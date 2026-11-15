@@ -1065,6 +1065,52 @@ is visible in the test.
 - `vendor-listener` offsets 9092, 9268 and 9443 resolve to lines 188, 192 and 196 on every frame
   in both modes.
 
+### Step 6 cycle — review findings and the orchestrator's decisions
+
+The refactor is committed as `06033b9`. It moved the ground-truth readings into `test-support.ts`
+and found that `.prettierignore`'s bare `corpus/` also matched `packages/corpus/`, so the format
+check had never covered that package. That fix is committed separately as `a9cba48`, which is
+formatting only, and both reviewers confirmed it is correct and complete. The figures reviewer
+derived every figure from raw JSON or the engine. **No figure was fabricated.** Every finding below
+is accepted. They tighten assertions or correct wording; none changes the engine.
+
+- **Both reviewers (F1, C3).** `ofIndependentSamples: 59` in the no-hook test is the long-frame
+  population's sample count, which makes it an indirect long-frame count. The same file refuses to
+  assert such counts elsewhere. Replaced with the rule itself: the pool is a usable sample count,
+  and the frame's own slice is not.
+- **C1.** Per-frame loops that would pass on zero frames get one guard helper wherever the loop is
+  the claim.
+- **C2.** The header no longer over-claims. `'OrderTable'`, `'.sort'`, `36`,
+  `'dispatchDiscreteEvent'`, `'app.js'` and `'vendor.js'` are read from the ground truth. The
+  header says plainly what stays literal.
+- **C4.** vendor-listener's first-party slice owners get their tier asserted, with a comment that
+  the tier is undeclared and comes from the engine's rule. The handoff's step 6 outcome is
+  corrected where it said every gap had its tier asserted.
+- **C5.** `mergedOf` returns `MergedComponents`, not a `string` tier.
+- **C6, C7.** The thin-evidence test checks the file as well as the line, and its dead
+  `claimed` branch is replaced by the rule in its stronger form.
+- **C8–C12, C14.** Readability fixes:
+  - no self-comparison, using `expect.closeTo`;
+  - `subjectOf` and `scriptOf` move to `test-support.ts`, replacing sentinel fallbacks inside
+    expectations;
+  - a `requiredTierAt` helper for declared-tier lookups;
+  - path prefixes for the ground-truth reads;
+  - one ground-truth walker with matching path formatting;
+  - `MIN_SAMPLES_TO_COMPARE_SHARES` instead of a hard-coded 5;
+  - an assertion that `App` is present before its margin is checked.
+- **C13.** The table row says "a function in 34-36, its call token as declared (line 36, `.sort`,
+  in this capture)", because the assertion also admits line 35.
+- **C15.** The raw `sourceFunctionName === ''` sentinel is re-asserted against the corpus, the
+  unpainted-frame test also asserts `presentationTime`, and `VendorListenerTruth` is named.
+- **F2.** The handoff said "13 of 14 / 2 of 3", which are 0-based indices. They become "the 14th of
+  14 / the 3rd of 3".
+- **F3.** `records.test.ts`'s "only place in the corpus where the served bytes are in version
+  control" is false: `innerhtml-rebuild` qualifies too. Corrected.
+- **F4, F5.** "(development, 4x)" is added to the bare 60943.7ms timestamp, and the "14ms listener
+  … 120ms wait" illustration is marked as rounded, with its measured range and mode.
+- **F6.** No change. The one remaining window lookup is over React spans, touches no samples or
+  frames, and is disclosed.
+
 ## Questions for the morning
 
 - **The step 5 confidence levels were lowered where review found them over-claiming.** Chosen
