@@ -31,7 +31,12 @@ import { cp, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { collectRun, CPU_THROTTLE_RATE, type RunSummary } from './collect-run.ts';
+import {
+  collectRun,
+  CPU_THROTTLE_RATE,
+  describeRunSummary,
+  type RunSummary,
+} from './collect-run.ts';
 import {
   type BuildMode,
   FIXTURES,
@@ -74,22 +79,6 @@ async function promote(
   return { ...summary, corpusPath: `corpus/${fixture.id}/${mode}` };
 }
 
-function describe(summary: RunSummary): string {
-  return (
-    `${summary.longFrames.toString()} frames, ` +
-    `${summary.samples.toString()} samples, ` +
-    `${summary.commits.toString()} commits, ` +
-    `${summary.measures.toString()} measures, ` +
-    `${summary.sourceWindows.toString()} windows` +
-    (summary.unresolvedPositions > 0
-      ? `, ${summary.unresolvedPositions.toString()} unresolved`
-      : '') +
-    (summary.actionsWithoutFrame > 0
-      ? `, ${summary.actionsWithoutFrame.toString()} silent interactions`
-      : '')
-  );
-}
-
 async function main(): Promise<void> {
   const requested = process.argv.slice(2).filter((argument) => !argument.startsWith('-'));
   const fixtures =
@@ -115,7 +104,7 @@ async function main(): Promise<void> {
       installReactHook: true,
       enableSourceLineColumn: false,
     });
-    console.log(`[warm-up] ${describe(warmUp)}`);
+    console.log(`[warm-up] ${describeRunSummary(warmUp)}`);
   }
 
   const promoted: PromotedRun[] = [];
@@ -132,7 +121,7 @@ async function main(): Promise<void> {
         enableSourceLineColumn: false,
       });
 
-      console.log(`    ${describe(summary)}`);
+      console.log(`    ${describeRunSummary(summary)}`);
       promoted.push(await promote(summary, fixture, mode));
     }
   }

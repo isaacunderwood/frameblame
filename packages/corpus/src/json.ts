@@ -138,6 +138,18 @@ export function nullableStringAt(value: Json | undefined, path: JsonPath): strin
   return asString(found, path);
 }
 
+/**
+ * A string, or `null` when the dump holds the empty string Chrome uses for "none".
+ *
+ * Here rather than beside its callers because two signals spell absence this
+ * way — LoAF's `sourceURL` and `sourceFunctionName`, and a profiler frame's
+ * `name` — and their adapters are separate modules.
+ */
+export function nonEmptyStringAt(value: Json | undefined, path: JsonPath): string | null {
+  const found = nullableStringAt(value, path);
+  return found === null || found === '' ? null : found;
+}
+
 /** `get` and `asRecord` in one step, for the common nested-object read. */
 export function recordAt(value: Json | undefined, path: JsonPath): JsonObject {
   return asRecord(get(value, path), path);

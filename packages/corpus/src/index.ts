@@ -32,15 +32,10 @@ export type { BuildMode, CorpusRun, RunEnvelope, RunFileKey } from './corpus.ts'
 export { checkSourceAnchor, collectSourceAnchors } from './ground-truth.ts';
 export type { SourceAnchor } from './ground-truth.ts';
 
-export {
-  framesOf,
-  interactionsOf,
-  loadSignals,
-  profileOf,
-  provenanceOf,
-  reactOf,
-  signalsOf,
-} from './records.ts';
+export { framesOf } from './loaf-records.ts';
+export { profileOf } from './profiler-records.ts';
+export { reactOf } from './react-records.ts';
+export { interactionsOf, loadSignals, provenanceOf, signalsOf } from './records.ts';
 
 export {
   arrayAt,

@@ -94,6 +94,31 @@ export interface RunSummary {
   readonly actionsWithoutFrame: number;
 }
 
+/**
+ * A run's summary as one line of counts, for the console.
+ *
+ * Shared by `pnpm spike:dump` and `pnpm spike:corpus`, which print the same
+ * thing after every capture. These are counts of records rather than
+ * measurements, so no build mode or throttle rate needs to travel with them.
+ * Unresolved positions and interactions that produced no long frame are named
+ * only when there are some.
+ */
+export function describeRunSummary(summary: RunSummary): string {
+  return (
+    `${summary.longFrames.toString()} frames, ` +
+    `${summary.samples.toString()} samples, ` +
+    `${summary.commits.toString()} commits, ` +
+    `${summary.measures.toString()} measures, ` +
+    `${summary.sourceWindows.toString()} windows` +
+    (summary.unresolvedPositions > 0
+      ? `, ${summary.unresolvedPositions.toString()} unresolved`
+      : '') +
+    (summary.actionsWithoutFrame > 0
+      ? `, ${summary.actionsWithoutFrame.toString()} silent interactions`
+      : '')
+  );
+}
+
 /** What the page hands back once the drive is finished. */
 interface CollectedStreams {
   loaf: unknown[];

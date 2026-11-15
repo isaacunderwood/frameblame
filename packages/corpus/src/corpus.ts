@@ -21,6 +21,8 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { BuildMode } from '@frameblame/core';
+
 import { isJsonRecord, type Json } from './json.ts';
 
 /*
@@ -30,6 +32,14 @@ import { isJsonRecord, type Json } from './json.ts';
  */
 export type { Json };
 
+/*
+ * Re-exported for the same reason. `BuildMode` is defined once, in `core`'s
+ * `provenance.ts`, because it is a property of a capture rather than of where
+ * the capture is stored: the corpus names its run directories by it, and the
+ * engine qualifies every figure with it, and the two must not drift.
+ */
+export type { BuildMode };
+
 /** Repo root, four levels up from this file's directory at `packages/corpus/src`. */
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 
@@ -37,8 +47,6 @@ export const CORPUS_ROOT = resolve(REPO_ROOT, 'corpus');
 export const FIXTURES_ROOT = resolve(REPO_ROOT, 'fixtures');
 
 /** Both modes are always captured. Production is not the weaker case. */
-export type BuildMode = 'development' | 'production';
-
 export const BUILD_MODES: readonly BuildMode[] = ['development', 'production'];
 
 /** The five files `collectRun` writes, by the key they are loaded under. */

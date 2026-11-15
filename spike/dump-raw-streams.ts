@@ -29,7 +29,7 @@
  * meaningless.
  */
 
-import { collectRun } from './collect-run.ts';
+import { collectRun, describeRunSummary } from './collect-run.ts';
 import { type BuildMode, FIXTURES, fixtureById } from './fixtures.ts';
 
 /** Parses the mode argument, defaulting to development. */
@@ -60,16 +60,7 @@ async function main(): Promise<void> {
     enableSourceLineColumn: process.env.SPIKE_SOURCE_LINE_COLUMN === '1',
   });
 
-  console.log(
-    `[spike] ${summary.longFrames.toString()} long frame(s), ` +
-      `${summary.samples.toString()} sample(s), ` +
-      `${summary.commits.toString()} React hook record(s), ` +
-      `${summary.measures.toString()} measure(s), ` +
-      `${summary.sourceWindows.toString()} source window(s)` +
-      (summary.actionsWithoutFrame > 0
-        ? `, ${summary.actionsWithoutFrame.toString()} interaction(s) produced no long frame`
-        : ''),
-  );
+  console.log(`[spike] ${describeRunSummary(summary)}`);
   console.log(`[spike] wrote ${summary.runDir}`);
 }
 

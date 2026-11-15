@@ -280,7 +280,7 @@ below. Baseline before the night: `pnpm check` green at 114 tests (57 core, 57 c
 
 Progress (updated before each next step starts):
 
-- [ ] Step 0.1 — cleanup refactor
+- [x] Step 0.1 — cleanup refactor
 - [ ] Step 0.2 — collector change (fiber parent id, forced style/layout on scripts)
 - [ ] Step 0.3 — re-capture all eight runs in one pass
 - [ ] Step 0.4 — re-derive moved figures
@@ -290,6 +290,26 @@ Progress (updated before each next step starts):
 - [ ] Step 5 — the confidence model
 - [ ] Step 6 — the accuracy suite
 
+### Step 0.1 — cleanup refactor
+
+- `BuildMode` now has one definition, in `packages/core/src/provenance.ts`. `packages/corpus/src/corpus.ts`
+  re-exports it, and `BUILD_MODES` (a runtime list) stays in corpus.
+- The `spike/` duplication was the run-summary console line. It is now one function,
+  `describeRunSummary` in `spike/collect-run.ts`, used by `capture-corpus.ts` and `dump-raw-streams.ts`.
+  The one visible change is that `pnpm spike:dump` now also prints the unresolved-position count.
+- `records.ts` is split along the three signals, into `loaf-records.ts`, `profiler-records.ts` and
+  `react-records.ts`. `records.ts` keeps provenance, interactions and `loadSignals`, and is 120 lines
+  instead of 558. The subagent checked by diff that every comment line from the original survives.
+  The readers that step 0.2 changes are therefore `readFiber` in `react-records.ts` and `readScript`
+  in `loaf-records.ts`, not `records.ts` as the brief says.
+- Left alone on purpose: a third `BuildMode` in `spike/fixtures.ts`. The spike is the root package,
+  which does not declare `@frameblame/core` as a dependency, and importing it there would be an
+  undeclared dependency. Fixing it means a root devDependency and a lockfile change. That is out of
+  proportion for a cleanup, so it is under Questions for the morning.
+- `pnpm check` is green at 114 tests and `pnpm build` passes. No test file changed.
+
 ## Questions for the morning
 
-None yet.
+- **Should the root package depend on `@frameblame/core` so that `spike/fixtures.ts` can drop its own
+  `BuildMode`?** Chosen for tonight: leave the duplicate, because it avoids a lockfile change in an
+  unattended run.
