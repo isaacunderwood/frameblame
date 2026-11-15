@@ -504,6 +504,51 @@ Choices made without a human, each the conservative option:
 7. **An interaction whose commits reached different tiers** gets `merged: null`, because a fiber-time
    share and a sample share are different quantities. Never observed in the corpus.
 
+### Step 3 cycle — review findings and the orchestrator's decisions
+
+The refactor is committed as `9194216`: the self-time arithmetic moved to `fiber-self-time.ts`. A
+cold review of `6759867..HEAD` found **no fabricated figure**. Every new number was found in the
+corpus or derived from it, at 4×. Its fifteen findings, and what was done with each:
+
+1. **Accepted.** "What React itself computes (:4421)" overstated the match. React subtracts every
+   direct child fiber, host fibers included. The engine subtracts only recorded component
+   descendants, so host-fiber time, such as DOM creation on mount, is charged to the nearest
+   component above it. The comment is reworded, and the visible consequence is recorded: `App` reads
+   35.7ms in `initial-mount` against about 25ms for every other component (development, 4×).
+2. **Accepted.** The commit sample window was called "the tightest bound the records support", and
+   it is not. It now also starts no earlier than the last `InteractionAction.atMs` at or before the
+   commit, and the label `commit-render` becomes `since-previous-commit`. No corpus figure moves,
+   because no stacked sample falls in the excluded span. It matters on a page with a polling timer.
+3. **Accepted.** Minified-name ambiguity is now decided once per capture, over all profile frames,
+   instead of per window and over innermost matches only. That is strictly more conservative. The
+   remaining assumption, that one site in the whole profile is the component, is stated.
+4. **Accepted.** The production name test was near-vacuous: a candidate existed for every hook name
+   even when the stack join matched nothing. The oracle now comes from the ground truth's
+   `rendered`, mapped through the development fiber index, and every candidate must have a weight
+   above 0.
+5. **Accepted.** "Self times sum to the commit total" is an identity by telescoping. An independent
+   oracle is added: every component burns `BURN_MS = 25`, so each rendered fiber's self time must be
+   at least 25ms minus the coarsening tolerance.
+6. **Accepted.** `CommitAttribution` carries `provenance`, and `describeComponentNote` prints its
+   milliseconds with the build mode and throttle.
+7. **Accepted.** The `profiler-unmapped` tier sentence no longer contradicts itself: it says
+   "not resolved through a source map", not "no source map".
+8. **Accepted.** The minified-name list now includes `_`, which is LateMount.
+9. **Partly accepted.** The remainder below a weight of 1 is honest but implicit. Accepted now: the
+   `profiler-unmapped` basis carries the unmatched sample count, and the timed basis carries the
+   bailed-out milliseconds, so the reason is in the data. **Deferred to step 5:** an explicit
+   `unattributed` candidate with its own reason. That belongs to the confidence model, which has to
+   be designed as one coherent thing.
+10–14. **Accepted** as readability fixes:
+    - restructure `tallySamples` by grouping per name;
+    - type evidence as a non-empty tuple;
+    - replace the boolean-parameter `sumSelf` with one partitioning loop;
+    - compute participation once, and throw where an unreachable fallback used to quietly relabel
+      a fiber;
+    - name `MergedComponents` and `AttributedInteraction`.
+15. **Accepted.** Stale `handoff.md` lines are corrected, and `rankCauses`' error message no longer
+    says "of the frame".
+
 ## Questions for the morning
 
 - **Should the derive-in-render histogram narrative live only in `findings.md`, with the README,
