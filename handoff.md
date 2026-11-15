@@ -270,3 +270,26 @@ style-versus-layout split cannot have come from the LoAF entry, and its instrume
 Reproducing it needs a Chrome trace, which is out of scope for the engine.
 
 Nothing is waiting on the human. Work the steps in order.
+
+## Overnight run log (2026-11-15)
+
+Run by an orchestrator session following `overnight-run.md`. Each step ran in its own fresh
+subagent, followed by a refactor, review and fix cycle in further fresh subagents. The orchestrator
+decided which review findings to accept; those decisions and their reasons are recorded per step
+below. Baseline before the night: `pnpm check` green at 114 tests (57 core, 57 corpus).
+
+Progress (updated before each next step starts):
+
+- [ ] Step 0.1 — cleanup refactor
+- [ ] Step 0.2 — collector change (fiber parent id, forced style/layout on scripts)
+- [ ] Step 0.3 — re-capture all eight runs in one pass
+- [ ] Step 0.4 — re-derive moved figures
+- [ ] Step 0 cycle (refactor, review, fix) and commit
+- [ ] Step 3 — components, the React tier
+- [ ] Step 4 — lines, the profiler tier
+- [ ] Step 5 — the confidence model
+- [ ] Step 6 — the accuracy suite
+
+## Questions for the morning
+
+None yet.
