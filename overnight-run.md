@@ -56,12 +56,16 @@ work so far is one commit on the branch **`v0.3-engine`**, taken off `origin/mai
 `user.email` are set locally, so your commits will not fail for want of an identity. Work on that
 branch; do not commit to `main` and do not merge.
 
-**The branch is not pushed and you will not be able to push it.** There is no `gh` on this machine,
-no SSH key, and no stored credential, so a push can only prompt for a username — which with nobody
-awake means a hung session. Prefix any `git` command that touches the network with
-`GIT_TERMINAL_PROMPT=0` so it fails in a second rather than waiting all night, and do not retry it.
-Local commits are what the night needs: they are the revert points. Pushing is a morning job, and
-`handoff.md` should say so.
+The branch is pushed and tracking `origin/v0.3-engine`. Credentials are in the macOS keychain via
+`gh auth setup-git`, so `git push` works without `gh` being on your `PATH` — which it is not, since
+Homebrew's `bin` is absent from `~/.zshenv` and that is the only profile a non-interactive shell
+reads. Use plain `git`, not `gh`.
+
+**Push after every commit, and never let it block.** Prefix anything that touches the network with
+`GIT_TERMINAL_PROMPT=0`, so that a credential that has expired fails in a second instead of waiting
+all night on a username prompt. If a push fails, record it in `handoff.md` and carry on committing
+locally — the local commits are the revert points and the night does not depend on the remote. Do
+not retry a failed push more than once, and do not open a pull request; that is a morning decision.
 
 ## Step 0 — cleanup, and the one capture
 
@@ -125,7 +129,8 @@ you will have read:
 - `pnpm check` must be green before every commit. If you cannot get it green after three honest
   attempts, `git reset --hard` to the last commit, write what you tried and what failed into
   `handoff.md`, and move to the next step rather than leaving the tree broken.
-- Commit after each step and after each fix round, with a message saying which step it was.
+- Commit after each step and after each fix round, with a message saying which step it was, then
+  push as above.
 - Keep `handoff.md` current as you go: what is done, what each review found, what you decided
   against and why. It is what gets read in the morning.
 - When every step is done and the gate is green, write a short `handoff.md` section stating what
