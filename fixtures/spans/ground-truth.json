@@ -304,6 +304,7 @@
         "id": "state-owner-self",
         "trigger": "click [data-fixture=\"state-owner-self\"] (StateOwner's own setState, no prop change anywhere)",
         "componentsThatRender": ["App", "StateOwner"],
+        "listedButBailedOut": ["App"],
         "componentsGivenASpan": [],
         "provenance": "measured",
         "note": "No span at all, for either component. This is the regression row: a tool keyed on spans reports that nothing happened for an interaction that burned real main-thread time.",
@@ -326,7 +327,12 @@
           "flags 0 - PerformedWork, bit 0, clear - with an alternate and not carried",
           "over, so React cloned App and bailed out without calling it. Its 25.2ms",
           "actualDuration is StateOwner's 25.2ms bubbled up, and App's self time is",
-          "zero. App belongs in componentsThatRender only as 'present in the commit'."
+          "zero. App belongs in componentsThatRender only as 'present in the commit'.",
+          "",
+          "listedButBailedOut makes that machine-readable for the React tier's",
+          "corpus test: the components a correct attribution names for this row are",
+          "componentsThatRender minus listedButBailedOut, which is StateOwner alone.",
+          "App's flags are 0 in this commit in the production capture too (as `b`)."
         ]
       },
       {

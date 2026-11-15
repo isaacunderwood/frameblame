@@ -20,8 +20,9 @@
  *
  * What this module does not do: decide which component caused a frame, pair a
  * commit with a frame, or compute self time. Self time is the React tier's
- * arithmetic, over the parent links described at `CommitComponents` — which a
- * capture made before the collector recorded them does not have.
+ * arithmetic, in `component-attribution.ts`, over the parent links described
+ * at `CommitComponents` — which a capture made before the collector recorded
+ * them does not have.
  *
  * **Clock.** Page-clock `performance.now()` milliseconds, shared with LoAF and
  * the profiler.

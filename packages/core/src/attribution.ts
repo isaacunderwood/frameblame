@@ -190,7 +190,10 @@ export type CauseSubject =
  * guess, and a bare number loses it.
  */
 export type WeightBasis =
-  /** Share of in-frame samples whose stack reached this subject. */
+  /**
+   * Share of the samples in a window whose stack reached this subject. The
+   * window is named on the `profiler-samples` evidence beside it.
+   */
   | 'sample-share'
   /** Share of a commit's render time, from fiber timings. */
   | 'fiber-self-time-share'
@@ -232,6 +235,19 @@ export function confidenceWeight(fraction: number, basis: WeightBasis): Confiden
 }
 
 /**
+ * The window a sample count was taken over.
+ *
+ * Named because the denominator changes what a share means. `frame` is the
+ * long frame's own extent, by `isWithinFrame`. `commit-render` is the stretch
+ * of page clock that ends at a React commit and begins at the previous commit
+ * or the interaction's start, whichever is later: the hook reports when a
+ * commit finished but not when its render began, so the window is the
+ * tightest bound the records support rather than the render itself, and it
+ * can hold samples of whatever ran before the render started.
+ */
+export type SampleWindowKind = 'frame' | 'commit-render';
+
+/**
  * One piece of evidence behind a candidate cause.
  *
  * Every variant carries its own denominator where it has one, so that "46
@@ -244,14 +260,34 @@ export type CauseEvidence =
   | {
       readonly kind: 'profiler-samples';
       readonly samples: number;
-      readonly ofSamplesInFrame: number;
+      /** The denominator: samples with a stack inside `window`. */
+      readonly ofSamplesInWindow: number;
+      /** Which window the samples were counted in. See `SampleWindowKind`. */
+      readonly window: SampleWindowKind;
     }
   | {
       readonly kind: 'fiber-render-time';
       readonly componentName: string;
+      /** The fiber's subtree time, as React reported it. */
       readonly actualDurationMs: number;
-      /** `null` where the capture could not support the subtraction. See `react.ts`. */
+      /**
+       * `actualDurationMs` minus the in-commit children's, signed — see
+       * `component-attribution.ts` — or `null` where the capture could not
+       * support the subtraction. See `react.ts`.
+       */
       readonly selfDurationMs: number | null;
+    }
+  | {
+      /**
+       * The DevTools hook saw this fiber render, from React's own render
+       * evidence, with no timing attached. What a production build leaves: the
+       * hook still fires on every commit and the `PerformedWork` bit is still
+       * set, but `actualDuration` is null, so *that* a component rendered is
+       * known and *how long for* has to come from somewhere else.
+       */
+      readonly kind: 'fiber-rendered';
+      readonly componentName: string;
+      readonly participation: 'mounted' | 'updated';
     }
   | {
       readonly kind: 'react-component-span';

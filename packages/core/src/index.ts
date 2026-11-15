@@ -21,11 +21,16 @@
  *    Both are exact and neither needs a sampled signal.
  * 3. **The answer's shape** — `attribution.ts`: ranked candidate causes, each
  *    with a weight, a tier and its evidence.
+ * 4. **The React tier** — `component-attribution.ts`: which components
+ *    rendered in a commit and their share of it, from fiber self times in
+ *    development, and from hook names joined to sampled stacks where the
+ *    timings are absent. A commit is attributed whether or not a long frame
+ *    surrounds it.
  *
- * What is deliberately not here yet is the join: nothing in this package reads
- * a fiber tree, weights a sample, or decides which component caused a frame.
- * The layers above are what those heuristics will be built on, and they are
- * meant to be checkable without them.
+ * What is deliberately not here yet is the rest of the join: nothing in this
+ * package resolves a source map, splits a frame's script slice among causes,
+ * or weighs a commit against the frame it landed in. Those are built on the
+ * layers above, which are meant to be checkable without them.
  */
 
 export {
@@ -41,12 +46,39 @@ export type {
   CauseSubject,
   ConfidenceWeight,
   RankedCauses,
+  SampleWindowKind,
   SourceLocation,
   UnattributedReason,
   WeightBasis,
 } from './attribution.ts';
 
 export { charPositionAt, createScriptLineIndex, lineColumnAt } from './char-position.ts';
+
+export {
+  attributeCommit,
+  attributeInteractionComponents,
+  commitRenderTimes,
+  describeCommitBasis,
+  describeComponentNote,
+  describeShortfall,
+  didRender,
+  fiberParticipation,
+} from './component-attribution.ts';
+export type {
+  CommitAttribution,
+  CommitAttributionBasis,
+  CommitComponent,
+  CommitRenderTimes,
+  CommitRenderTiming,
+  CommitSampleWindow,
+  CommitTimingNote,
+  ComponentAttributionNote,
+  FiberParticipation,
+  FiberSelfTime,
+  InteractionComponents,
+  ReactTierShortfall,
+  RenderedParticipation,
+} from './component-attribution.ts';
 export type { LineColumn, ScriptLineIndex } from './char-position.ts';
 
 export {

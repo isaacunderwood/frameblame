@@ -23,7 +23,9 @@ function cause(fraction: number, name: string): CandidateCause {
     subject: { kind: 'component', name, nameIsMinified: false, definedAt: null },
     weight: confidenceWeight(fraction, 'sample-share'),
     tier: 'react-fiber-timings',
-    evidence: [{ kind: 'profiler-samples', samples: 1, ofSamplesInFrame: 1 }],
+    evidence: [
+      { kind: 'profiler-samples', samples: 1, ofSamplesInWindow: 1, window: 'frame' },
+    ],
   };
 }
 

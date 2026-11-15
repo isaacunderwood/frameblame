@@ -305,7 +305,7 @@ Progress (updated before each next step starts):
 - [x] Step 0.3 — re-capture all eight runs in one pass
 - [x] Step 0.4 — re-derive moved figures
 - [x] Step 0 cycle (refactor, review, fix) and commit
-- [ ] Step 3 — components, the React tier
+- [x] Step 3 — components, the React tier
 - [ ] Step 4 — lines, the profiler tier
 - [ ] Step 5 — the confidence model
 - [ ] Step 6 — the accuracy suite
@@ -454,6 +454,55 @@ corpus). No decomposition note changed on any of the 53 corpus frames. The fix p
 that `handoff.md`'s step 1 said `App` "did not re-render at all" in `mount-toggle`. That is wrong,
 because the commit comes from `App`'s own `setShowLateMount`, and the orchestrator corrected the
 sentence. Committed as `9007f0d` and pushed. Step 3 starts next.
+
+### Step 3 — outcome
+
+Built in `packages/core/src/component-attribution.ts`, using `attribution.ts`'s vocabulary. Not
+committed. `pnpm check` is green at 178 tests (87 core, 91 corpus) and `pnpm build` passes.
+
+- **The arithmetic.** `fiberParticipation` decides whether a fiber rendered the way React DevTools
+  does: carried over first, then no alternate (a mount), then `PerformedWork`. Carried-over status is
+  re-inherited down the parent links rather than trusted. `commitRenderTimes` subtracts in-commit
+  children only, so a carried-over fiber is skipped both as a candidate and as a child. A bailed-out
+  fiber stays in the subtraction but is never a candidate. A self time more than two grid steps
+  below zero becomes a `negative-self-time` note and is not clamped. A truncated walk becomes a note.
+  Partial timings and unlinked captures come back `untimed` with a named `ReactTierShortfall`.
+- **The answer.** `attributeCommit` and `attributeInteractionComponents` return ranked candidates
+  per commit, merged by name per interaction. Each commit carries the long frame it landed in, or
+  `null`. Spans are attached as `react-component-span` evidence and never move a weight. The corpus
+  test checks this by removing the spans and comparing the weights.
+- **Production.** The commit degrades to `profiler-unmapped`, with `shortfall: 'fiber-timings-absent'`
+  and a `describeCommitBasis` sentence that says so. The hook's minified names are joined to the
+  profiler's minified function names, which are the same identifiers. Each stacked sample in the
+  commit's window is charged to its innermost frame named as a rendered component. No source map is
+  resolved; that is step 4.
+- **Vocabulary changes.** `profiler-samples` evidence now carries `ofSamplesInWindow` and a `window`
+  (`frame` or `commit-render`) in place of `ofSamplesInFrame`, because a commit window is not a
+  frame. A new `fiber-rendered` evidence variant records "the hook saw it render, untimed".
+- **Ground truth.** `spans`' `state-owner-self` row gained `listedButBailedOut: ["App"]`. It makes the
+  existing comment machine-readable: `App` has flags 0 in that commit in both build modes.
+
+Choices made without a human, each the conservative option:
+
+1. **Tier name for production: `profiler-unmapped`, not `profiler-mapped`.** The bundle ships a map,
+   but nothing resolves it yet, so every name is reported as minified and every position as
+   generated code.
+2. **The commit's sample window** is `(max(previous commit, interaction start), committedAt]`. The
+   hook does not report when a render began, so this is the tightest bound the records support.
+   Stacked samples in it that match no component stay in the denominator, which is why some
+   production weights sum to less than 1: 0.87 for `initial-mount` and 0.93 for `mount-toggle`
+   (production, 4x).
+3. **Negative self time.** The raw signed value is kept. The weight uses `max(self, 0)` over a
+   denominator of summed positive self times. That equals the commit total whenever no fiber is
+   negative, which holds on every corpus commit.
+4. **Bailed-out fibers' self time** is React's reconciliation beneath components that did not render.
+   It is charged to no component and is left as the unattributed remainder. It is 0ms on all 29
+   timed corpus commits (development, 4x).
+5. **A minified name matching more than one definition site** in a window is not charged at all, and
+   a note says so. Never observed in the corpus.
+6. **`nameIsMinified`** is `buildMode === 'production'`, as the field's own doc defines it.
+7. **An interaction whose commits reached different tiers** gets `merged: null`, because a fiber-time
+   share and a sample share are different quantities. Never observed in the corpus.
 
 ## Questions for the morning
 
