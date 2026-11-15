@@ -206,8 +206,9 @@ describe('the records', () => {
        * a `derive-in-render` run (4x, one per build mode), are a single
        * `Promise.resolve` task with `renderStart` and `styleAndLayoutStart`
        * reporting the spec's 0 sentinel, and no `paintTime` or
-       * `presentationTime` at all. A frame starting at 60943.7ms whose
-       * `renderStart` is 0 is not a frame that rendered at time zero.
+       * `presentationTime` at all. A frame starting at 60943.7ms
+       * (development, 4x) whose `renderStart` is 0 is not a frame that
+       * rendered at time zero.
        *
        * Which frames those are is the capture's business, and how many there
        * are is a long-frame count, so neither is asserted. What is asserted is
@@ -234,6 +235,10 @@ describe('the records', () => {
         if (!unpainted) continue;
 
         expect(serialised.paintTime, where).toBeUndefined();
+        expect(serialised.presentationTime, where).toBeUndefined();
+        // And the reader carries neither: a frame with no rendering update has
+        // no paint or presentation time to report, not a zero one.
+        expect(frame.renderingUpdate, where).toEqual({ kind: 'none' });
         expect(frame.startTimeMs, where).toBeGreaterThan(1000);
         expect(frame.firstUIEventTimestampMs, where).toBeNull();
         expect(decomposeFrame(frame).frameEndMs, where).toBeCloseTo(
@@ -537,8 +542,9 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
        * was running; it does not say the thread was busy. The fixture
        * publishes what nothing outside the page can see: how long a
        * `MessageChannel` message posted at the end of the listener took to be
-       * delivered. A 14ms listener followed by a 120ms wait for a task it
-       * posted itself means the thread was occupied throughout.
+       * delivered. A listener of about 14ms followed by a wait of about
+       * 120ms for a task it posted itself, figures rounded from the ranges
+       * below, means the thread was occupied throughout.
        *
        * Measured on the unforced clicks (4x): listeners of 13.3-14.3ms and
        * deliveries of 116.7-148.8ms in development, 13.4-14.2ms and
@@ -626,8 +632,10 @@ describe('vendor-listener: three slices, not one', () => {
    * The fixture's scripts are served out of `public/`, which Vite copies
    * byte-for-byte in both build modes, so the repo's own copy *is* the text
    * the character offsets index into. That is what makes this check possible
-   * with no capture of the text and no server: it is the only place in the
-   * corpus where the served bytes are in version control.
+   * with no capture of the text and no server. It is one of two fixtures
+   * whose served bytes are in version control: `innerhtml-rebuild` also
+   * serves its `app.js` from `public/`, and every one of its captured source
+   * windows matches the repo's copy at its offset, in both build modes (4x).
    */
   const appJs = createScriptLineIndex(
     readRepoFile('fixtures/vendor-listener/public/app.js'),
@@ -668,9 +676,12 @@ describe('vendor-listener: three slices, not one', () => {
 
     it(`${mode}: LoAF locates each listener at the line that registered it, in app.js`, () => {
       const signals = loadSignals('vendor-listener', mode);
+      const entries = arrayAt(loadCorpusRun('vendor-listener', mode).files.loaf, [
+        'entries',
+      ]);
       expect(signals.frames.length).toBeGreaterThan(0);
 
-      for (const frame of signals.frames) {
+      for (const [frameIndex, frame] of signals.frames.entries()) {
         /*
          * Each entry's `sourceCharPosition`, resolved against the served text,
          * lands on the `addEventListener` line the ground truth declares for
@@ -701,6 +712,18 @@ describe('vendor-listener: three slices, not one', () => {
           expect(script.sourceFunctionName).toBeNull();
           expect(script.sourceUrl).toContain('/app.js');
           expect(JSON.stringify(script)).not.toContain('vendor.js');
+
+          // The absence is the reader's reading of Chrome's sentinel: the
+          // entry as serialised carries the empty string the ground truth
+          // declares "by construction", which the reader maps one to one.
+          expect(
+            stringAt(entries[frameIndex], [
+              'toJSON',
+              'scripts',
+              index,
+              'sourceFunctionName',
+            ]),
+          ).toBe(declared[index]?.loafSourceFunctionName);
         }
       }
       expect(declared.some((slice) => slice.isThirdParty)).toBe(true);

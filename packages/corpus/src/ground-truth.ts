@@ -37,7 +37,74 @@
 import { ATTRIBUTION_TIERS, type AttributionTier } from '@frameblame/core';
 
 import { BUILD_MODES, type BuildMode, readRepoFile } from './corpus.ts';
-import { get, isJsonArray, isJsonRecord, type Json, type JsonPath } from './json.ts';
+import {
+  get,
+  isJsonArray,
+  isJsonRecord,
+  type Json,
+  type JsonObject,
+  type JsonPath,
+} from './json.ts';
+
+/**
+ * Renders a path into a ground truth the one way every message here names a
+ * place: `.key` for an object step and `[i]` for an array index, from the
+ * root. `['expected', 'slices', 0, 'declaredTier']` is
+ * `.expected.slices[0].declaredTier`, and the root itself is the empty string.
+ */
+function formatPath(path: JsonPath): string {
+  return path
+    .map((step) => (typeof step === 'number' ? `[${String(step)}]` : `.${step}`))
+    .join('');
+}
+
+/** What an object in a ground truth inherits from the objects above it. */
+interface RecordScope {
+  /**
+   * The `sourceFile` of the object itself, or else of its nearest ancestor
+   * that names one; `null` when none does.
+   */
+  readonly sourceFile: string | null;
+  /** Where the object sits, as `formatPath` renders it. */
+  readonly path: string;
+}
+
+/**
+ * Visits every object in a ground truth, depth first and parents before
+ * children, with the scope it inherits.
+ *
+ * Scoping rule: an object's `sourceFile` applies to that object and everything
+ * below it, so a container naming a file once covers a list of lines inside it
+ * — which is how `spans` declares fourteen lines of React's own source and how
+ * `vendor-listener` declares a file per slice.
+ *
+ * Every value is walked into, a `declaredTier` included. A well-formed
+ * declaration is build modes mapped to tier names, so nothing inside one can
+ * be an anchor or another declaration, and a malformed one is reported by
+ * `checkTierDeclaration` whether or not its inside is visited.
+ */
+function forEachRecord(
+  groundTruth: Json,
+  visit: (record: JsonObject, scope: RecordScope) => void,
+): void {
+  function walk(node: Json, sourceFile: string | null, path: JsonPath): void {
+    if (isJsonArray(node)) {
+      node.forEach((child, index) => {
+        walk(child, sourceFile, [...path, index]);
+      });
+      return;
+    }
+    if (!isJsonRecord(node)) return;
+
+    const scoped = typeof node.sourceFile === 'string' ? node.sourceFile : sourceFile;
+    visit(node, { sourceFile: scoped, path: formatPath(path) });
+    for (const [key, child] of Object.entries(node)) {
+      walk(child, scoped, [...path, key]);
+    }
+  }
+
+  walk(groundTruth, null, []);
+}
 
 /** One `line` plus `expectedSourceText` pair, with the file it applies to. */
 export interface SourceAnchor {
@@ -54,12 +121,8 @@ export interface SourceAnchor {
 }
 
 /**
- * Collects every source anchor a ground truth declares.
- *
- * Scoping rule: an object's `sourceFile` applies to that object and everything
- * below it, so a container naming a file once covers a list of lines inside it
- * — which is how `spans` declares fourteen lines of React's own source and how
- * `vendor-listener` declares a file per slice.
+ * Collects every source anchor a ground truth declares, each with the
+ * `sourceFile` in scope under `forEachRecord`'s scoping rule.
  *
  * Two anchor shapes are recognised. The plain one is `line` with
  * `expectedSourceText`. The second is `nextLine` with
@@ -71,20 +134,10 @@ export interface SourceAnchor {
 export function collectSourceAnchors(groundTruth: Json): SourceAnchor[] {
   const anchors: SourceAnchor[] = [];
 
-  function walk(node: Json, file: string | null, path: string): void {
-    if (isJsonArray(node)) {
-      node.forEach((child, index) => {
-        walk(child, file, `${path}[${String(index)}]`);
-      });
-      return;
-    }
-    if (!isJsonRecord(node)) return;
-
-    const scopedFile = typeof node.sourceFile === 'string' ? node.sourceFile : file;
-
+  forEachRecord(groundTruth, (node, { sourceFile, path }) => {
     if (typeof node.line === 'number' && typeof node.expectedSourceText === 'string') {
       anchors.push({
-        sourceFile: scopedFile,
+        sourceFile,
         line: node.line,
         expectedSourceText: node.expectedSourceText,
         declaredAt: `${path}.line`,
@@ -96,19 +149,14 @@ export function collectSourceAnchors(groundTruth: Json): SourceAnchor[] {
       typeof node.nextLineExpectedSourceText === 'string'
     ) {
       anchors.push({
-        sourceFile: scopedFile,
+        sourceFile,
         line: node.nextLine,
         expectedSourceText: node.nextLineExpectedSourceText,
         declaredAt: `${path}.nextLine`,
       });
     }
+  });
 
-    for (const [key, child] of Object.entries(node)) {
-      walk(child, scopedFile, `${path}.${key}`);
-    }
-  }
-
-  walk(groundTruth, null, '');
   return anchors;
 }
 
@@ -165,25 +213,13 @@ export interface TierDeclaration {
 export function collectTierDeclarations(groundTruth: Json): TierDeclaration[] {
   const declarations: TierDeclaration[] = [];
 
-  function walk(node: Json, path: string): void {
-    if (isJsonArray(node)) {
-      node.forEach((child, index) => {
-        walk(child, `${path}[${String(index)}]`);
-      });
-      return;
-    }
-    if (!isJsonRecord(node)) return;
-
+  forEachRecord(groundTruth, (node, { path }) => {
     const declared = node.declaredTier;
     if (declared !== undefined) {
       declarations.push({ declaredAt: `${path}.declaredTier`, value: declared });
     }
-    for (const [key, child] of Object.entries(node)) {
-      if (key !== 'declaredTier') walk(child, `${path}.${key}`);
-    }
-  }
+  });
 
-  walk(groundTruth, '');
   return declarations;
 }
 
@@ -248,7 +284,7 @@ export function declaredTierAt(
   path: JsonPath,
   mode: BuildMode,
 ): AttributionTier | null {
-  const where = [...path, 'declaredTier'].join('.');
+  const where = formatPath([...path, 'declaredTier']);
   const value = get(groundTruth, [...path, 'declaredTier']);
   if (value === undefined) throw new Error(`no declaredTier at ${where}`);
 

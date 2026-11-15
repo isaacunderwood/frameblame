@@ -34,7 +34,7 @@ import {
   listFixtures,
   loadCorpusRun,
   loadGroundTruth,
-} from './index.ts';
+} from './corpus.ts';
 import {
   checkSourceAnchor,
   checkTierDeclaration,

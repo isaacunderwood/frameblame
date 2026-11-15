@@ -16,6 +16,9 @@
 import {
   type CandidateCause,
   type CapturedSignals,
+  type FrameAttribution,
+  type FrameScript,
+  type FunctionSubject,
   resolveProfile,
   type ResolvedProfile,
 } from '@frameblame/core';
@@ -43,6 +46,38 @@ export function componentNamesOf(causes: readonly CandidateCause[]): string[] {
   return causes.flatMap((cause) =>
     cause.subject.kind === 'component' ? [cause.subject.name] : [],
   );
+}
+
+/**
+ * A candidate's subject, which in the profiler tier is always a source
+ * location. Throws for any other subject, or for no candidate at all, so that
+ * an expectation reads the location rather than a fallback standing in for it.
+ */
+export function subjectOf(cause: CandidateCause | undefined): FunctionSubject {
+  if (cause?.subject.kind !== 'source-location') {
+    throw new Error(
+      `expected a source-location candidate, got ${String(cause?.subject.kind)}`,
+    );
+  }
+  return cause.subject;
+}
+
+/**
+ * The script entry of `frame` that a candidate was cut from, read off its
+ * evidence: a slice of one entry's time, or the forced style and layout
+ * nested inside one. `null` for a candidate cut from no script entry, such as
+ * the unattributed remainder or the rendering update.
+ */
+export function scriptOf(
+  frame: FrameAttribution,
+  cause: CandidateCause,
+): FrameScript | null {
+  for (const evidence of cause.evidence) {
+    if (evidence.kind === 'loaf-script' || evidence.kind === 'forced-style-and-layout') {
+      return frame.frame.scripts[evidence.scriptIndex] ?? null;
+    }
+  }
+  return null;
 }
 
 /**
@@ -77,12 +112,32 @@ export interface DeriveInRenderTruth {
   };
   /** `notAtFault.components`: the declared wrong answers. */
   readonly notAtFault: readonly string[];
+  /**
+   * The `expected.culpritLines` entry whose role is "the dominant cost": the
+   * line sampled stacks are expected to land on, and the call its
+   * `expectedSourceText` begins with (`.sort` for line 36's
+   * `.sort((a, b) => ...)`).
+   */
+  readonly dominant: { readonly line: number; readonly callToken: string };
+  /**
+   * `observedJank.loafScriptAttribution.sourceFunctionName`: the only function
+   * LoAF names for a keypress frame, which is react-dom's dispatcher.
+   */
+  readonly loafSourceFunctionName: string;
 }
 
 /** Reads `derive-in-render`'s ground truth off disk; see `DeriveInRenderTruth`. */
 export function deriveInRenderTruth(): DeriveInRenderTruth {
   const truth = loadGroundTruth('derive-in-render');
   const range = ['expected', 'acceptableAttribution', 'lineRange'] as const;
+  const dominant = arrayAt(truth, ['expected', 'culpritLines']).find((line) =>
+    stringAt(line, ['role']).startsWith('the dominant cost'),
+  );
+  const dominantText = stringAt(dominant, ['expectedSourceText']).trim();
+  const callToken = /^\.\w+/.exec(dominantText)?.[0];
+  if (callToken === undefined) {
+    throw new Error(`the dominant culprit line begins with no call: ${dominantText}`);
+  }
   return {
     truth,
     component: stringAt(truth, ['expected', 'component']),
@@ -95,6 +150,12 @@ export function deriveInRenderTruth(): DeriveInRenderTruth {
     notAtFault: arrayAt(truth, ['notAtFault', 'components']).map((name, index) =>
       asString(name, ['notAtFault', 'components', index]),
     ),
+    dominant: { line: numberAt(dominant, ['line']), callToken },
+    loafSourceFunctionName: stringAt(truth, [
+      'observedJank',
+      'loafScriptAttribution',
+      'sourceFunctionName',
+    ]),
   };
 }
 
@@ -156,6 +217,11 @@ export interface VendorSlice {
   readonly charPosition: number;
   readonly loafFileName: string;
   readonly loafLine: number;
+  /**
+   * `loafAttributesTo.sourceFunctionName`: the empty string, by construction
+   * rather than measurement, because every listener is an anonymous arrow.
+   */
+  readonly loafSourceFunctionName: string;
   /** `trueOwner`: the function the slice's time was spent in. */
   readonly ownerFileName: string;
   readonly ownerFunction: string;
@@ -164,14 +230,15 @@ export interface VendorSlice {
   readonly expectedRank: number;
 }
 
-/**
- * Reads `vendor-listener`'s ground truth off disk, with its declared slices in
- * registration order, which is the order LoAF reports their script entries.
- */
-export function vendorListenerTruth(): {
+/** `vendor-listener`'s declared slices, as its tests compare against them. */
+export interface VendorListenerTruth {
   readonly truth: Json;
+  /** In registration order, which is the order LoAF reports their script entries. */
   readonly slices: readonly VendorSlice[];
-} {
+}
+
+/** Reads `vendor-listener`'s ground truth off disk; see `VendorListenerTruth`. */
+export function vendorListenerTruth(): VendorListenerTruth {
   const truth = loadGroundTruth('vendor-listener');
   const slices = arrayAt(truth, ['expected', 'slices']).map((slice, index) => ({
     slice: stringAt(slice, ['slice']),
@@ -179,6 +246,7 @@ export function vendorListenerTruth(): {
     charPosition: numberAt(slice, ['loafAttributesTo', 'sourceCharPosition']),
     loafFileName: fileNameOf(stringAt(slice, ['loafAttributesTo', 'sourceFile'])),
     loafLine: numberAt(slice, ['loafAttributesTo', 'line']),
+    loafSourceFunctionName: stringAt(slice, ['loafAttributesTo', 'sourceFunctionName']),
     ownerFileName: fileNameOf(stringAt(slice, ['trueOwner', 'sourceFile'])),
     ownerFunction: stringAt(slice, ['trueOwner', 'function']),
     ownerLine: numberAt(slice, ['trueOwner', 'definedAtLine']),

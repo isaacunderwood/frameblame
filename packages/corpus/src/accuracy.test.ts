@@ -4,11 +4,21 @@
  * evidence earns.
  *
  * Every assertion is made on what `attributeCapture` returns for a capture's
- * signals, and every expectation is read from the fixture's ground truth:
- * the culprit from its `expected` block, the tier from its `declaredTier`
- * (checked against the engine's vocabulary in `corpus.test.ts`). The
- * confidence levels are the engine's own rules under the step 5 decisions,
- * asserted as they stand; see `handoff.md`'s Questions for the morning.
+ * signals, except the thin-evidence test, which asks `attributeSampledFunctions`
+ * directly for the one population the whole answer does not expose: the
+ * samples inside long frames. The culprits are read from the fixture's ground
+ * truth: the component, file, lines and call token from its `expected` block,
+ * the names LoAF reports from `observedJank` and each slice's
+ * `loafAttributesTo`, and the tier from its `declaredTier` (checked against
+ * the engine's vocabulary in `corpus.test.ts`). The confidence levels are the
+ * engine's own rules under the step 5 decisions, asserted as they stand; see
+ * `handoff.md`'s Questions for the morning.
+ *
+ * What stays literal is what no ground truth declares: the interaction labels
+ * the drive plans (`replay`, `unforced`, `forced`, `three-listeners`, and the
+ * two `spans` rows chosen from the engine's output), the minified name `h` the
+ * production bundle ships for the component, and the engine's tier where a
+ * fixture declares none, each marked as such beside its assertion.
  *
  * Per fixture and build mode:
  *
@@ -16,7 +26,8 @@
  * | -------------------------- | ------------------------------------------------ | -------------------------------- | ---------- |
  * | derive-in-render, dev      | component `OrderTable` (`expected.component`)    | react-fiber-timings (undeclared) | high       |
  * | derive-in-render, prod     | component `OrderTable`                           | profiler-mapped (undeclared)     | moderate   |
- * | derive-in-render, both     | function on line 36, `.sort`, in 34-36           | profiler-mapped (`lineRange`)    | moderate   |
+ * | derive-in-render, both     | a function in 34-36, its call token as declared  | profiler-mapped (`lineRange`)    | moderate   |
+ * |                            | (line 36, `.sort`, in this capture)              |                                  |            |
  * | spans, dev                 | per interaction, the components that rendered    | react-fiber-timings (declared)   | high       |
  * | spans, prod                | the same names, at their declared sites          | profiler-mapped (undeclared)     | low        |
  * | innerhtml-rebuild, both    | unforced: an unattributed share above the floor  | unattributed (declared)          | moderate   |
@@ -56,6 +67,7 @@
 import {
   attributeCapture,
   attributeSampledFunctions,
+  type AttributionTier,
   type CandidateCause,
   type CaptureAttribution,
   type CapturedSignals,
@@ -64,21 +76,25 @@ import {
   type FunctionAttribution,
   type InteractionAttribution,
   isLowerConfidence,
+  isUsableSampleCount,
   longFramePopulation,
-  type RankedCauses,
+  type MergedComponents,
+  MIN_SAMPLES_TO_COMPARE_SHARES,
 } from '@frameblame/core';
 import { describe, expect, it } from 'vitest';
 
 import { BUILD_MODES, type BuildMode, loadGroundTruth } from './corpus.ts';
 import { declaredTierAt } from './ground-truth.ts';
-import { arrayAt, numberAt, stringAt } from './json.ts';
+import { arrayAt, type Json, type JsonPath, numberAt, stringAt } from './json.ts';
 import { loadSignals } from './records.ts';
 import {
   componentNamesOf,
   deriveInRenderTruth,
   fileNameOf,
   resolvedProfileOf,
+  scriptOf,
   spansTruth,
+  subjectOf,
   vendorListenerTruth,
 } from './test-support.ts';
 
@@ -101,10 +117,7 @@ function functionsOf(interaction: InteractionAttribution): FunctionAttribution {
 }
 
 /** An interaction's merged component ranking, which needs commits at one tier. */
-function mergedOf(interaction: InteractionAttribution): {
-  readonly tier: string;
-  readonly causes: RankedCauses;
-} {
+function mergedOf(interaction: InteractionAttribution): MergedComponents {
   const { components } = interaction;
   if (components.kind !== 'attributed' || components.merged === null) {
     throw new Error(`${interaction.interaction.label}: no merged component ranking`);
@@ -112,19 +125,35 @@ function mergedOf(interaction: InteractionAttribution): {
   return components.merged;
 }
 
-/** The script entry a candidate was cut from, read off its evidence. */
-function scriptIndexOf(cause: CandidateCause): number | null {
-  for (const evidence of cause.evidence) {
-    if (evidence.kind === 'loaf-script' || evidence.kind === 'forced-style-and-layout') {
-      return evidence.scriptIndex;
-    }
-  }
-  return null;
-}
-
 /** Fails a test that reached for a value it has no way to continue without. */
 function absent(what: string): never {
   throw new Error(`expected ${what}`);
+}
+
+/**
+ * The frames a per-frame claim is made of, which must not be none: a loop
+ * over no frames passes whatever it asserts. A guard against vacuity, not a
+ * count. How many long frames a capture holds is the threshold's business,
+ * and nothing here asserts it.
+ */
+function jankedFrames(
+  frames: readonly FrameAttribution[],
+  what: string,
+): readonly FrameAttribution[] {
+  if (frames.length === 0) throw new Error(`${what}: no long frame to assert on`);
+  return frames;
+}
+
+/**
+ * The tier a ground truth declares at `path` for `mode`, where the test
+ * relies on it declaring one. A missing mode fails here, naming the path,
+ * rather than as the engine's tier compared against `null`.
+ */
+function requiredTierAt(truth: Json, path: JsonPath, mode: BuildMode): AttributionTier {
+  return (
+    declaredTierAt(truth, path, mode) ??
+    absent(`a declaredTier for ${mode} at ${path.join('.')}`)
+  );
 }
 
 /** The line a function candidate is defined on, or `null` for any other subject. */
@@ -180,19 +209,23 @@ describe('derive-in-render: the declared component, and the declared function', 
      * with the rest of React's dispatcher entry at 1.5-12.1% (development,
      * 4x). `App` is a candidate at 0.2-2.2%, never within a tenth of it.
      */
-    for (const frame of replay.frames) {
-      const [first] = frame.causes.causes;
-      expect(first?.subject).toMatchObject({ kind: 'component', name: component });
-      expect(first?.tier).toBe('react-fiber-timings');
-      expect(first?.weight.basis).toBe('fiber-self-time-share');
-      expect(first?.weight.confidence.level).toBe('high');
+    for (const frame of jankedFrames(replay.frames, 'the replay')) {
+      const first = frame.causes.causes[0] ?? absent('a top candidate');
+      expect(first.subject).toMatchObject({ kind: 'component', name: component });
+      expect(first.tier).toBe('react-fiber-timings');
+      expect(first.weight.basis).toBe('fiber-self-time-share');
+      expect(first.weight.confidence.level).toBe('high');
       expect(frame.causes.lead).toBe('clear');
       expect(frame.causes.totalWeight).toBeCloseTo(1, 6);
       expect(frame.notes).toEqual([]);
-      for (const cause of frame.causes.causes) {
-        if (cause.subject.kind !== 'component') continue;
-        if (!notAtFault.includes(cause.subject.name)) continue;
-        expect(cause.weight.fraction).toBeLessThan((first?.weight.fraction ?? 0) / 10);
+      // The declared wrong answer is on offer, and far behind.
+      for (const wrong of notAtFault) {
+        expect(componentNamesOf(frame.causes.causes)).toContain(wrong);
+        const cause =
+          frame.causes.causes.find(
+            (each) => each.subject.kind === 'component' && each.subject.name === wrong,
+          ) ?? absent(`${wrong} among the frame's candidates`);
+        expect(cause.weight.fraction).toBeLessThan(first.weight.fraction / 10);
       }
     }
   });
@@ -241,7 +274,7 @@ describe('derive-in-render: the declared component, and the declared function', 
        */
       const [top, second] = replay.causes.causes;
       expect(replay.population.window).toBe('interaction');
-      expect(top?.tier).toBe(declaredTierAt(truth, lineRange.path, mode));
+      expect(top?.tier).toBe(requiredTierAt(truth, lineRange.path, mode));
       const line = definedOnLine(top);
       const token = callTokenOnLine(line);
       expect(token).not.toBeNull();
@@ -252,18 +285,14 @@ describe('derive-in-render: the declared component, and the declared function', 
       });
       expect(line).toBeGreaterThanOrEqual(from);
       expect(line).toBeLessThanOrEqual(to);
-      expect(
-        top?.subject.kind === 'source-location'
-          ? fileNameOf(top.subject.location.file)
-          : '',
-      ).toBe(fileName);
+      expect(fileNameOf(subjectOf(top).location.file)).toBe(fileName);
 
       // A stable estimate: enough samples for a usable range, and a first
       // candidate whose range clears the second's.
       expect(top?.weight.confidence.level).toBe('moderate');
       expect(replay.causes.lead).toBe('clear');
       expect(top?.weight.confidence.range.low).toBeGreaterThan(
-        second?.weight.confidence.range.high ?? 1,
+        (second ?? absent('a second candidate')).weight.confidence.range.high,
       );
 
       // The statement inside the function is not on offer, and the data says so.
@@ -280,13 +309,11 @@ describe('spans: the components that rendered, per interaction and per frame', (
     const answer = attributeCapture(loadSignals('spans', 'development'));
     expect(answer.workingFrom).toEqual([]);
 
+    // The declared tier, at the confidence a measurement earns.
+    const declared = requiredTierAt(truth, acceptable, 'development');
     for (const row of sequence) {
       const interaction = interactionOf(answer, row.id);
       const merged = mergedOf(interaction);
-
-      // The declared tier, at the confidence a measurement earns.
-      const declared = declaredTierAt(truth, acceptable, 'development');
-      expect(declared).not.toBeNull();
       expect(merged.tier).toBe(declared);
       expect(new Set(componentNamesOf(merged.causes.causes))).toEqual(
         new Set(row.rendered),
@@ -392,36 +419,22 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
     if (found === undefined) throw new Error(`no scenario ${label}`);
     return found;
   };
-  const floor = numberAt(scenario('unforced'), [
-    'correctAttribution',
-    'unattributedShareFloor',
-  ]);
+  const correct = ['correctAttribution'] as const;
+  const accepted = ['expected', 'acceptableAttribution'] as const;
+  const sampledListener = [...accepted, 'sampledListener'] as const;
+
+  const floor = numberAt(scenario('unforced'), [...correct, 'unattributedShareFloor']);
   const tierOf = (label: string, mode: BuildMode) =>
-    declaredTierAt(scenario(label), ['correctAttribution'], mode);
+    requiredTierAt(scenario(label), correct, mode);
   const agreement = numberAt(truth, [
     'expected',
     'unattributedCrossCheck',
     'agreementToleranceShare',
   ]);
-  const culpritFrom = numberAt(truth, [
-    'expected',
-    'acceptableAttribution',
-    'lineRange',
-    'from',
-  ]);
+  const culpritFrom = numberAt(truth, [...accepted, 'lineRange', 'from']);
   const listener = {
-    name: stringAt(truth, [
-      'expected',
-      'acceptableAttribution',
-      'sampledListener',
-      'function',
-    ]),
-    line: numberAt(truth, [
-      'expected',
-      'acceptableAttribution',
-      'sampledListener',
-      'line',
-    ]),
+    name: stringAt(truth, [...sampledListener, 'function']),
+    line: numberAt(truth, [...sampledListener, 'line']),
   };
 
   /** How far apart the two signals' shares are, for a frame that was checked. */
@@ -436,8 +449,7 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
   for (const mode of BUILD_MODES) {
     it(`${mode}/unforced: most of the frame is unattributed, and two signals agree on it`, () => {
       const answer = attributeCapture(loadSignals('innerhtml-rebuild', mode));
-      const { frames } = interactionOf(answer, 'unforced');
-      expect(frames.length).toBeGreaterThan(0);
+      const frames = jankedFrames(interactionOf(answer, 'unforced').frames, 'unforced');
 
       for (const frame of frames) {
         /*
@@ -469,18 +481,16 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
         for (const cause of frame.causes.causes) {
           if (cause.subject.kind !== 'unattributed') continue;
           expect(cause.weight.confidence.level).toBe('moderate');
-          const { support } = cause.weight.confidence;
-          if (support.kind !== 'subtraction') throw new Error('expected a subtraction');
-          expect(support).toEqual({
+          expect(cause.weight.confidence.support).toEqual({
             kind: 'subtraction',
             check: frame.unattributed.check,
-            gridShare: support.gridShare,
+            // The timing grid over the frame, which is what the range widens by.
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest types every asymmetric matcher as `any`; `toEqual` reads it as a matcher, not as a value.
+            gridShare: expect.closeTo(
+              COARSENED_TIMING_TOLERANCE_MS / frame.frame.durationMs,
+              12,
+            ),
           });
-          // The timing grid over the frame, which is what the range widens by.
-          expect(support.gridShare).toBeCloseTo(
-            COARSENED_TIMING_TOLERANCE_MS / frame.frame.durationMs,
-            12,
-          );
           expect(cause.evidence.map((evidence) => evidence.kind)).toContain(
             'empty-stack-share',
           );
@@ -512,8 +522,7 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
 
     it(`${mode}/forced: the same work, forced inside the script, is charged to that script`, () => {
       const answer = attributeCapture(loadSignals('innerhtml-rebuild', mode));
-      const { frames } = interactionOf(answer, 'forced');
-      expect(frames.length).toBeGreaterThan(0);
+      const frames = jankedFrames(interactionOf(answer, 'forced').frames, 'forced');
 
       for (const frame of frames) {
         /*
@@ -522,20 +531,20 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
          * and the top-ranked cause (4x, both build modes). It is the script
          * entry's own figure, nested in the entry and charged to it.
          */
-        const [top] = frame.causes.causes;
-        expect(top?.subject).toMatchObject({
+        const top = frame.causes.causes[0] ?? absent('a top candidate');
+        expect(top.subject).toMatchObject({
           kind: 'browser-work',
           what: 'forced-style-and-layout',
         });
-        expect(top?.tier).toBe(tierOf('forced', mode));
-        expect(top?.weight.confidence.level).toBe('high');
+        expect(top.tier).toBe(tierOf('forced', mode));
+        expect(top.weight.confidence.level).toBe('high');
         const forcingScript =
-          frame.frame.scripts[scriptIndexOf(top ?? absent('a top candidate')) ?? -1];
-        expect(top?.subject).toMatchObject({
-          forcedBy: { sourceCharPosition: forcingScript?.sourceCharPosition },
+          scriptOf(frame, top) ?? absent('the script entry that forced it');
+        expect(top.subject).toMatchObject({
+          forcedBy: { sourceCharPosition: forcingScript.sourceCharPosition },
         });
-        expect((top?.weight.fraction ?? 0) * frame.frame.durationMs).toBeCloseTo(
-          forcingScript?.forcedStyleAndLayoutDurationMs ?? -1,
+        expect(top.weight.fraction * frame.frame.durationMs).toBeCloseTo(
+          forcingScript.forcedStyleAndLayoutDurationMs,
           6,
         );
 
@@ -558,24 +567,29 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
 describe('vendor-listener: three slices, and the vendor at the confidence its samples support', () => {
   const { truth, slices: declared } = vendorListenerTruth();
 
+  /** The candidates of `frame` cut from its script entry at a LoAF offset. */
+  const candidatesAt = (
+    frame: FrameAttribution,
+    charPosition: number,
+  ): CandidateCause[] =>
+    frame.causes.causes.filter(
+      (cause) => scriptOf(frame, cause)?.sourceCharPosition === charPosition,
+    );
+
   for (const mode of BUILD_MODES) {
     it(`${mode}: ranks the three slices as declared, and names each one's true owner`, () => {
       const answer = attributeCapture(loadSignals('vendor-listener', mode));
-      const { frames } = interactionOf(answer, 'three-listeners');
-      expect(frames.length).toBeGreaterThan(0);
+      const frames = jankedFrames(
+        interactionOf(answer, 'three-listeners').frames,
+        'three-listeners',
+      );
 
       for (const frame of frames) {
-        /** The frame's candidates cut from the script entry at a LoAF offset. */
-        const ofSlice = (charPosition: number): CandidateCause[] =>
-          frame.causes.causes.filter((cause) => {
-            const index = scriptIndexOf(cause);
-            return (
-              index !== null &&
-              frame.frame.scripts[index]?.sourceCharPosition === charPosition
-            );
-          });
         const shareOf = (charPosition: number): number =>
-          ofSlice(charPosition).reduce((sum, cause) => sum + cause.weight.fraction, 0);
+          candidatesAt(frame, charPosition).reduce(
+            (sum, cause) => sum + cause.weight.fraction,
+            0,
+          );
 
         /*
          * Three slices, not one cause: forced layout at 66.4-74.6% of the
@@ -597,41 +611,52 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
 
         // Each slice's largest function is the one the ground truth says owns it.
         for (const slice of declared) {
-          const [owner] = ofSlice(slice.charPosition).filter(
+          const [owner] = candidatesAt(frame, slice.charPosition).filter(
             (cause) => cause.subject.kind === 'source-location',
           );
           expect(owner?.subject).toMatchObject({
             functionName: { text: slice.ownerFunction },
           });
           expect(definedOnLine(owner)).toBe(slice.ownerLine);
-          expect(
-            owner?.subject.kind === 'source-location'
-              ? fileNameOf(owner.subject.scriptUrl)
-              : '',
-          ).toBe(slice.ownerFileName);
+          expect(fileNameOf(subjectOf(owner).scriptUrl)).toBe(slice.ownerFileName);
+
+          /*
+           * The ground truth declares a tier for the vendor's owner only
+           * (`recoverableFrom`, asserted in the next test). For the two
+           * first-party owners it declares none, so `profiler-unmapped` here
+           * is the engine's rule, not the fixture's claim: a sample in a
+           * script served with no source map, which neither of this fixture's
+           * scripts carries in either build mode (4x).
+           */
+          expect(owner?.tier).toBe(
+            slice.isThirdParty
+              ? requiredTierAt(truth, [...slice.path, 'recoverableFrom'], mode)
+              : 'profiler-unmapped',
+          );
         }
       }
     });
 
     it(`${mode}: the vendor's share rests on independent samples, not on a burst`, () => {
       const answer = attributeCapture(loadSignals('vendor-listener', mode));
-      const { frames } = interactionOf(answer, 'three-listeners');
+      const frames = jankedFrames(
+        interactionOf(answer, 'three-listeners').frames,
+        'three-listeners',
+      );
       const vendor =
         declared.find((slice) => slice.isThirdParty) ?? absent('a third-party slice');
 
       for (const frame of frames) {
-        const [candidate] = frame.causes.causes.filter(
+        const [candidate] = candidatesAt(frame, vendor.charPosition).filter(
           (cause) =>
             cause.subject.kind === 'source-location' &&
-            fileNameOf(cause.subject.scriptUrl) === vendor.ownerFileName &&
-            frame.frame.scripts[scriptIndexOf(cause) ?? -1]?.sourceCharPosition ===
-              vendor.charPosition,
+            fileNameOf(cause.subject.scriptUrl) === vendor.ownerFileName,
         );
         if (candidate === undefined) throw new Error('no vendor candidate');
 
         // The declared tier, and the warning that goes with no source map.
         expect(candidate.tier).toBe(
-          declaredTierAt(truth, [...vendor.path, 'recoverableFrom'], mode),
+          requiredTierAt(truth, [...vendor.path, 'recoverableFrom'], mode),
         );
         expect(candidate.subject).toMatchObject({
           location: { throughSourceMap: false, whyNot: 'no-source-map' },
@@ -647,11 +672,12 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
          */
         const { support } = candidate.weight.confidence;
         if (support.kind !== 'sampled') throw new Error('expected a sampled weight');
-        const raw = candidate.evidence.flatMap((evidence) =>
-          evidence.kind === 'profiler-samples' ? [evidence] : [],
-        )[0];
-        expect(support.ofIndependentSamples).toBeLessThan(raw?.ofSamplesInWindow ?? 0);
-        expect(support.independentSamples).toBeLessThan(raw?.samples ?? 0);
+        const raw =
+          candidate.evidence.flatMap((evidence) =>
+            evidence.kind === 'profiler-samples' ? [evidence] : [],
+          )[0] ?? absent('the raw profiler-samples evidence');
+        expect(support.ofIndependentSamples).toBeLessThan(raw.ofSamplesInWindow);
+        expect(support.independentSamples).toBeLessThan(raw.samples);
         expect(candidate.weight.confidence.level).toBe('low');
         expect(candidate.weight.confidence.range.low).toBeLessThan(
           candidate.weight.fraction,
@@ -663,7 +689,8 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
 });
 
 describe('thin evidence: the answer may only be wrong where it says it is unsure', () => {
-  const { from, to } = deriveInRenderTruth().lineRange;
+  const { fileName, lineRange } = deriveInRenderTruth();
+  const { from, to } = lineRange;
 
   for (const mode of BUILD_MODES) {
     it(`derive-in-render/${mode}: inside long frames, a top function outside the declared range is never claimed`, async (context) => {
@@ -684,23 +711,24 @@ describe('thin evidence: the answer may only be wrong where it says it is unsure
        * low confidence, with a range of 15-85% on the one in front.
        *
        * Asserted as the rule rather than as those counts, which move with
-       * how many presses cleared the threshold: wherever the answer claims a
-       * clear lead at better than low confidence, its first candidate must be
-       * inside the declared range.
+       * how many presses cleared the threshold: wherever the first candidate
+       * is not a function in the declared file and range, the lead is not
+       * clear and every share is low confidence. That is stronger than
+       * forbidding only a clear lead at better than low confidence, because
+       * it also holds the candidates behind the first to the same bar.
        */
       const [top] = inFrame.causes.causes;
-      const claimed =
-        top !== undefined &&
-        inFrame.causes.lead === 'clear' &&
-        top.weight.confidence.level !== 'low';
       const line = definedOnLine(top);
-      const correct = line !== null && line >= from && line <= to;
+      const correct =
+        line !== null &&
+        line >= from &&
+        line <= to &&
+        fileNameOf(subjectOf(top).location.file) === fileName;
       await context.annotate(
         `${mode}, 4x: ${String(inFrame.stackedSamples)} stacked samples inside long frames; ` +
           `first candidate defined on line ${String(line)}, lead ${inFrame.causes.lead}, ` +
           `${top?.weight.confidence.level ?? 'no'} confidence`,
       );
-      if (claimed) expect(correct).toBe(true);
       if (!correct) {
         expect(inFrame.causes.lead).not.toBe('clear');
         for (const cause of inFrame.causes.causes) {
@@ -723,7 +751,7 @@ describe('thin evidence: the answer may only be wrong where it says it is unsure
      * still reports, is outside the profile rather than short of samples, and
      * says so in a note.
      */
-    for (const frame of answer.frames) {
+    for (const frame of jankedFrames(answer.frames, 'derive-in-render/development')) {
       const { check } = frame.unattributed;
       const unattributed = frame.causes.causes.filter(
         (cause) => cause.subject.kind === 'unattributed',
@@ -736,8 +764,13 @@ describe('thin evidence: the answer may only be wrong where it says it is unsure
         expect(frame.notes.some((note) => note.kind === 'frame-outside-profile')).toBe(
           check.reason === 'frame-outside-profile',
         );
+        if (check.reason === 'too-few-samples') {
+          expect(check.ofSamplesInFrame).toBeLessThan(MIN_SAMPLES_TO_COMPARE_SHARES);
+        }
       } else {
-        expect(check.ofSamplesInFrame).toBeGreaterThanOrEqual(5);
+        expect(check.ofSamplesInFrame).toBeGreaterThanOrEqual(
+          MIN_SAMPLES_TO_COMPARE_SHARES,
+        );
       }
     }
   });
@@ -825,6 +858,9 @@ describe('degraded tiers: a real capture with one signal removed', () => {
     const degraded = attributeCapture(
       withoutProfile(loadSignals('vendor-listener', 'development')),
     );
+    const { slices } = vendorListenerTruth();
+    const vendor =
+      slices.find((slice) => slice.isThirdParty) ?? absent('a third-party slice');
 
     /*
      * LoAF alone attributes all three slices to `app.js`, where the listeners
@@ -832,26 +868,31 @@ describe('degraded tiers: a real capture with one signal removed', () => {
      * answer says it is working from the registration site instead of
      * reporting a first-party frame as though it had looked.
      */
-    for (const frame of degraded.frames) {
-      const entries = frame.causes.causes.filter(
-        (cause) => cause.subject.kind === 'script-entry',
+    for (const frame of jankedFrames(degraded.frames, 'vendor-listener/development')) {
+      const entries = frame.causes.causes.flatMap((cause) =>
+        cause.subject.kind === 'script-entry'
+          ? [{ cause, site: cause.subject.site }]
+          : [],
       );
       expect(entries).toHaveLength(frame.frame.scripts.length);
-      for (const entry of entries) {
-        expect(entry.tier).toBe('loaf-script-registration');
-        expect(entry.subject).toMatchObject({ scope: 'whole-entry' });
-        expect(
-          entry.subject.kind === 'script-entry'
-            ? fileNameOf(entry.subject.site.sourceUrl ?? '')
-            : '',
-        ).toBe('app.js');
+      for (const { cause, site } of entries) {
+        expect(cause.tier).toBe('loaf-script-registration');
+        expect(cause.subject).toMatchObject({ scope: 'whole-entry' });
+        // The file the ground truth says LoAF attributes this slice to.
+        const slice =
+          slices.find((each) => each.charPosition === site.sourceCharPosition) ??
+          absent(`a declared slice at offset ${String(site.sourceCharPosition)}`);
+        expect(fileNameOf(site.sourceUrl ?? absent('a registration URL'))).toBe(
+          slice.loafFileName,
+        );
       }
-      expect(JSON.stringify(frame.causes.causes)).not.toContain('vendor.js');
+      expect(JSON.stringify(frame.causes.causes)).not.toContain(vendor.ownerFileName);
       expect(frame.causes.totalWeight).toBeCloseTo(1, 6);
     }
   });
 
   it('no profiler, derive-in-render/development: the component is still measured, and the function is gone', () => {
+    const { component, loafSourceFunctionName } = deriveInRenderTruth();
     const signals = loadSignals('derive-in-render', 'development');
     const degraded = attributeCapture(withoutProfile(signals));
 
@@ -859,19 +900,19 @@ describe('degraded tiers: a real capture with one signal removed', () => {
     const replay = interactionOf(degraded, 'replay');
     const merged = mergedOf(replay);
     expect(merged.tier).toBe('react-fiber-timings');
-    expect(merged.causes.causes[0]?.subject).toMatchObject({ name: 'OrderTable' });
+    expect(merged.causes.causes[0]?.subject).toMatchObject({ name: component });
     expect(merged.causes.causes[0]?.weight.confidence.level).toBe('high');
     expect(replay.functions.kind).toBe('unavailable');
 
     // What is left of each dispatcher entry is named as LoAF named it.
-    for (const frame of replay.frames) {
-      expect(frame.causes.causes[0]?.subject).toMatchObject({ name: 'OrderTable' });
+    for (const frame of jankedFrames(replay.frames, 'the replay')) {
+      expect(frame.causes.causes[0]?.subject).toMatchObject({ name: component });
       expect(
         frame.causes.causes.find((cause) => cause.subject.kind === 'script-entry')
           ?.subject,
       ).toMatchObject({
         scope: 'outside-component-renders',
-        site: { sourceFunctionName: 'dispatchDiscreteEvent' },
+        site: { sourceFunctionName: loafSourceFunctionName },
       });
       expect(frame.unattributed.check).toEqual({
         verdict: 'unchecked',
@@ -911,8 +952,11 @@ describe('degraded tiers: a real capture with one signal removed', () => {
      * time at the registration tier, and the commit's components are on its
      * evidence: inferred from the overlap, named, and not weighed.
      */
-    for (const frame of degraded.frames) {
-      if (frame.commits.length === 0) continue;
+    const withCommits = jankedFrames(
+      degraded.frames.filter((frame) => frame.commits.length > 0),
+      'derive-in-render/production, frames a commit landed in',
+    );
+    for (const frame of withCommits) {
       const entry = frame.causes.causes.find(
         (cause) => cause.subject.kind === 'script-entry',
       );
@@ -927,6 +971,7 @@ describe('degraded tiers: a real capture with one signal removed', () => {
   });
 
   it('no React hook, derive-in-render/development: source-level attribution, from the profiler', () => {
+    const { dominant } = deriveInRenderTruth();
     const signals = loadSignals('derive-in-render', 'development');
     const degraded = attributeCapture({
       ...signals,
@@ -946,26 +991,33 @@ describe('degraded tiers: a real capture with one signal removed', () => {
      * samples, 39 of them in the `.sort` comparator (development, 4x). The
      * pool names the function; each frame's own slice holds 3 to 6 of those
      * samples, so how that frame split is a guess, and the level is `low`.
+     *
+     * Asserted as that rule rather than as the 59, which is the long-frame
+     * population's sample count and moves with how many presses cleared the
+     * threshold: the pool is a usable sample count, and the frame's own
+     * slice is not.
      */
-    for (const frame of replay.frames) {
-      const [top] = frame.causes.causes;
-      expect(top?.tier).toBe('profiler-mapped');
-      expect(top?.weight.basis).toBe('frame-slice-sample-share');
-      expect(top?.subject).toMatchObject({
+    for (const frame of jankedFrames(replay.frames, 'the replay')) {
+      const top = frame.causes.causes[0] ?? absent('a top candidate');
+      expect(top.tier).toBe('profiler-mapped');
+      expect(top.weight.basis).toBe('frame-slice-sample-share');
+      expect(top.subject).toMatchObject({
         kind: 'source-location',
-        enclosingCallToken: '.sort',
+        enclosingCallToken: dominant.callToken,
       });
-      expect(definedOnLine(top)).toBe(36);
-      expect(top?.weight.confidence.level).toBe('low');
-      expect(top?.weight.confidence.support).toMatchObject({
-        kind: 'sampled',
-        ofIndependentSamples: 59,
-      });
+      expect(definedOnLine(top)).toBe(dominant.line);
+      expect(top.weight.confidence.level).toBe('low');
+      const { support } = top.weight.confidence;
+      if (support.kind !== 'sampled' || support.inOwnWindow === null) {
+        throw new Error('expected a sampled weight with the frame slice counted apart');
+      }
+      expect(isUsableSampleCount(support.ofIndependentSamples)).toBe(true);
+      expect(isUsableSampleCount(support.inOwnWindow)).toBe(false);
       expect(
         frame.causes.causes.some((cause) => cause.subject.kind === 'component'),
       ).toBe(false);
     }
-    expect(definedOnLine(functionsOf(replay).causes.causes[0])).toBe(36);
+    expect(definedOnLine(functionsOf(replay).causes.causes[0])).toBe(dominant.line);
   });
 
   it('no source map, derive-in-render/production: a minified name, with the warning', () => {

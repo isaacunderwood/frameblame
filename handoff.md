@@ -989,7 +989,7 @@ interaction window, which now goes through `framesOfInteraction`.
 
 | old `corpus.test.ts` claim | now |
 | --- | --- |
-| derive-in-render: 60%+ of the replay's `OrderTable.tsx` samples in 34-36, line 36 first | `lines.test.ts` `derive-in-render: the profiler names the function on the declared line` (same population, floor and file filter); `accuracy.test.ts` asserts the line-36 function first at the declared tier. The previous capture's in-frame shares, which the old comment quoted, are in the ground truth's `shareInDeclaredRangeAcrossCaptures`. |
+| derive-in-render: 60%+ of the replay's `OrderTable.tsx` samples in 34-36, line 36 first | `lines.test.ts` `derive-in-render: the profiler names the function on the declared line` (same population, floor and file filter); `accuracy.test.ts` asserts a function in 34-36 first, its call token as declared (line 36, `.sort`, in this capture), at the declared tier. The previous capture's in-frame shares, which the old comment quoted, are in the ground truth's `shareInDeclaredRangeAcrossCaptures`. |
 | vendor-listener: each offset resolves to its registration line in `app.js`; no function name; `vendor.js` named nowhere | `records.test.ts` `vendor-listener … > {mode}: LoAF locates each listener at the line that registered it, in app.js`. It is a claim about the raw signal, and it now covers every frame in both modes instead of one development frame. |
 | innerhtml unforced: zero style/layout, residual above 70% | `records.test.ts` `innerhtml-rebuild … > {mode}: the unforced rebuild is mostly unattributed` (now both modes) |
 | innerhtml unforced: pooled empty-stack share above 40% | `accuracy.test.ts` `{mode}/unforced`: per-frame cross-check verdict `agrees` within the ground truth's tolerance. This is stronger, because it is per frame rather than pooled with the forced frames. |
@@ -1035,9 +1035,12 @@ misspelt one also fails `corpus.test.ts`.
 - `spans` in production;
 - `vendor-listener`'s slice ranking and its two first-party owners.
 
-For each, the suite asserts the culprit and the tier the engine's rule gives (react-fiber-timings
-in development, profiler-mapped in production), and says beside the assertion that the fixture
-does not declare it. `spans` production asserts that `declaredTierAt` returns `null`, so the gap
+For each, the suite asserts the culprit, and says beside the assertion that the fixture does not
+declare a tier for it. Where it asserts a tier, it is the one the engine's rule gives:
+react-fiber-timings in development and profiler-mapped in production for `derive-in-render`'s
+component and for `spans`, and profiler-unmapped for `vendor-listener`'s two first-party owners,
+whose scripts carry no source map in either mode (4x). The slice ranking has no tier asserted:
+its candidates are the slices' own causes, at whatever tier each was cut. `spans` production asserts that `declaredTierAt` returns `null`, so the gap
 is visible in the test.
 
 **Choices made without a human**, each the conservative option:
@@ -1059,8 +1062,8 @@ is visible in the test.
   116.7-148.8ms).
 - The `spans` mount commit lands at 239.4ms in development and 175.8ms in production, inside a
   window opening at 0.
-- The unpainted frames are `derive-in-render`'s last frame in each mode: 13 of 14 in development,
-  starting at 60943.7ms, and 2 of 3 in production, at 115168.1ms. They are 2 of the corpus's 53
+- The unpainted frames are `derive-in-render`'s last frame in each mode: the 14th of 14 in
+  development, starting at 60943.7ms, and the 3rd of 3 in production, at 115168.1ms. They are 2 of the corpus's 53
   frames.
 - `vendor-listener` offsets 9092, 9268 and 9443 resolve to lines 188, 192 and 196 on every frame
   in both modes.
@@ -1110,6 +1113,54 @@ is accepted. They tighten assertions or correct wording; none changes the engine
   … 120ms wait" illustration is marked as rounded, with its measured range and mode.
 - **F6.** No change. The one remaining window lookup is over React spans, touches no samples or
   frames, and is disclosed.
+
+### Step 6 — closed
+
+The fix pass applied every accepted finding. `pnpm check` is green at 297 tests (161 core, 136
+corpus), and the engine code in `packages/core` is unchanged.
+
+## Overnight run — finished
+
+Steps 0, 3, 4, 5 and 6 are done. Each one went through a refactor, a review and a fix. The gate is
+green at 297 tests, against 114 when the night started, and `pnpm build` passes. Every commit is
+pushed to `origin/v0.3-engine`. No pull request was opened; that is a morning decision.
+
+What exists now:
+- **Collector and corpus:** fiber linkage and render evidence, the forced style/layout split, and
+  all eight runs re-captured in one pass.
+- **The engine,** with `attributeCapture` as its single entry point:
+  - **React tier:** components ranked by fiber self time, spans used only as corroboration, and a
+    commit with no frame still counted.
+  - **Profiler tier:** stacks resolved through shipped source maps, at function level with a line
+    attached.
+  - **Confidence:** every weight carries how it was arrived at, a range and a level. Remainders are
+    explicit, cross-checked against the in-frame empty-stack share.
+- **The accuracy suite:** `packages/corpus/src/accuracy.test.ts`. Each fixture's culprit and tier
+  are asserted against a `declaredTier` the ground truth already claimed. No test walks a stack by
+  hand, partitions a frame by hand, or counts long frames.
+
+Figures the reviews corrected, with the record kept:
+- `findings.md` point 4, on source-map bias: measured with the column off by one.
+- A press count that included the page load.
+- Several stale or misstated comment figures.
+- A `.prettierignore` pattern that kept `packages/corpus` out of the format check.
+
+No review found a fabricated figure.
+
+**What the next session should pick up: a step back, not step 7.** The user decided this on
+2026-11-15, after a sanity check. The idea is sound, but the ratio of process to product is high:
+this file is over 1,100 lines, and the engine has no user-facing output and has only been tested on
+four fixtures built to make one claim each. In order:
+1. **Run the engine on one real React app the user did not write.** That tests whether it
+   generalises, and it will say more than another review cycle on the fixtures.
+2. Answer the Questions for the morning below. Several of them are confidence-model trade-offs
+   that real data would inform.
+3. Condense this file. The overnight log belongs in git history and in a short summary, not here
+   in full.
+
+Do not propose new steps, features or review machinery before that step back. `overnight-run.md`
+asked to be deleted when the work was done, and it has been. Its text is in git history at
+`b96d570`.
 
 ## Questions for the morning
 

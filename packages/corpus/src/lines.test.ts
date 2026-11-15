@@ -25,12 +25,10 @@
 import {
   attributeSampledFunctions,
   attributeScriptEntries,
-  type CandidateCause,
   chargedSamples,
   describeScriptEntry,
   describeSourceLocation,
   type FunctionAttribution,
-  type FunctionSubject,
   interactionPopulation,
   longFramePopulation,
   type ScriptEntryAttribution,
@@ -38,24 +36,14 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { BUILD_MODES, type BuildMode } from './corpus.ts';
-import { arrayAt, numberAt, stringAt } from './json.ts';
 import {
   deriveInRenderTruth,
   fileNameOf,
   resolvedProfileOf,
+  subjectOf,
   type VendorSlice,
   vendorListenerTruth,
 } from './test-support.ts';
-
-/** A candidate's subject, which in this tier is always a source location. */
-function subjectOf(cause: CandidateCause | undefined): FunctionSubject {
-  if (cause?.subject.kind !== 'source-location') {
-    throw new Error(
-      `expected a source-location candidate, got ${String(cause?.subject.kind)}`,
-    );
-  }
-  return cause.subject;
-}
 
 /** As `resolvedProfileOf`, with the engine's attribution over the replay population. */
 function replayOf(fixture: string, mode: BuildMode) {
@@ -93,12 +81,10 @@ function shareInRange(
 }
 
 describe('derive-in-render: the profiler names the function on the declared line', () => {
-  const { truth, component, fileName, lineRange, notAtFault } = deriveInRenderTruth();
+  const { component, fileName, lineRange, notAtFault, dominant, loafSourceFunctionName } =
+    deriveInRenderTruth();
   const { from, to } = lineRange;
-  const dominant = arrayAt(truth, ['expected', 'culpritLines']).find((line) =>
-    stringAt(line, ['role']).startsWith('the dominant cost'),
-  );
-  const dominantLine = numberAt(dominant, ['line']);
+  const dominantLine = dominant.line;
 
   for (const mode of BUILD_MODES) {
     it(`${mode}: the function defined on line ${String(dominantLine)} ranks first over the replay, and most samples are charged to functions defined in ${String(from)}-${String(to)}`, async (context) => {
@@ -226,11 +212,7 @@ describe('derive-in-render: the profiler names the function on the declared line
      * In production both are one bundle, so the same disagreement is a
      * difference of function rather than of script, and is not flagged.
      */
-    const declared = stringAt(truth, [
-      'observedJank',
-      'loafScriptAttribution',
-      'sourceFunctionName',
-    ]);
+    const declared = loafSourceFunctionName;
     const entry = attributeScriptEntries(signals, resolved).find(
       (candidate) => candidate.site.sourceFunctionName === declared,
     );
