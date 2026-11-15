@@ -19,9 +19,9 @@
  * around it.
  *
  * What this module does not do: decide which component caused a frame, pair a
- * commit with a frame, or compute self time — see the warning on
- * `RenderedFiber.actualDurationMs`, which is the one piece of arithmetic here
- * that the captured records cannot support.
+ * commit with a frame, or compute self time. Self time is the React tier's
+ * arithmetic, over the parent links described at `CommitComponents` — which
+ * a capture made before the collector recorded them does not have.
  *
  * **Clock.** Page-clock `performance.now()` milliseconds, shared with LoAF and
  * the profiler.
@@ -76,10 +76,11 @@ export interface RenderedFiber {
    * all, its child did — as 5.9x its real contribution.
    *
    * Self time is `actualDuration - sum(children.actualDuration)`, which is what
-   * React itself computes. **But see the note on `ReactCommit.components`: the
-   * captured records carry no parent links, so that subtraction is not
-   * generally computable from a dump.** It is deliberately not offered as a
-   * function here.
+   * React itself computes, and the children it needs are the fibers whose
+   * `parentId` names this one — see `LinkedFiber`. Captures made before the
+   * collector recorded those links (every run in `corpus/` until the v0.3
+   * re-capture) carry no tree, so for them the subtraction is computable only
+   * where the tree's shape is known from somewhere else.
    *
    * Where this and a component span both existed for one component they agreed
    * to about a millisecond (45.0 against 45.0, 45.5 against 45.6), so the
@@ -100,16 +101,131 @@ export interface RenderedFiber {
 }
 
 /**
- * One commit, as `onCommitFiberRoot` reported it.
+ * An index into one commit's fiber list, and meaningful only within that
+ * commit.
  *
- * **`components` is flat and carries no parent links.** That is a property of
- * the capture, not of React: the collector walked the fiber tree and recorded
- * each component's name and timings without its position in the tree. The
- * consequence is specific and worth stating before anyone builds on it — self
- * time, which needs a component's children, is recoverable from these records
- * only when the tree's shape is known from somewhere else. It happens to be
- * known for both React fixtures in the corpus, which are one root over flat
- * siblings. It would not be for a real app.
+ * Not a longer-lived identity because the capture has none to offer: React
+ * double-buffers the fiber tree, so the object representing a component
+ * alternates between two from one commit to the next. Matching a component
+ * across commits is by name, scoped to one bundle — see `RenderedFiber.name`.
+ */
+export type FiberId = number;
+
+/**
+ * A fiber together with its position in the commit's component tree.
+ *
+ * `parentId` names the **nearest component ancestor**, not React's own parent
+ * fiber. The two differ wherever a host element sits between components, and
+ * host elements are not recorded. Over the recorded set the subtraction still
+ * means what it should: a fiber's children are the fibers whose `parentId` is
+ * its `id`, and `actualDurationMs - sum(children.actualDurationMs)` is its own
+ * render time *plus* that of the host elements it rendered directly. React's
+ * own subtraction runs over every direct child, host fibers included, so it
+ * would give those host fibers their own share; charging it to the component
+ * instead is the right blame, since the component is what a developer would
+ * change.
+ *
+ * The subtraction is only sound over fibers that took part in this commit,
+ * which is what `render` is for: the collector records every component fiber
+ * in the committed tree, and some of them are a previous commit's objects
+ * carrying a previous render's `actualDuration`. See `FiberRenderEvidence`.
+ */
+export interface LinkedFiber extends RenderedFiber {
+  /** Its index in the commit's `fibers`. */
+  readonly id: FiberId;
+  /**
+   * The nearest component ancestor's `id`, always lower than this fiber's own,
+   * or `null` for a component with no component above it.
+   */
+  readonly parentId: FiberId | null;
+  readonly render: FiberRenderEvidence;
+}
+
+/**
+ * The raw evidence for whether a fiber rendered in its commit, recorded by the
+ * same collector change as the parent links.
+ *
+ * Raw rather than a `rendered: boolean`, because "rendered" is the engine's
+ * judgement to make and its inputs are React internals: a boolean the collector
+ * computed could not be re-derived if the judgement turned out wrong, and the
+ * capture cannot be repeated.
+ *
+ * Checked against the React the fixtures pin, 19.3.1, in
+ * `react-dom/cjs/react-dom-client.development.js`. A component fiber in the
+ * committed tree is one of three things:
+ *
+ * 1. **Rendered.** Its render function ran, which sets `PerformedWork`, bit 0
+ *    of `flags` (`updateFunctionComponent` at :10584, `updateForwardRef` at
+ *    :10138, `updateMemoComponent` at :10197, `updateClassComponent` at
+ *    :11132). Its `actualDuration` is this commit's.
+ * 2. **Cloned and bailed out.** React made a work-in-progress copy and called
+ *    nothing. `createWorkInProgress` (:5105) resets the copy's `actualDuration`
+ *    to `-0` rather than copying it (:5128, and the constructor at :5087), and
+ *    masks `flags` to the static bits (:5130), which clears `PerformedWork`.
+ *    `selfBaseDuration` *is* copied (:5150), which is why the corpus shows
+ *    bailed-out fibers at 0ms actual and 25ms base.
+ * 3. **Carried over.** An ancestor bailed out with no work beneath it, so
+ *    React returned without cloning its children (:11883-11894) and the
+ *    committed tree points at the previous commit's fiber objects. Their
+ *    `actualDuration` and `flags` are whatever their last render left —
+ *    `PerformedWork` included, so the flag alone misreads them as rendered.
+ *    React's own `bubbleProperties` detects this case as
+ *    `alternate.child === child` and leaves those children out of the
+ *    parent's `actualDuration` (:12823-12842), so subtracting them from it is
+ *    what would make a self time negative.
+ *
+ * React DevTools makes the same call in `recordProfilingDurations`: a fiber
+ * counts if it has no previous fiber (a mount) or if it is not the previous
+ * fiber itself (not carried over) and `didFiberRender` says so — which, for
+ * function, class, forwardRef, memo and context consumer fibers, is the
+ * `PerformedWork` bit, and for other kinds compares props, state and ref with
+ * the previous fiber. (`react-devtools-shared/src/backend/fiber/renderer.js`
+ * and `shared/DevToolsFiberChangeDetection.js`, read on GitHub's `main` on
+ * 2026-11-15; DevTools is not in this repo's dependencies.)
+ *
+ * The corpus's two React fixtures are one root over flat siblings, so case 3
+ * may simply never occur in them. That is a property of the fixtures, not
+ * evidence that it is rare.
+ */
+export interface FiberRenderEvidence {
+  /** React's raw effect bitmask at commit time. Bit 0 is `PerformedWork`. */
+  readonly flags: number;
+  /** `false` when the fiber has no alternate, which is a fiber mounting in this commit. */
+  readonly hasAlternate: boolean;
+  /**
+   * Whether this is a previous commit's fiber object that React never reached
+   * in this render — case 3 above. Computed during the walk rather than
+   * recorded raw, because the test runs on every fiber on the path, host fibers
+   * included, and host fibers are not in the record.
+   */
+  readonly carriedOver: boolean;
+}
+
+/**
+ * A commit's component fibers, and whether the capture recorded how they nest.
+ *
+ * A union on the capture rather than a nullable `parentId` on each fiber,
+ * because linkage is a property of the collector that wrote the record, not of
+ * any one fiber: a commit is linked throughout or not at all, and a nullable
+ * field would make "this fiber is a root" and "nobody recorded this fiber's
+ * parent" the same value.
+ *
+ * - `recorded`: the collector stored each fiber's `id`, `parentId` and render
+ *   evidence, so self time is computable from the record alone. The two
+ *   arrived in one collector change and self time needs both, so they are one
+ *   variant rather than two independent optional halves.
+ * - `unrecorded`: the fibers are flat, as every capture made before the v0.3
+ *   collector change is. Self time is recoverable from these only when the
+ *   tree's shape is known from somewhere else. It happens to be known for both
+ *   React fixtures in the corpus, which are one root over flat siblings. It
+ *   would not be for a real app.
+ */
+export type CommitComponents =
+  | { readonly linkage: 'recorded'; readonly fibers: readonly LinkedFiber[] }
+  | { readonly linkage: 'unrecorded'; readonly fibers: readonly RenderedFiber[] };
+
+/**
+ * One commit, as `onCommitFiberRoot` reported it.
  */
 export interface ReactCommit {
   /**
@@ -144,8 +260,19 @@ export interface ReactCommit {
    * Measured at 0-0.7ms.
    */
   readonly collectionCostMs: number;
-  /** Flat, unordered with respect to the tree. See the note on this interface. */
-  readonly components: readonly RenderedFiber[];
+  /**
+   * Whether the collector's walk hit its 10,000-fiber cap and left fibers out,
+   * or `null` for a capture made before the collector recorded it.
+   *
+   * When `true`, every ancestor of a missing fiber has its self time overstated
+   * by the missing subtree, and nothing in `components` shows which ones.
+   */
+  readonly truncated: boolean | null;
+  /**
+   * In the order the collector walked the tree, which visits a fiber's
+   * ancestors before it. See `CommitComponents` for what is linked and when.
+   */
+  readonly components: CommitComponents;
 }
 
 /** One `[label, value]` row out of a span's detail, parsed but not trusted. */

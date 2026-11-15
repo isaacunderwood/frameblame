@@ -131,6 +131,13 @@ export function nullableNumberAt(value: Json | undefined, path: JsonPath): numbe
   return asNumber(found, path);
 }
 
+/** As `nullableNumberAt`, for a boolean. */
+export function nullableBooleanAt(value: Json | undefined, path: JsonPath): boolean | null {
+  const found = get(value, path);
+  if (found === null || found === undefined) return null;
+  return asBoolean(found, path);
+}
+
 /** As `nullableNumberAt`, for a string. */
 export function nullableStringAt(value: Json | undefined, path: JsonPath): string | null {
   const found = get(value, path);

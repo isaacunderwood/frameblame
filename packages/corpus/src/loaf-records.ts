@@ -38,18 +38,21 @@ import {
  * agree on every shared field across all 80 entries in the corpus, and neither
  * is complete:
  *
- * - Only `toJSON` carries `forcedStyleDuration` and `forcedLayoutDuration`. The
- *   hand-written projection predates the discovery that Chrome ships them —
- *   `findings.md` still has an open item saying the split is unavailable from
- *   the entry — because the projection was written from the same hand-transcribed
- *   ambient declarations that missed them.
+ * - In captures made before step 0.2 of the v0.3 run, only `toJSON` carries
+ *   `forcedStyleDuration` and `forcedLayoutDuration`. The hand-written
+ *   projection predated the discovery that Chrome ships them — `findings.md`
+ *   long had an open item saying the split was unavailable from the entry —
+ *   because it was written from the same hand-transcribed ambient declarations
+ *   that missed them. The collector now projects both, as `null` where the
+ *   browser lacks them.
  * - Only the projection carries `sourceLine` and `sourceColumn`, which Chrome's
  *   `toJSON` omits entirely and which are `null` in every capture anyway,
  *   because the Blink features that populate them are off by default.
  *
  * So the authoritative copy is `toJSON`, and the projection is consulted for
- * exactly the two fields it alone has. Passing `projected` as `undefined` is
- * fine: both fields become `null`, which is what they are.
+ * the two fields it alone has, and for the forced split where `toJSON` lacks
+ * it. Passing `projected` as `undefined` is fine: every field read from it
+ * becomes `null`, which is what it is.
  */
 function readScript(serialised: JsonObject, projected: Json | undefined): FrameScript {
   // Chrome's "unknown" sentinel is -1, and it is the only negative number
@@ -71,8 +74,14 @@ function readScript(serialised: JsonObject, projected: Json | undefined): FrameS
     sourceColumn: nullableNumberAt(projected, ['sourceColumn']),
     pauseDurationMs: numberAt(serialised, ['pauseDuration']),
     forcedStyleAndLayoutDurationMs: numberAt(serialised, ['forcedStyleAndLayoutDuration']),
-    forcedStyleDurationMs: nullableNumberAt(serialised, ['forcedStyleDuration']),
-    forcedLayoutDurationMs: nullableNumberAt(serialised, ['forcedLayoutDuration']),
+    // Absent from both copies means the browser did not report the split, and
+    // stays `null`: a zero would claim it measured no forced style work.
+    forcedStyleDurationMs:
+      nullableNumberAt(serialised, ['forcedStyleDuration']) ??
+      nullableNumberAt(projected, ['forcedStyleDuration']),
+    forcedLayoutDurationMs:
+      nullableNumberAt(serialised, ['forcedLayoutDuration']) ??
+      nullableNumberAt(projected, ['forcedLayoutDuration']),
     windowAttribution: stringAt(serialised, ['windowAttribution']),
   };
 }

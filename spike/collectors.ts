@@ -133,27 +133,114 @@ export async function installCollectors(
       return null;
     }
 
-    function describeCommit(root: ReactFiberRoot): unknown[] {
+    /**
+     * The commit's component fibers, flat, each carrying an `id` and the `id`
+     * of its nearest component ancestor as `parentId`.
+     *
+     * **The id scheme.** A fiber's `id` is its index in the returned array, so
+     * it is meaningful within one commit's record and nowhere else. Fiber
+     * objects cannot supply a longer-lived identity: React double-buffers the
+     * tree, so the object a component is represented by alternates between two
+     * from one commit to the next. Ids are assigned in walk order, and the walk
+     * only reaches a fiber after it has emitted the fiber's ancestors, so a
+     * `parentId` always names an earlier entry — a reader can link the list in
+     * one pass, and a walk cut short by the cap below loses descendants but
+     * never leaves a dangling parent.
+     *
+     * **Why "nearest component ancestor" rather than React's own parent.**
+     * Host elements and text are not recorded, so a component's real parent
+     * fiber is often a `div` that is not in the list. Linking to the nearest
+     * ancestor that *is* recorded keeps the subtraction
+     * `actualDuration - sum(children.actualDuration)` meaningful over the
+     * recorded set, where a component's children are its nearest component
+     * descendants. React computes the same subtraction over every direct fiber
+     * child, host fibers included; the difference is the host fibers' own
+     * time, which this scheme charges to the component that rendered them —
+     * the component a developer would have to change. `parentId` is `null` for
+     * a component with no component above it.
+     *
+     * **Whether a fiber rendered in this commit.** The walk visits every
+     * component fiber in the committed tree, and many of them did no work in
+     * this commit. Two different things can be true of one that did not, and
+     * they leave different evidence, so both are recorded raw:
+     *
+     * 1. React *cloned* the fiber for this render, called nothing, and bailed
+     *    out. `createWorkInProgress` resets a clone's `actualDuration` to `-0`
+     *    rather than copying it, and masks its `flags` down to the static bits,
+     *    which clears `PerformedWork` (bit 0); only a component whose render
+     *    function actually ran sets it again. React DevTools reads exactly that
+     *    bit to decide whether a function, class, forwardRef, memo or context
+     *    consumer fiber rendered. So the raw `flags` are recorded, not a
+     *    boolean made from them, because which bits matter is an
+     *    implementation detail DevTools itself calls leaked, and a reader can
+     *    re-derive a boolean but never recover the bits from one.
+     * 2. React *never reached* the fiber: an ancestor bailed out with no work
+     *    below it, so React did not clone its children at all and the
+     *    committed tree points at the previous commit's fiber objects. Those
+     *    keep whatever `actualDuration` and `flags` their last render left,
+     *    `PerformedWork` included. React's own `bubbleProperties` recognises the
+     *    case as `alternate.child === child` and leaves those children's
+     *    durations out of the parent's sum, so a self-time subtraction that
+     *    subtracted them would go negative. That test needs every fiber on the
+     *    path, host fibers included, and host fibers are not recorded, so it is
+     *    applied here, during the walk, and carried down as `carriedOver`.
+     *
+     * `hasAlternate` is the remaining raw fact: `false` is a fiber mounting in
+     * this commit, which DevTools always counts as rendered.
+     *
+     * Checked against the React the fixtures pin, 19.3.1,
+     * `react-dom/cjs/react-dom-client.development.js`: `createWorkInProgress`
+     * at :5105-5129, the static mask at :5130, the bailout that skips cloning
+     * children at :11883-11894, and `bubbleProperties` at :12823-12842. The
+     * DevTools side is `didFiberRender` in
+     * `react-devtools-shared/src/backend/fiber/shared/DevToolsFiberChangeDetection.js`
+     * and its call in `recordProfilingDurations`, which also requires
+     * `prevFiber !== fiber` — the carried-over case.
+     */
+    function describeCommit(root: ReactFiberRoot): {
+      components: unknown[];
+      truncated: boolean;
+    } {
       const components: unknown[] = [];
-      const pending: ReactFiber[] = [];
+      // Each pending fiber travels with the id of the nearest component above
+      // it, because by the time it is popped the walk has moved elsewhere and
+      // a fiber's `return` would lead back through unrecorded host fibers. It
+      // carries whether it is a previous commit's object for the same reason.
+      const pending: {
+        fiber: ReactFiber;
+        parentId: number | null;
+        carriedOver: boolean;
+      }[] = [];
+      // The root's current fiber is this commit's finished work, so it is
+      // never carried over itself; its children may be.
       const firstFiber = root.current;
-      if (firstFiber) pending.push(firstFiber);
+      if (firstFiber)
+        pending.push({ fiber: firstFiber, parentId: null, carriedOver: false });
 
       // Iterative so a deep tree cannot overflow the stack inside a callback
       // React is waiting on, and capped so a pathological tree cannot turn
       // collection itself into the slow thing being measured.
       let visited = 0;
       while (pending.length > 0 && visited < 10_000) {
-        const fiber = pending.pop();
-        if (!fiber) break;
+        const next = pending.pop();
+        if (!next) break;
+        const { fiber, parentId, carriedOver } = next;
         visited += 1;
 
         const name = componentName(fiber.type);
+        let idForChildren = parentId;
         if (name !== null) {
+          const id = components.length;
+          idForChildren = id;
           components.push({
+            id,
+            parentId,
             name,
             tag: fiber.tag,
             lanes: fiber.lanes ?? null,
+            flags: fiber.flags,
+            hasAlternate: fiber.alternate !== null,
+            carriedOver,
             // Expected to be absent outside a profiling build; measured to be
             // present in React 19.3's development build, and to agree with the
             // profiler to within a millisecond. Recorded either way, because
@@ -168,11 +255,28 @@ export async function installCollectors(
           });
         }
 
-        if (fiber.child) pending.push(fiber.child);
-        if (fiber.sibling) pending.push(fiber.sibling);
+        // A child's nearest component ancestor is this fiber if it is one,
+        // and otherwise whatever this fiber's was. A sibling shares this
+        // fiber's parent, so it inherits `parentId` unchanged.
+        //
+        // A child is a previous commit's object if this fiber is one, or if
+        // React bailed out of this fiber without cloning its children — the
+        // exact test `bubbleProperties` uses. A sibling was cloned, or not,
+        // together with this fiber, so it inherits `carriedOver` unchanged.
+        if (fiber.child) {
+          pending.push({
+            fiber: fiber.child,
+            parentId: idForChildren,
+            carriedOver: carriedOver || fiber.alternate?.child === fiber.child,
+          });
+        }
+        if (fiber.sibling) pending.push({ fiber: fiber.sibling, parentId, carriedOver });
       }
 
-      return components;
+      // Anything still pending is a fiber the cap kept out of the record. Its
+      // ancestors' self times would then be overstated by its whole subtree,
+      // so the commit says so rather than looking complete.
+      return { components, truncated: pending.length > 0 };
     }
 
     const renderers = new Map<number, unknown>();
@@ -196,7 +300,7 @@ export async function installCollectors(
           // the render that produced it. The gap is the whole difficulty of the
           // join and is measured, not papered over.
           const committedAt = performance.now();
-          const components = describeCommit(root);
+          const { components, truncated } = describeCommit(root);
 
           commits.push({
             // Tagged because both callbacks land in one array, and a reader
@@ -209,6 +313,7 @@ export async function installCollectors(
             didError,
             priorityLevel: typeof priorityLevel === 'number' ? priorityLevel : null,
             components,
+            truncated,
           });
         },
         onPostCommitFiberRoot(rendererId) {
@@ -263,6 +368,15 @@ export async function installCollectors(
         // slice double-counts; `findings.md` names that as the first thing an
         // engine must get right.
         forcedStyleAndLayoutDuration: script.forcedStyleAndLayoutDuration,
+        // The same figure's two halves, which the spec defines the combined
+        // one as the sum of. Missing from this projection until step 0.2 of
+        // the v0.3 run, because it was written from ambient declarations that
+        // missed them; captures before that carry them only in `toJSON`.
+        // `null` rather than `0` where the browser has no such attribute: a
+        // zero would claim it measured no forced style work, when it measured
+        // nothing at all.
+        forcedStyleDuration: script.forcedStyleDuration ?? null,
+        forcedLayoutDuration: script.forcedLayoutDuration ?? null,
         windowAttribution: script.windowAttribution,
       };
     }

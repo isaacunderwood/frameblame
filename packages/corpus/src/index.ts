@@ -47,6 +47,7 @@ export {
   get,
   isJsonArray,
   isJsonRecord,
+  nullableBooleanAt,
   nullableNumberAt,
   nullableStringAt,
   numberAt,

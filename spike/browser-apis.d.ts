@@ -107,24 +107,35 @@ interface PerformanceScriptTiming extends PerformanceEntry {
    * The same figure split in two, and the correction this file most deserved.
    *
    * Both are specified — the spec defines `forcedStyleAndLayoutDuration` as
-   * *their sum* — and Chrome 159 ships both. They were missing from this file
-   * until the corpus was read field by field, and because the collector's
-   * `serializeScript` was written from this list, they are absent from its
-   * projection too. They are in every dump only because the collector also
-   * stores whatever `toJSON()` serialises.
+   * *their sum* — and Chrome 159 ships both. Names checked against the IDL on
+   * 2026-11-15:
+   * https://w3c.github.io/long-animation-frames/#dom-performancescripttiming-forcedstyleduration
+   * https://w3c.github.io/long-animation-frames/#dom-performancescripttiming-forcedlayoutduration
+   *
+   * They were missing from this file until the corpus was read field by
+   * field, and because the collector's `serializeScript` was written from this
+   * list, they were absent from its projection too until step 0.2 of the v0.3
+   * run added them. Captures before that carry them only because the
+   * collector also stores whatever `toJSON()` serialises.
    *
    * So "transcribed from the specification rather than from memory" was not
    * enough: a hand-transcribed list is a list of the fields someone noticed.
    * `findings.md` carried an open item for days saying this split was
    * unavailable from the entry.
    *
+   * Optional, unlike the combined figure, although the spec makes them
+   * unconditional: they are the newest attributes on the interface, and a
+   * browser that predates them returns `undefined`. Declared that way so the
+   * collector has to say what absence becomes, rather than letting a missing
+   * field pass through as if it were a measurement.
+   *
    * They do not sum to the combined figure exactly. Each is coarsened
    * independently, deliberately, so that summing them cannot recover
    * resolution the browser is withholding; measured, they differ by one 100µs
    * grid step on 6 of the corpus's 20 forced entries.
    */
-  readonly forcedStyleDuration: number;
-  readonly forcedLayoutDuration: number;
+  readonly forcedStyleDuration?: number;
+  readonly forcedLayoutDuration?: number;
   readonly windowAttribution: string;
 }
 
@@ -176,6 +187,19 @@ interface ReactFiber {
   readonly type: unknown;
   readonly child: ReactFiber | null;
   readonly sibling: ReactFiber | null;
+  /**
+   * The fiber's other half in React's double buffer, or `null` for a fiber
+   * mounting in this commit. Compared by identity to find a subtree React
+   * bailed out of without cloning; see `describeCommit` in
+   * `spike/collectors.ts`.
+   */
+  readonly alternate: ReactFiber | null;
+  /**
+   * React's effect bitmask. Bit 0 is `PerformedWork`, set only when a
+   * component's render function ran in this render; the other bits are
+   * internal and recorded only so a reader can re-derive what it needs.
+   */
+  readonly flags: number;
   /**
    * The plan assumed these were set only in a profiling build. Measured, both
    * are populated in React 19.3's **development** build, on every component

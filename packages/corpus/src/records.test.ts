@@ -214,8 +214,8 @@ describe('the records', () => {
     expect(prod.react.spans).toEqual([]);
     expect(prod.react.commits.length).toBeGreaterThan(0);
     for (const commit of prod.react.commits) {
-      expect(commit.components.length).toBeGreaterThan(0);
-      for (const component of commit.components) {
+      expect(commit.components.fibers.length).toBeGreaterThan(0);
+      for (const component of commit.components.fibers) {
         expect(component.actualDurationMs).toBeNull();
         expect(component.selfBaseDurationMs).toBeNull();
       }

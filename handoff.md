@@ -281,7 +281,7 @@ below. Baseline before the night: `pnpm check` green at 114 tests (57 core, 57 c
 Progress (updated before each next step starts):
 
 - [x] Step 0.1 — cleanup refactor
-- [ ] Step 0.2 — collector change (fiber parent id, forced style/layout on scripts)
+- [x] Step 0.2 — collector change (fiber parent id, forced style/layout on scripts)
 - [ ] Step 0.3 — re-capture all eight runs in one pass
 - [ ] Step 0.4 — re-derive moved figures
 - [ ] Step 0 cycle (refactor, review, fix) and commit
@@ -307,6 +307,26 @@ Progress (updated before each next step starts):
   undeclared dependency. Fixing it means a root devDependency and a lockfile change. That is out of
   proportion for a cleanup, so it is under Questions for the morning.
 - `pnpm check` is green at 114 tests and `pnpm build` passes. No test file changed.
+
+### Step 0.2 — collector change
+
+- `forcedStyleDuration` and `forcedLayoutDuration` were checked against the W3C LoAF IDL
+  (https://w3c.github.io/long-animation-frames/). The spec defines `forcedStyleAndLayoutDuration` as
+  their sum. The collector serialises each one as `null` when Chrome omits it, never as 0.
+- Each component fiber in `describeCommit` now carries `id`, its position in that commit's list, and
+  `parentId`, the nearest *component* ancestor. Host elements are not recorded, so their time is
+  charged to the component that rendered them. Core models this as
+  `CommitComponents = recorded | unrecorded`, so a commit is linked throughout or not at all.
+- **Added at the orchestrator's request before the capture:** per-fiber render evidence (`flags`,
+  `hasAlternate`, `carriedOver`) and a per-commit `truncated` flag. The reason is that a subtree React
+  skips entirely keeps its previous commit's fiber objects. That leaves both a stale `actualDuration`
+  and a stale `PerformedWork` bit, so `flags & 1` alone would count it as rendered. `carriedOver` uses
+  React's own test (`alternate.child === child`, in `bubbleProperties`). This was verified in the
+  React 19.3.1 development build, `react-dom-client.development.js`: `createWorkInProgress` at :5105,
+  with `actualDuration` reset at :5128 and flags masked at :5130; `bubbleProperties` at :12823-12842.
+  Step 3 must skip `carriedOver` fibers, both as candidates and as children subtracted from a parent.
+- The old corpus reads as `unrecorded` with `truncated: null`. New synthetic tests are in
+  `packages/corpus/src/collector-fields.test.ts`. The gate is green at 123 tests.
 
 ## Questions for the morning
 

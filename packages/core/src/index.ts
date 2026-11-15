@@ -92,6 +92,10 @@ export type { BuildMode, CaptureProvenance } from './provenance.ts';
 
 export { COMPONENT_SPAN_PREFIX } from './react.ts';
 export type {
+  CommitComponents,
+  FiberId,
+  FiberRenderEvidence,
+  LinkedFiber,
   ReactCommit,
   ReactSignals,
   ReactSpan,

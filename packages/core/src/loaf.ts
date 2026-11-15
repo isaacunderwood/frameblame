@@ -151,13 +151,15 @@ export interface FrameScript {
    * eight captures. The reason nobody saw them is that the project's ambient
    * declarations were transcribed from the spec by hand and these two were
    * missed, while the collector's own field-by-field projection copied that
-   * list. They survive in the corpus only because the collector also stores
-   * whatever Chrome's `toJSON()` chooses to serialise, verbatim, next to its
-   * hand-picked projection — which is the entire argument for having done that.
+   * list. They survived in the captures made before the v0.3 run's collector
+   * change only because the collector also stores whatever Chrome's `toJSON()`
+   * chooses to serialise, verbatim, next to its hand-picked projection — which
+   * is the entire argument for having done that. The projection now carries
+   * them too.
    *
    * `null` rather than required because the combined figure is the load-bearing
-   * one and a thinner collector may carry only that; a zero would claim the
-   * browser measured no style work.
+   * one, and a browser predating the split, or a thinner collector, may carry
+   * only that; a zero would claim the browser measured no style work.
    */
   readonly forcedStyleDurationMs: number | null;
   readonly forcedLayoutDurationMs: number | null;
