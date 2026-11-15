@@ -8,7 +8,7 @@
  * what makes the captured corpus a test input rather than a fixture-shaped
  * special case.
  *
- * Four layers, in dependency order:
+ * Five layers, in dependency order:
  *
  * 1. **The records** — `loaf.ts`, `profiler.ts`, `react.ts`, bundled by
  *    `signals.ts` with the `provenance.ts` that says which build and throttle
@@ -26,12 +26,20 @@
  *    development, and from hook names joined to sampled stacks where the
  *    timings are absent. A commit is attributed whether or not a long frame
  *    surrounds it. The self times themselves are `fiber-self-time.ts`, which
- *    reads nothing but the commit record.
+ *    reads nothing but the commit record. Where timings are absent and the
+ *    bundle ships a source map, the components come back under their real
+ *    names through it.
+ * 5. **The profiler tier** — `source-map.ts` resolves the profiler's frames
+ *    through the maps the capture carried, and `line-attribution.ts` charges
+ *    a population of samples to the functions they ran in, located by
+ *    definition site: the replay, the long frames, or the script slices LoAF
+ *    attributed to one registration site, where the profiler can name a
+ *    third party LoAF cannot.
  *
- * What is deliberately not here yet is the rest of the join: nothing in this
- * package resolves a source map, splits a frame's script slice among causes,
- * or weighs a commit against the frame it landed in. Those are built on the
- * layers above, which are meant to be checkable without them.
+ * What is deliberately not here yet is the confidence model: nothing in this
+ * package weighs one tier's answer against another's, or a commit against the
+ * frame it landed in. That is built on the layers above, which are meant to be
+ * checkable without it.
  */
 
 export {
@@ -46,10 +54,12 @@ export type {
   CauseEvidence,
   CauseSubject,
   ConfidenceWeight,
+  FunctionName,
   RankedCauses,
   SampleWindowKind,
   SourceLocation,
   UnattributedReason,
+  UnmappedReason,
   WeightBasis,
 } from './attribution.ts';
 
@@ -113,9 +123,34 @@ export {
 export type { FrameRenderingUpdate, FrameScript, LongAnimationFrame } from './loaf.ts';
 
 export {
+  attributeSampledFunctions,
+  attributeScriptEntries,
+  chargedSamples,
+  describeFunctionAttribution,
+  describeScriptEntry,
+  describeSourceLocation,
+  describeUnmappedReason,
+  FUNCTION_LEVEL_CAVEAT,
+  interactionPopulation,
+  longFramePopulation,
+  scriptSlicePopulation,
+} from './line-attribution.ts';
+export type {
+  FunctionAttribution,
+  FunctionSubject,
+  SamplePopulation,
+  SampleRange,
+  ScriptDisagreement,
+  ScriptEntryAttribution,
+  ScriptEntrySite,
+  ScriptSlice,
+} from './line-attribution.ts';
+
+export {
   OBSERVED_SAMPLE_CADENCE_MS,
   profiledFramePosition,
   SAMPLE_INTERVAL_FLOOR_MS,
+  stackFrameIds,
   stackFrames,
 } from './profiler.ts';
 export type {
@@ -148,3 +183,11 @@ export type {
 
 export { framesOfInteraction } from './signals.ts';
 export type { CapturedSignals, InteractionAction, InteractionWindow } from './signals.ts';
+
+export {
+  definitionSite,
+  enclosingCallTokenAt,
+  resolvedStack,
+  resolveProfile,
+} from './source-map.ts';
+export type { FrameResolution, ResolvedProfile, UnlocatedReason } from './source-map.ts';

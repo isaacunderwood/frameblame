@@ -45,14 +45,21 @@
  * beneath one shared React frame (minified `os`) and directly above the shared
  * `burn` helper (minified `d`).
  *
- * The tier is `profiler-unmapped`. The bundle ships a source map, but
- * resolving one is the next tier's job and is not done here, so every name is
- * reported as minified and every position as generated code.
+ * Where the bundle ships a source map, each charged component's definition
+ * site is resolved through it (`source-map.ts`), and the map's `names` array
+ * gives the component its real name back: `h` is `OrderTable` at
+ * `OrderTable.tsx:32:16` in `derive-in-render`, and all six minified names in
+ * `spans` come back as the components the ground truth declares (production,
+ * 4x). The commit is then `profiler-mapped`. The join itself still runs on
+ * the minified identifier, because that is the one thing the hook and the
+ * profiler share. Without a usable map the commit is `profiler-unmapped`, and
+ * the names are reported as minified and the positions as generated code,
+ * with the reason on each position.
  *
  * ## What this module does not do
  *
- * It does not split a frame among causes, resolve a source map, weigh a
- * commit against the frame it landed in, or decide whether an interaction was
+ * It does not split a frame among causes, weigh a commit against the frame it
+ * landed in, or decide whether an interaction was
  * slow, and it does not do the self-time subtraction itself. It answers one
  * question, which components rendered and their share of
  * the render, and states which tier the answer came from.
@@ -70,7 +77,6 @@ import {
   describeTier,
   type RankedCauses,
   rankCauses,
-  type SourceLocation,
   type WeightBasis,
 } from './attribution.ts';
 import {
@@ -89,12 +95,7 @@ import {
   isWithinFrame,
   type LongAnimationFrame,
 } from './loaf.ts';
-import {
-  type ProfiledFrame,
-  profiledFramePosition,
-  type ProfileTrace,
-  stackFrames,
-} from './profiler.ts';
+import { type ProfiledFrame, type ProfileTrace, stackFrames } from './profiler.ts';
 import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
 import type { FiberId, ReactCommit, ReactSpan } from './react.ts';
 import {
@@ -102,6 +103,7 @@ import {
   framesOfInteraction,
   type InteractionWindow,
 } from './signals.ts';
+import { definitionSite, resolveProfile, type ResolvedProfile } from './source-map.ts';
 
 /**
  * One recorded component fiber and what the hook says it did, available at
@@ -151,11 +153,13 @@ export type CommitAttributionBasis =
     }
   | {
       /**
-       * Sample shares, with component identity from the hook's names. The
-       * names are joined against unresolved profiler frames, which is why
-       * this is `profiler-unmapped` even where the bundle ships a source map.
+       * Sample shares, with component identity from the hook's names, joined
+       * to the profiler's frames by the minified identifier both report.
+       * `profiler-mapped` when every candidate's definition site resolved
+       * through a source map, and so has its real name back;
+       * `profiler-unmapped` when any did not, or there is no candidate.
        */
-      readonly tier: 'profiler-unmapped';
+      readonly tier: 'profiler-mapped' | 'profiler-unmapped';
       readonly shortfall: ReactTierShortfall;
       /** Samples with a stack inside the window, which is the denominator. */
       readonly samplesInWindow: number;
@@ -230,8 +234,11 @@ type Evidence = [CauseEvidence, ...CauseEvidence[]];
 
 /** One candidate's raw share before it becomes a weight, so commits can be merged. */
 interface Tally {
+  /** The hook's name, which the join and the merge key on. */
   readonly name: string;
   readonly subject: CauseSubject;
+  /** The tier this candidate stands on. Shared by a commit's fiber tallies. */
+  readonly tier: AttributionTier;
   numerator: number;
   /** Created with its first entry, so a candidate can never lack evidence. */
   readonly evidence: Evidence;
@@ -277,18 +284,18 @@ function componentsOf(
 
 /**
  * Adds `numerator` and `evidence` to the tally for `name`, creating it with
- * `subject()` the first time the name is seen.
+ * the subject and tier `subject()` returns the first time the name is seen.
  */
 function addToTally(
   tallies: Map<string, Tally>,
   name: string,
-  subject: () => CauseSubject,
+  subject: () => { readonly subject: CauseSubject; readonly tier: AttributionTier },
   numerator: number,
   evidence: Readonly<Evidence>,
 ): void {
   const existing = tallies.get(name);
   if (existing === undefined) {
-    tallies.set(name, { name, subject: subject(), numerator, evidence: [...evidence] });
+    tallies.set(name, { name, ...subject(), numerator, evidence: [...evidence] });
     return;
   }
   existing.numerator += numerator;
@@ -325,10 +332,13 @@ function tallyFiberTimings(
       tallies,
       entry.fiber.name,
       () => ({
-        kind: 'component',
-        name: entry.fiber.name,
-        nameIsMinified: false,
-        definedAt: null,
+        subject: {
+          kind: 'component',
+          name: entry.fiber.name,
+          nameIsMinified: false,
+          definedAt: null,
+        },
+        tier: 'react-fiber-timings',
       }),
       Math.max(entry.selfMs, 0),
       [
@@ -385,37 +395,32 @@ function definitionSiteKey(frame: ProfiledFrame): string {
  * What remains assumed: a name with exactly one site in the whole profile is
  * taken to be the component. A component that was never sampled, sharing its
  * minified name with one other function that was, would have that function's
- * samples charged to it. Nothing in an unmapped profile can rule that out; the
- * source map, which step 4 resolves, can.
+ * samples charged to it. Nothing in an unmapped profile can rule that out. A
+ * source map could, by checking that the one site resolves to a function the
+ * hook's component could be; the join does not do that yet, and on a mapped
+ * profile it only renames the candidate after the fact.
  *
  * In the corpus every name the hook reported has exactly one site in its
  * capture's profile: `h` and `re` in `derive-in-render`, and `b`, `m`, `h`,
  * `g`, `v` and `_` in `spans` (production, 4x).
  */
-type DefinitionSites = ReadonlyMap<string, readonly ProfiledFrame[]>;
+type DefinitionSites = ReadonlyMap<string, readonly number[]>;
 
-/** Indexes a profile's frames by name and definition site. See `DefinitionSites`. */
+/**
+ * Indexes a profile's frames by name and definition site, as the index into
+ * `profile.frames` of the first frame seen at each site. See
+ * `DefinitionSites`.
+ */
 function definitionSitesOf(profile: ProfileTrace): DefinitionSites {
-  const byName = new Map<string, Map<string, ProfiledFrame>>();
-  for (const frame of profile.frames) {
+  const byName = new Map<string, Map<string, number>>();
+  for (const [frameId, frame] of profile.frames.entries()) {
     if (frame.name === null) continue;
-    const sites = byName.get(frame.name) ?? new Map<string, ProfiledFrame>();
-    sites.set(definitionSiteKey(frame), frame);
+    const sites = byName.get(frame.name) ?? new Map<string, number>();
+    const key = definitionSiteKey(frame);
+    if (!sites.has(key)) sites.set(key, frameId);
     byName.set(frame.name, sites);
   }
   return new Map([...byName].map(([name, sites]) => [name, [...sites.values()]]));
-}
-
-/** Where a profiler frame's function is defined, in generated code. */
-function generatedLocation(
-  profile: ProfileTrace,
-  frame: ProfiledFrame,
-): SourceLocation | null {
-  const position = profiledFramePosition(frame);
-  if (frame.resourceId === null || position === null) return null;
-  const resource = profile.resources[frame.resourceId];
-  if (resource === undefined) return null;
-  return { file: resource.url, position, throughSourceMap: false };
 }
 
 /** A component the hook says rendered, or one whose participation is unknown. */
@@ -432,11 +437,23 @@ function isRenderedOrUnknown(component: CommitComponent): component is RenderedO
 interface IndexedProfile {
   readonly profile: ProfileTrace;
   readonly sites: DefinitionSites;
+  /**
+   * The profile's frames resolved through its source maps, computed on first
+   * use. Lazy because only the profiler tier reads it: a development commit
+   * with fiber timings never needs React's 3MB development map decoded.
+   */
+  readonly resolved: () => ResolvedProfile;
 }
 
 /** The capture's profile with its name index, or `null` when there was no profiler. */
 function indexProfile(profile: ProfileTrace | null): IndexedProfile | null {
-  return profile === null ? null : { profile, sites: definitionSitesOf(profile) };
+  if (profile === null) return null;
+  let resolved: ResolvedProfile | undefined;
+  return {
+    profile,
+    sites: definitionSitesOf(profile),
+    resolved: () => (resolved ??= resolveProfile(profile)),
+  };
 }
 
 /**
@@ -458,13 +475,22 @@ function indexProfile(profile: ProfileTrace | null): IndexedProfile | null {
  * samples were whose. Its samples are not passed on to a component further
  * out on the stack either: whichever function it was, its time is not that
  * outer component's self time.
+ *
+ * The commit's tier is `profiler-mapped` when every rendered name with a
+ * single definition site in the profile resolved through a source map, and at
+ * least one did, and `profiler-unmapped` otherwise. It is decided from the
+ * sites rather than from the window's samples, so that a commit whose window
+ * happened to catch no sample stands at the same tier as its neighbours. A
+ * name never sampled anywhere has no site and decides nothing; an ambiguous
+ * name keeps the commit unmapped, because its candidate cannot be resolved.
  */
 function tallySamples(
   components: readonly CommitComponent[],
-  { profile, sites }: IndexedProfile,
+  { profile, sites, resolved }: IndexedProfile,
   window: CommitSampleWindow,
   provenance: CaptureProvenance,
 ): {
+  tier: 'profiler-mapped' | 'profiler-unmapped';
   tallies: Tally[];
   samplesInWindow: number;
   unchargedSamples: number;
@@ -493,10 +519,24 @@ function tallySamples(
     counts.set(match.name, (counts.get(match.name) ?? 0) + 1);
   }
 
+  const siteSets = [...fibersByName.keys()].map((name) => sites.get(name) ?? []);
+  const decisive = siteSets.filter((nameSites) => nameSites.length > 0);
+  const tier =
+    decisive.length > 0 &&
+    decisive.every(
+      (nameSites) =>
+        nameSites.length === 1 &&
+        nameSites[0] !== undefined &&
+        resolved().frames[nameSites[0]]?.kind === 'mapped',
+    )
+      ? 'profiler-mapped'
+      : 'profiler-unmapped';
+
   // Reported rather than divided by: with nothing in the window, every
   // rendered component would otherwise carry a weight of 0 of 0.
   if (samplesInWindow === 0 && fibersByName.size > 0) {
     return {
+      tier,
       tallies: [],
       samplesInWindow,
       unchargedSamples: 0,
@@ -523,15 +563,27 @@ function tallySamples(
 
     const samples = ambiguous ? 0 : (counts.get(name) ?? 0);
     chargedSamples += samples;
+
+    /*
+     * The map's name for the identifier at the definition site, where there
+     * is one. For a function declaration that is the function's own name,
+     * which is how `h` becomes `OrderTable`. Without it the hook's name
+     * stands, minified in production, and the position stays generated with
+     * the reason the map did not apply.
+     */
+    const resolution =
+      !ambiguous && site !== undefined ? resolved().frames[site] : undefined;
+    const mapped = resolution?.kind === 'mapped' ? resolution : null;
+    const realName = mapped?.originalName ?? null;
     tallies.push({
       name,
       subject: {
         kind: 'component',
-        name,
-        nameIsMinified,
-        definedAt:
-          !ambiguous && site !== undefined ? generatedLocation(profile, site) : null,
+        name: realName ?? name,
+        nameIsMinified: realName === null && nameIsMinified,
+        definedAt: resolution === undefined ? null : definitionSite(resolution),
       },
+      tier: mapped === null ? 'profiler-unmapped' : 'profiler-mapped',
       numerator: samples,
       evidence: [
         {
@@ -556,6 +608,7 @@ function tallySamples(
   }
 
   return {
+    tier,
     tallies,
     samplesInWindow,
     unchargedSamples: samplesInWindow - chargedSamples,
@@ -608,7 +661,7 @@ function tallyCommit(
   const sampled = tallySamples(components, profile, window, signals.provenance);
   return {
     basis: {
-      tier: 'profiler-unmapped',
+      tier: sampled.tier,
       shortfall: timing.shortfall,
       samplesInWindow: sampled.samplesInWindow,
       unchargedSamples: sampled.unchargedSamples,
@@ -621,26 +674,21 @@ function tallyCommit(
 }
 
 /**
- * Turns tallies into ranked causes at one tier.
+ * Turns tallies into ranked causes, each at its own tally's tier.
  *
  * A zero denominator gives every candidate a zero weight rather than a
  * division: a commit whose components all rendered in 0ms on the 100us grid
  * still names them, at no weight.
  */
-function rankTallies(
-  tier: AttributionTier,
-  tallies: readonly Tally[],
-  denominator: number,
-): RankedCauses {
-  const basis = weightBasisOf(tier);
+function rankTallies(tallies: readonly Tally[], denominator: number): RankedCauses {
   return rankCauses(
     tallies.map((tally): CandidateCause => ({
       subject: tally.subject,
       weight: confidenceWeight(
         denominator > 0 ? tally.numerator / denominator : 0,
-        basis,
+        weightBasisOf(tally.tier),
       ),
-      tier,
+      tier: tally.tier,
       evidence: tally.evidence,
     })),
   );
@@ -665,8 +713,10 @@ function frameAt(
  * corroborate. At the profiler tier it decides which samples are shared out.
  *
  * Returns the strongest tier the commit supports: `react-fiber-timings` when
- * the record carries links and timings, else `profiler-unmapped` when a
- * profile exists, else `unattributed`, with the shortfall named in every
+ * the record carries links and timings, else `profiler-mapped` or
+ * `profiler-unmapped` when a profile exists, by whether the rendered
+ * components' definition sites resolved through a source map, else
+ * `unattributed`, with the shortfall named in every
  * degraded case. Weights are shares of this commit, not of any frame. Assumes
  * `commit` is one of `signals.react.commits`, though only its own fields are
  * read.
@@ -701,7 +751,7 @@ function attributeInWindow(
       sampleWindow,
       components: tally.components,
       basis: tally.basis,
-      causes: rankTallies(tally.basis.tier, tally.tallies, tally.denominator),
+      causes: rankTallies(tally.tallies, tally.denominator),
       notes: tally.notes,
     },
     tally,
@@ -878,14 +928,14 @@ function mergeTallies(commits: readonly CommitTally[]): MergedComponents | null 
       addToTally(
         merged,
         tally.name,
-        () => tally.subject,
+        () => ({ subject: tally.subject, tier: tally.tier }),
         tally.numerator,
         tally.evidence,
       );
     }
   }
 
-  return { tier, causes: rankTallies(tier, [...merged.values()], denominator) };
+  return { tier, causes: rankTallies([...merged.values()], denominator) };
 }
 
 /** One line of prose for a React-tier shortfall. */
@@ -907,12 +957,16 @@ export function describeCommitBasis(basis: CommitAttributionBasis): string {
   switch (basis.tier) {
     case 'react-fiber-timings':
       return describeTier(basis.tier);
+    case 'profiler-mapped':
     case 'profiler-unmapped':
       return (
         `${describeTier(basis.tier)}, joined by name to the components React's DevTools ` +
         `hook reported; degraded from ${describeTier('react-fiber-timings')} because ` +
-        `${describeShortfall(basis.shortfall)}. This tier does not resolve a source map ` +
-        'even where the bundle ships one, so positions are in generated code too. ' +
+        `${describeShortfall(basis.shortfall)}. ` +
+        (basis.tier === 'profiler-mapped'
+          ? "The components' names and definition sites come from the source map. "
+          : 'Names are as the hook reported them, minified in a production build, and ' +
+            'positions are in generated code where any are given. ') +
         `${String(basis.unchargedSamples)} of the ${String(basis.samplesInWindow)} stacked ` +
         "samples in the commit's window were charged to no component"
       );

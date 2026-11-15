@@ -13,10 +13,10 @@
  * or the specification sees the same words. They are array indices in every
  * case.
  *
- * What this module does not do: walk a stack, resolve a source map, or weight a
- * sample. It holds the records, the one position conversion the whole project
- * must get right, and the facts about sampling that bound what any heuristic
- * built on top may claim.
+ * What this module does not do: resolve a source map (`source-map.ts`) or
+ * weight a sample (`line-attribution.ts`). It holds the records, the stack
+ * walk, the one position conversion the whole project must get right, and the
+ * facts about sampling that bound what any heuristic built on top may claim.
  *
  * **Clock.** Sample timestamps are `performance.now()` milliseconds on the
  * document's timeline, shared with LoAF and React. The spec says they are
@@ -263,13 +263,21 @@ export interface ProfileTrace {
  * the profiler reported without line and column. Every frame in the corpus has
  * both, so the null branch is reasoned rather than measured.
  *
- * One consequence worth knowing before using the result: the column, resolved,
- * lands on the opening paren of a callback argument rather than on the call
- * token, because esbuild and rolldown emit no source-map segment for an arrow
- * function's opening paren and the definition column falls one segment early.
- * The token worth printing is at `column - 1`, which resolves to `.sort` for
- * the corpus's declared culprit. That adjustment is a presentation decision and
- * is deliberately not applied here.
+ * What the result resolves to, measured rather than assumed. For an arrow
+ * function passed as an argument, the converted position points at the arrow's
+ * opening paren in the generated code: the corpus's declared culprit is reported
+ * at `27:108`, and 0-based column 107 of that served line is the `(` of
+ * `(a, b) =>` (`derive-in-render`, development, 4x; `source-windows.json`
+ * carries the served line). esbuild and rolldown emit no source-map segment for
+ * that paren, so the lookup falls back to the segment before it, which is the
+ * enclosing call's token: `OrderTable.tsx:36:5`, 0-based, is `sort` in
+ * `.sort((a, b) => ...)` (`36:6` counted 1-based, as `findings.md` quotes it),
+ * in development and production alike. One further column to the left
+ * resolves identically in both builds, so no second adjustment sharpens it.
+ * That fallback is why `source-map.ts` can name the call a callback was passed
+ * to, and it needs no adjustment beyond this one. (This comment used to say the
+ * resolved column lands on the paren and that the call token sits one column
+ * further left; resolving the corpus showed both halves wrong.)
  */
 export function profiledFramePosition(frame: ProfiledFrame): LineColumn | null {
   const { line, column } = frame;
@@ -278,23 +286,26 @@ export function profiledFramePosition(frame: ProfiledFrame): LineColumn | null {
 }
 
 /**
- * Walks a sample's stack from the leaf outwards, yielding each frame.
+ * Walks a sample's stack from the leaf outwards, returning the index into
+ * `trace.frames` of each frame on it.
  *
  * Leaf first, because the leaf is where the time was actually spent: a sample
  * whose stack runs `workLoopSync -> beginWork -> OrderTable -> sort callback`
  * is evidence about the callback, and about `OrderTable` only in the weaker
  * sense that it was on the stack.
  *
- * Returns an empty array for a sample with no stack, and stops at the first
- * dangling index rather than throwing — a truncated trace is a thing a buffer
- * limit can produce, and losing the deeper half of one stack should not lose
- * the run.
+ * Indices rather than frames, so that a caller holding something computed per
+ * frame, such as a source-map resolution, can look it up without a second
+ * walk. Returns an empty array for a sample with no stack, and stops at the
+ * first dangling index rather than throwing: a truncated trace is a thing a
+ * buffer limit can produce, and losing the deeper half of one stack should not
+ * lose the run.
  */
-export function stackFrames(
+export function stackFrameIds(
   trace: ProfileTrace,
   stackId: number | null,
-): readonly ProfiledFrame[] {
-  const frames: ProfiledFrame[] = [];
+): readonly number[] {
+  const frameIds: number[] = [];
   let current = stackId;
 
   /*
@@ -307,13 +318,26 @@ export function stackFrames(
   for (let step = 0; current !== null && step <= trace.stacks.length; step += 1) {
     const stack: ProfiledStack | undefined = trace.stacks[current];
     if (stack === undefined) break;
+    if (trace.frames[stack.frameId] === undefined) break;
 
-    const frame = trace.frames[stack.frameId];
-    if (frame === undefined) break;
-
-    frames.push(frame);
+    frameIds.push(stack.frameId);
     current = stack.parentId;
   }
 
-  return frames;
+  return frameIds;
+}
+
+/**
+ * Walks a sample's stack from the leaf outwards, yielding each frame. The same
+ * walk as `stackFrameIds`, with the same leaf-first order and the same stop at
+ * a dangling index, returning the frames themselves.
+ */
+export function stackFrames(
+  trace: ProfileTrace,
+  stackId: number | null,
+): readonly ProfiledFrame[] {
+  return stackFrameIds(trace, stackId).flatMap((frameId) => {
+    const frame = trace.frames[frameId];
+    return frame === undefined ? [] : [frame];
+  });
 }

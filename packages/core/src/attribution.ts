@@ -40,9 +40,10 @@ import type { LineColumn } from './char-position.ts';
  *   component name comes back from the map's `names` array, with no hook, no
  *   development build and no build-time plugin.
  * - `profiler-unmapped` — sampled stacks not resolved through a source map,
- *   because none shipped or none was resolved, so the names are whatever the
- *   bundle shipped. Still a real answer, and it must be reported with the
- *   warning that the name is minified.
+ *   because none shipped, none could be read, or the map did not cover the
+ *   position, so the names and positions are whatever the script shipped.
+ *   Still a real answer, and it must be reported with the warning that the
+ *   name may be minified. `UnmappedReason` says which of those it was.
  * - `loaf-script-registration` — a script entry's `sourceCharPosition`,
  *   resolved. Precise for non-framework jank, and systematically wrong about
  *   third parties: it names the line that *registered* a listener, so a vendor
@@ -102,17 +103,76 @@ export function describeTier(tier: AttributionTier): string {
   }
 }
 
-/** A position in an original source file, and whether a map was involved. */
-export interface SourceLocation {
-  /** The original file as the source map names it, or the served script's URL. */
-  readonly file: string;
-  /** 1-based line, 0-based column — `core`'s convention throughout. */
-  readonly position: LineColumn;
-  /**
-   * `false` means the position is in generated code: a minified bundle, or a
-   * dev server's transform of a module. A claim built on one must say so.
-   */
-  readonly throughSourceMap: boolean;
+/**
+ * Why a position is in generated code rather than in an original file.
+ *
+ * Each is the "source map absent" tier, and each deserves a different warning,
+ * because only some of them are the developer's to fix:
+ *
+ * - `no-source-map` — the script shipped none. The corpus's two vanilla
+ *   fixtures serve hand-written files out of `public/` byte-for-byte in both
+ *   build modes, so their names and positions are already the original ones;
+ *   a minified bundle with no map would report minified names the same way,
+ *   and nothing in the trace tells the two apart.
+ * - `source-map-unavailable` — a map was named but could not be fetched.
+ * - `source-map-unreadable` — a map was fetched but is not a version 3 map the
+ *   resolver can read.
+ * - `no-mapping-at-position` — the map covers the script but not this
+ *   position: a bundler's own runtime, or a module's top level. One production
+ *   frame in `spans`, at generated `1:1`, is this.
+ */
+export type UnmappedReason =
+  | 'no-source-map'
+  | 'source-map-unavailable'
+  | 'source-map-unreadable'
+  | 'no-mapping-at-position';
+
+/**
+ * A position in an original source file, or in generated code with the reason
+ * it is not in an original one.
+ *
+ * A union on `throughSourceMap`, so that a generated position cannot be written
+ * without saying why no map applied, and a mapped one cannot carry such a
+ * reason.
+ */
+export type SourceLocation =
+  | {
+      /**
+       * The original file as the source map names it, resolved against the
+       * map's `sourceRoot` but not against its URL: `OrderTable.tsx` in a
+       * development capture, `../../src/OrderTable.tsx` in a production one.
+       */
+      readonly file: string;
+      /** 1-based line, 0-based column — `core`'s convention throughout. */
+      readonly position: LineColumn;
+      readonly throughSourceMap: true;
+    }
+  | {
+      /** The served script's URL. */
+      readonly file: string;
+      /** 1-based line, 0-based column, in the script as it was served. */
+      readonly position: LineColumn;
+      /**
+       * The position is in generated code: a minified bundle, a dev server's
+       * transform of a module, or a script served as written. A claim built on
+       * one must say so.
+       */
+      readonly throughSourceMap: false;
+      readonly whyNot: UnmappedReason;
+    };
+
+/**
+ * Where a function's name came from.
+ *
+ * `source-map` is the map's `names` array, which is how a production bundle's
+ * `h` comes back as `OrderTable`. `served-script` is the name the profiler
+ * read off the script as it was served: the original name in a development
+ * build or a hand-written script, a minified one in a production bundle with
+ * no map, and nothing in the trace distinguishes those two.
+ */
+export interface FunctionName {
+  readonly text: string;
+  readonly from: 'source-map' | 'served-script';
 }
 
 /** Why a slice of a frame has no cause attached. */
@@ -151,17 +211,38 @@ export type CauseSubject =
       readonly definedAt: SourceLocation | null;
     }
   | {
+      /**
+       * A function, located by where it is defined.
+       *
+       * The JS Self-Profiling API reports the line a function was *defined*
+       * on, never the line that was executing, so every location the profiler
+       * tier produces is a function's definition site. `granularity` says so
+       * in the data rather than leaving it to the wording: line 32 of
+       * `OrderTable.tsx` means "inside the component body but in no nested
+       * callback", not "line 32 ran". Statement-level attribution needs CDP's
+       * `positionTicks` and is unavailable from inside the page at any sample
+       * count, which is why there is no other value.
+       */
       readonly kind: 'source-location';
       readonly location: SourceLocation;
-      readonly functionName: string | null;
+      readonly granularity: 'function-definition';
       /**
-       * The token the enclosing call sits on, e.g. `.sort`, when it could be
-       * recovered from the served text.
+       * The served script the function ran in, which is what LoAF's
+       * `sourceURL` names. Carried beside `location` because a mapped location
+       * names an original file, and the question "is this the script LoAF
+       * blamed" is about the served one.
+       */
+      readonly scriptUrl: string;
+      /** `null` for an anonymous function or a module's top level. */
+      readonly functionName: FunctionName | null;
+      /**
+       * For an anonymous callback, the call it was passed to, e.g. `.sort`,
+       * read from the source map's `sourcesContent` at the resolved position.
        *
-       * This is what makes the claim defensible. The profiler reports the line
-       * a function was *defined* on, so the honest phrasing is
-       * `OrderTable.tsx:36, in the callback passed to .sort` — statement-level
-       * attribution is unavailable from inside the page at any sample count.
+       * This is what makes the claim defensible. The honest phrasing is
+       * `OrderTable.tsx:36, in the callback passed to .sort`, and "line 36 is
+       * slow" is not. `null` for a named function, and wherever the original
+       * text is not available.
        */
       readonly enclosingCallToken: string | null;
     }
@@ -245,9 +326,14 @@ export function confidenceWeight(fraction: number, basis: WeightBasis): Confiden
  * input action at or before the commit. The hook reports when a commit
  * finished but not when its render began, so the window bounds the render
  * rather than being it, and it can hold samples of whatever ran between its
- * start and the render's.
+ * start and the render's. `interaction` is the union of the capture's
+ * interaction windows, which is the replay population: it does not depend on
+ * how many presses cleared LoAF's 50ms threshold. `script-slice` is a frame's
+ * script slices, half-open so that a sample on the boundary between two
+ * adjacent scripts belongs to one of them.
  */
-export type SampleWindowKind = 'frame' | 'since-previous-commit';
+export type SampleWindowKind =
+  'frame' | 'since-previous-commit' | 'interaction' | 'script-slice';
 
 /**
  * One piece of evidence behind a candidate cause.
@@ -306,6 +392,18 @@ export type CauseEvidence =
       readonly kind: 'forced-style-and-layout';
       readonly scriptIndex: number;
       readonly durationMs: number;
+    }
+  | {
+      /**
+       * Of the samples charged to a function, how many had ignore-listed code
+       * at the leaf: library code, by the source map's own `ignoreList`, that
+       * this function called. Those samples are charged to the innermost
+       * function the map does not ignore, so that React's JSX runtime working
+       * on behalf of a `.map` callback is reported as that callback's cost.
+       * The count keeps the folding visible.
+       */
+      readonly kind: 'ignore-listed-callees';
+      readonly samples: number;
     }
   | {
       readonly kind: 'empty-stack-share';

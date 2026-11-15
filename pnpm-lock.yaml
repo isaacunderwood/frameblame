@@ -300,6 +300,10 @@ importers:
         version: 6.0.3
 
   packages/core:
+    dependencies:
+      '@jridgewell/trace-mapping':
+        specifier: 0.3.31
+        version: 0.3.31
     devDependencies:
       tsdown:
         specifier: 0.23.7

@@ -10,7 +10,9 @@
  *    around it.
  * 3. The production run degrades to the profiler tier and says so, rather than
  *    reporting nothing because `actualDuration` is null and the names are
- *    minified.
+ *    minified. Since step 4 the shipped source map gives the names back, so
+ *    the tier it degrades to is `profiler-mapped`, and each component is
+ *    checked against the source file and line its ground truth declares.
  *
  * Nothing here walks a fiber tree, subtracts a duration or counts samples by
  * hand: the engine does that, and these tests check its answer. Nothing here
@@ -238,6 +240,17 @@ describe('spans/production: the profiler tier, named as such', () => {
     );
   }
 
+  /** Where the ground truth says each component is defined. */
+  const DECLARED_SITES = new Map(
+    arrayAt(loadGroundTruth('spans'), ['expected', 'components']).map((component) => [
+      stringAt(component, ['name']),
+      {
+        fileName: stringAt(component, ['sourceFile']).split('/').pop() ?? '',
+        line: numberAt(component, ['line']),
+      },
+    ]),
+  );
+
   for (const row of SEQUENCE) {
     it(`${row.id}: degrades to the profiler tier and says so`, () => {
       const result = attributed(production, row.id);
@@ -249,50 +262,67 @@ describe('spans/production: the profiler tier, named as such', () => {
       }
 
       const { basis } = commit;
-      expect(basis.tier).toBe('profiler-unmapped');
-      if (basis.tier !== 'profiler-unmapped') return;
+      expect(basis.tier).toBe('profiler-mapped');
+      if (basis.tier !== 'profiler-mapped') return;
       expect(basis.shortfall).toBe('fiber-timings-absent');
-      expect(result.merged?.tier).toBe('profiler-unmapped');
+      expect(result.merged?.tier).toBe('profiler-mapped');
 
       const said = describeCommitBasis(basis);
       expect(said).toContain('degraded from');
       expect(said).toContain('actualDuration is null');
-      expect(said).toContain('as the bundle shipped them');
+      expect(said).toContain('come from the source map');
 
       /*
        * Not an empty answer: every component the hook says rendered is a
-       * candidate, under its minified name, flagged as minified, weighted by
-       * its share of the samples in the commit's window. 2 to 15 stacked
-       * samples per window (production, 4x), so per-commit shares are coarse;
-       * the claim is the names and the tier, not the percentages. Each
-       * weight must be above 0, though: a candidate the stack join matched
-       * no sample to would be a name from the hook alone, with no measurement
-       * behind it.
+       * candidate, weighted by its share of the samples in the commit's
+       * window. 2 to 15 stacked samples per window (production, 4x), so
+       * per-commit shares are coarse; the claim is the names, the sites and
+       * the tier, not the percentages. Each weight must be above 0, though: a
+       * candidate the stack join matched no sample to would be a name from
+       * the hook alone, with no measurement behind it.
+       *
+       * The join still runs on the minified identifiers, which is what the
+       * hook and the profiler share, so each candidate's `fiber-rendered`
+       * evidence names a fiber the development join maps to a declared
+       * component. The name the candidate carries is the source map's, and it
+       * must be the declared one, defined at the declared file and line.
        */
       expect(commit.causes.causes.length).toBeGreaterThan(0);
-      expect(new Set(namesOf(commit.causes))).toEqual(productionNamesFor(row));
+      expect(new Set(namesOf(commit.causes))).toEqual(new Set(row.rendered));
+      const minified = productionNamesFor(row);
       for (const cause of commit.causes.causes) {
-        expect(cause.tier).toBe('profiler-unmapped');
+        expect(cause.tier).toBe('profiler-mapped');
         expect(cause.weight.basis).toBe('sample-share');
         expect(cause.weight.fraction).toBeGreaterThan(0);
-        expect(cause.subject).toMatchObject({ kind: 'component', nameIsMinified: true });
+        expect(cause.subject).toMatchObject({ kind: 'component', nameIsMinified: false });
+        if (cause.subject.kind !== 'component') continue;
+
+        const joinedOn = cause.evidence.flatMap((evidence) =>
+          evidence.kind === 'fiber-rendered' ? [evidence.componentName] : [],
+        );
+        expect(joinedOn.length).toBeGreaterThan(0);
+        for (const name of joinedOn) expect(minified).toContain(name);
+
+        const declared = DECLARED_SITES.get(cause.subject.name);
+        const site = cause.subject.definedAt;
+        expect(declared, `no declared site for ${cause.subject.name}`).toBeDefined();
+        expect(site?.throughSourceMap).toBe(true);
+        expect(site?.file.endsWith(`/${declared?.fileName ?? ''}`)).toBe(true);
+        expect(site?.position.line).toBe(declared?.line);
       }
       expect(commit.notes).toEqual([]);
     });
   }
 
-  it('state-owner-self: names StateOwner’s minified counterpart, from a commit with no frame', () => {
+  it('state-owner-self: names StateOwner, from a commit with no frame', () => {
     const result = attributed(production, 'state-owner-self');
     const commit = onlyCommit(result);
     expect(commit.frame).toBeNull();
     expect(result.frames).toEqual([]);
 
-    // `g` in this bundle. Every stacked sample in the window lands in it: 2 of
-    // 2 (production, 4x).
-    const row = SEQUENCE.find((candidate) => candidate.id === 'state-owner-self');
-    if (row === undefined) throw new Error('no state-owner-self row in the ground truth');
-    const [stateOwner] = productionNamesFor(row);
-    expect(namesOf(commit.causes)).toEqual([stateOwner]);
+    // `g` in this bundle, named `StateOwner` by the map. Every stacked sample
+    // in the window lands in it: 2 of 2 (production, 4x).
+    expect(namesOf(commit.causes)).toEqual(['StateOwner']);
     expect(commit.causes.causes[0]?.weight.fraction).toBeGreaterThan(0.5);
   });
 });
@@ -316,21 +346,21 @@ describe('derive-in-render: the React tier names the declared component', () => 
     for (const commit of result.commits) expect(commit.notes).toEqual([]);
   });
 
-  it('production: its minified counterpart does, from the profiler', () => {
-    const dev = attributed(loadSignals('derive-in-render', 'development'), 'replay');
+  it('production: so does the profiler, under the name the source map gives back', () => {
     const prod = attributed(loadSignals('derive-in-render', 'production'), 'replay');
-    const index = dev.commits[0].components.find((component) => component.name === declared)
-      ?.fiberIndex;
-    expect(index).toBeDefined();
-    const minified = index === undefined ? undefined : prod.commits[0].components[index]?.name;
 
     /*
-     * `h` in this bundle, with 97.1% of the 69 stacked samples in the replay's
-     * commit windows (production, 4x).
+     * `h` in this bundle, resolved through the shipped map to
+     * `OrderTable.tsx:32:16` with the name `OrderTable`, holding 97.1% of the
+     * 69 stacked samples in the replay's commit windows (production, 4x).
      */
-    expect(prod.merged?.tier).toBe('profiler-unmapped');
+    expect(prod.merged?.tier).toBe('profiler-mapped');
     const [top] = prod.merged?.causes.causes ?? [];
-    expect(top?.subject).toMatchObject({ kind: 'component', name: minified, nameIsMinified: true });
+    expect(top?.subject).toMatchObject({ kind: 'component', name: declared, nameIsMinified: false });
     expect(top?.weight.fraction).toBeGreaterThan(0.6);
+    if (top?.subject.kind !== 'component') return;
+    expect(top.subject.definedAt?.throughSourceMap).toBe(true);
+    expect(top.subject.definedAt?.file.endsWith('/OrderTable.tsx')).toBe(true);
+    expect(top.subject.definedAt?.position.line).toBe(32);
   });
 });

@@ -18,6 +18,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@jridgewell/trace-mapping": "0.3.31"
+  },
   "devDependencies": {
     "tsdown": "0.23.7",
     "typescript": "6.0.3",

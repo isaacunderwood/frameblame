@@ -516,6 +516,66 @@ describe('attributeCommit without fiber timings', () => {
     expect(attribution.causes.totalWeight).toBeCloseTo(0.75, 10);
   });
 
+  it('gives the names back through a shipped source map, and says the tier improved', () => {
+    /*
+     * The same commit, with a map for the bundle. On generated line 9 the map
+     * has a segment at 0-based column 101, where `g` is defined (1-based 102),
+     * named `StateOwner`, and one at 299, where this test defines `b`, named
+     * `App`. Encoded by hand: eight empty lines, then `qGAAAA` and `sMACAC`.
+     * In the corpus the same step turns `h` into `OrderTable` and all six of
+     * `spans`' minified names into the components it declares (production,
+     * 4x).
+     */
+    const sampled = trace(
+      [
+        { atMs: 950, stack: ['d', 'g', 'os', 'Fd'] },
+        { atMs: 970, stack: ['d', 'b', 'os', 'Fd'] },
+      ],
+      { 'b@970': 300 },
+    );
+    const [bundle] = sampled.resources;
+    if (bundle === undefined) throw new Error('no bundle');
+    const input = signals({
+      commits: [production],
+      buildMode: 'production',
+      profile: {
+        ...sampled,
+        resources: [
+          {
+            ...bundle,
+            sourceMap: {
+              origin: { kind: 'external', url: 'index.js.map' },
+              map: {
+                version: 3,
+                sources: ['src/App.tsx'],
+                names: ['StateOwner', 'App'],
+                mappings: ';;;;;;;;qGAAAA,sMACAC',
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const attribution = attributeCommit(input, production, 900);
+    expect(attribution.basis.tier).toBe('profiler-mapped');
+    expect(describeCommitBasis(attribution.basis)).toContain('come from the source map');
+    // Tied at one sample each, so they keep the hook's walk order.
+    expect(names(attribution)).toEqual(['App', 'StateOwner']);
+    for (const cause of attribution.causes.causes) {
+      expect(cause.tier).toBe('profiler-mapped');
+      expect(cause.subject).toMatchObject({
+        kind: 'component',
+        nameIsMinified: false,
+        definedAt: { file: 'src/App.tsx', throughSourceMap: true },
+      });
+    }
+    // The weights are the unmapped tier's: the map renames, it does not re-count.
+    expect(attribution.causes.causes.map((cause) => cause.weight.fraction)).toEqual([
+      0.5, 0.5,
+    ]);
+  });
+
   it('charges nothing to a minified name that two functions share', () => {
     const input = signals({
       commits: [production],

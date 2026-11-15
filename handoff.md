@@ -308,7 +308,7 @@ Progress (updated before each next step starts):
 - [x] Step 0.4 — re-derive moved figures
 - [x] Step 0 cycle (refactor, review, fix) and commit
 - [x] Step 3 — components, the React tier
-- [ ] Step 4 — lines, the profiler tier
+- [x] Step 4 — lines, the profiler tier
 - [ ] Step 5 — the confidence model
 - [ ] Step 6 — the accuracy suite
 
@@ -558,6 +558,102 @@ The fix pass applied every accepted finding. `pnpm check` is green at 180 tests 
 corpus). A before-and-after script over all 8 captures (18 interactions, 58 commits) found every
 weight, sample count, denominator, tier and note identical. Only two things changed: the evidence
 order, and `re` in `derive-in-render` production now carrying its `definedAt`. Step 4 starts next.
+
+### Orchestration change, from the user, 2026-11-15 10:40
+
+From step 4's review onward, the review runs as two fresh subagents in parallel, each reviewing the
+same diff cold:
+- **Figures reviewer:** questions 2, 4 and 5 of the review brief. The completion criteria,
+  millisecond figures without build mode and throttle, and every new number checked against the
+  corpus.
+- **Code reviewer:** questions 1, 3 and 6. The code against its comments, over- and under-claiming,
+  and readability with the rewrite attached.
+
+Steps, refactors and fixes stay one at a time.
+
+### Step 4 — outcome
+
+Built in `packages/core/src/source-map.ts` and `packages/core/src/line-attribution.ts`, using
+`attribution.ts`'s vocabulary. `@jridgewell/trace-mapping` 0.3.31 is now a dependency of
+`packages/core`; the lockfile gained four lines and nothing new was fetched. `pnpm check` is green
+at 210 tests (107 core, 103 corpus), and `pnpm build` passes. Not committed.
+
+- **Resolution.** `resolveProfile` resolves every interned frame once through the map its resource
+  carried. Each frame comes back `mapped`, `unmapped` with an `UnmappedReason` (`no-source-map`,
+  `source-map-unavailable`, `source-map-unreadable`, `no-mapping-at-position`), or `unlocated`.
+  The only minus one is still `profiledFramePosition`'s. Measured: `27:108` points at the `(` of
+  `(a, b) =>` in the served text, and it resolves to `OrderTable.tsx:36:5` (0-based), the `sort` of
+  `.sort`, in both builds. That comment in `profiler.ts` used to say the resolved column landed on
+  the paren and the call token sat one column further left. Both halves were wrong, and the comment
+  is corrected. `enclosingCallTokenAt` reads `.sort` back out of the map's `sourcesContent`, for
+  anonymous frames only.
+- **The answer.** `attributeSampledFunctions` charges each stacked sample in a named population to
+  a function and ranks the functions by sample share. The populations are `interactionPopulation`
+  (the replay), `longFramePopulation` and `scriptSlicePopulation`. A candidate is a `source-location`
+  subject with `granularity: 'function-definition'`, its served `scriptUrl`, a `FunctionName` with
+  its origin, and the enclosing call token. Its tier is `profiler-mapped`, or `profiler-unmapped`
+  with the reason on the location. `SourceLocation` is now a union on `throughSourceMap`, so a
+  generated position must carry `whyNot`. `describeSourceLocation` produces
+  `OrderTable.tsx:36, in the callback passed to .sort`.
+- **LoAF against the profiler.** `attributeScriptEntries` groups every script slice in the capture
+  by the registration site LoAF named, then attributes those slices from the profiler. It records a
+  `ScriptDisagreement` when the profiler's top function ran in a different script.
+  `describeScriptEntry` says both halves, with milliseconds qualified by build mode and throttle.
+- **The tier improved where a map resolves.** Production React commits are now `profiler-mapped`,
+  under the names the map gives back: `h` is `OrderTable`, and all six `spans` names are the declared
+  components at their declared files and lines. A before-and-after script over the 58 commits of
+  `spans` and `derive-in-render` found every weight, sample count and note identical. Only the
+  names, the tier and `definedAt` changed. Step 3's production tests are updated to match, and they
+  are stronger: the expected names and sites now come straight from the ground truth.
+
+How the done-when is demonstrated, in `packages/corpus/src/lines.test.ts`:
+
+- `derive-in-render: the profiler names the declared line > {development,production}: line 36 ranks
+  first over the replay, and most samples land in 34-36`.
+  - The top candidate is `OrderTable.tsx:36`, mapped, `.sort`, function-level.
+  - The replay floor holds: 65 of 92 (70.7%) in development and 56 of 67 (83.6%) in production,
+    4x, the orchestrator's figures exactly.
+  - The in-frame share is reported through `context.annotate` and not asserted: 40 of 56 (71.4%)
+    in development and 1 of 3 (33.3%) in production.
+  - The standard-error note sits beside the floor.
+- `vendor-listener: … > {development,production}: the vendor slice is vendor.js by the profiler and
+  app.js by LoAF`.
+  - LoAF names `app.js` at offset 9268 on all six entries.
+  - The profiler puts 13 of 13 stacked samples (development) and 13 of 14 (production) in
+    `vendor.js:42`, `vendorTrack`, at `profiler-unmapped` with `no-source-map`, 4x.
+  - The disagreement names both scripts.
+- Also in that file: the first-party slices agree with LoAF and name `computeTotals` and
+  `thrashLayout`; `innerhtml-rebuild` stays at `profiler-unmapped` with its reason named; App is
+  never the answer; and development LoAF names react-dom's dispatcher while the profiler names
+  `OrderTable.tsx`.
+
+Choices made without a human, each the conservative option:
+
+1. **Which frame a sample is charged to.** The innermost frame that the map's own `ignoreList`
+   does not name as library code, or the leaf if every frame is library code. A frame no map
+   vouches for is never skipped, which is what keeps `vendor.js` charged as itself. This rule
+   reproduces the throwaway test's figures exactly. The leaf alone would give 85.5% of 76 in
+   development and charge line 49's JSX work to `react-jsx-dev-runtime.development.js:327`.
+   - Each fold is counted in `ignore-listed-callees` evidence.
+   - Known blind spot, recorded in the module: a third-party SDK bundled from `node_modules` is
+     ignore-listed, so it folds into its first-party caller. No capture has that shape.
+2. **The vendor is a `source-location` subject, not `third-party-script`.** Both files are
+   same-origin, and nothing in the trace says which is a third party. The claim the criterion asks
+   for is about the file. Naming the vendor is `later.md`'s "categorising every slice" item.
+3. **Script slices are half-open.** One sample in the corpus lies on a boundary: `vendorTrack` at
+   3757.2ms, the exact coarsened instant the vendor slice ends and the forced-layout slice begins
+   (development, 4x). It is counted once, in the later slice.
+4. **A LoAF site is everything LoAF reports about it:** URL, function name, offset, invoker and
+   invoker type.
+5. **A mapped file is named as the map names it**, resolved against `sourceRoot` but not against
+   the map's URL. So it reads `OrderTable.tsx` in development and `../../src/OrderTable.tsx` in
+   production, and the tests compare last path segments.
+6. **A commit's profiler tier** is `profiler-mapped` when every rendered name with a single
+   definition site resolved through a map, and at least one did. It is decided from the sites
+   rather than the window's samples, so a commit whose window caught no sample does not split an
+   interaction's merge. An ambiguous name keeps the commit unmapped.
+7. **Dropped from the vocabulary:** a `not-resolved` unmapped reason that nothing produced.
+   `CauseSubject`'s `third-party-script` variant is still unused and was left alone.
 
 ## Questions for the morning
 
