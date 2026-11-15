@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "preserve",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+
+    // Imports carry the real `.ts` extension of the file on disk. Bundlers and
+    // Node's own type stripping both resolve those directly, so the specifier
+    // means what it says instead of naming a `.js` file that never exists.
+    "allowImportingTsExtensions": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "erasableSyntaxOnly": true,
+
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+
+    // Workspace packages resolve to each other's source rather than to built
+    // output, so `typecheck` needs no prior `build` and a type error crossing a
+    // package boundary surfaces immediately. The published `exports` fields
+    // still point at dist; only the compiler takes this shortcut.
+    "paths": {
+      "@frameblame/core": ["./packages/core/src/index.ts"],
+      "@frameblame/agent": ["./packages/agent/src/index.ts"],
+      "@frameblame/react": ["./packages/react/src/index.ts"]
+    }
+  }
+}

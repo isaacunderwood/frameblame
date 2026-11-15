@@ -1,0 +1,452 @@
+{
+  "$comment": [
+    "Ground truth for fixture `innerhtml-rebuild`: what a correct attribution must",
+    "say about the frames this app produces. The accuracy suite reads this file;",
+    "it is the fixture's contract, not documentation of it.",
+    "",
+    "What this fixture asserts is unusual, and it is the reason it exists: that the",
+    "tool reports most of the frame as *unattributed*. Every other fixture checks",
+    "that a culprit is named. This one checks that one is not. A tool that answers",
+    "`derive-in-render` perfectly and this one confidently is a tool that lies",
+    "whenever it cannot see, which is the failure mode that would quietly discredit",
+    "every other number it prints.",
+    "",
+    "`expectedSourceText` exists so the ground truth validates itself. Line",
+    "numbers drift the moment someone edits the app, and a stale line number fails",
+    "as a wrong attribution rather than as a broken fixture. A test asserts that",
+    "each recorded line still contains the recorded text before it asserts anything",
+    "about the tool's output. The text is each line's content with leading",
+    "whitespace trimmed, counting lines from 1."
+  ],
+  "fixture": "innerhtml-rebuild",
+  "title": "A long frame whose cost is browser work, not script",
+  "bug": {
+    "summary": "A click listener toggles a class that invalidates the computed style of every row, then replaces all 4,000 rows through `innerHTML`. The listener is cheap - roughly 9-18ms of script - and the frame is 129-156ms.",
+    "whyItIsRealistic": "This is what hand-written list rendering looks like in a page with no framework: join a string, assign it to `innerHTML`, and toggle a density or theme class on `body` in the same handler. Neither operation looks expensive at the call site, and a profiler pointed at JavaScript will show almost nothing, because almost none of the cost is JavaScript.",
+    "whereTheTimeGoes": "Style recalculation for every invalidated row, then parsing, attaching and laying out 4,000 replacement rows. In the unforced scenario all of it runs in the frame's rendering update with no script on the stack; in the forced scenario the same work is pulled inside the listener by one geometry read.",
+    "rowsRebuilt": 4000,
+    "invalidatingProperties": ["letter-spacing", "font-size", "padding-left"],
+    "$comment": [
+      "Those three properties are load-bearing, not decoration. `letter-spacing` and",
+      "`font-size` change text metrics and `padding-left` changes the box the text is",
+      "laid out into, so no cached line box survives the toggle. A class that only",
+      "changed `color` would repaint cheaply and the fixture would not jank."
+    ]
+  },
+  "interaction": {
+    "description": "Click one of the two rebuild buttons. Which button selects the scenario, so the target selector is declared per scenario rather than here.",
+    "kind": "click",
+    "note": "The scenario is chosen by clicking, not by setting a flag on `window`. The throwaway predecessor used a mutable `window.__force` global, which meant a driver had to put the page into the right state before clicking and a human could not reproduce the forced case at all."
+  },
+  "scenarios": [
+    {
+      "label": "unforced",
+      "targetSelector": "[data-fixture=\"rebuild-unforced\"]",
+      "description": "The listener toggles the class, assigns `innerHTML`, and returns without reading geometry.",
+      "whatLoafReports": {
+        "styleDurationMs": 0,
+        "layoutDurationMs": 0,
+        "forcedStyleAndLayoutDurationMs": 0,
+        "$comment": [
+          "All three are zero, and that is specified behaviour rather than a Chrome bug:",
+          "style and layout performed while no script is running, before the rendering",
+          "update, are counted by neither `styleDuration`/`layoutDuration` nor",
+          "`forcedStyleAndLayoutDuration`. So LoAF's own fields account for the script",
+          "and nothing else, and the arithmetic in findings.md leaves up to 93% of the",
+          "frame with no name available from LoAF at all."
+        ]
+      },
+      "correctAttribution": {
+        "mustReportUnattributedShare": true,
+        "unattributedShareFloor": 0.75,
+        "$comment": [
+          "The honest answer is: a few milliseconds of script at the listener",
+          "registration line, and a large unattributed remainder that the tool states",
+          "as unattributed. Naming any script for that remainder would be a lie - no",
+          "JavaScript was running while it was spent, which the empty-stack cross-check",
+          "below demonstrates independently of the subtraction.",
+          "The floor is deliberately well below the measured 93%: the assertion worth",
+          "making is `most of this frame is unattributable`, not a reproduction of one",
+          "run's percentage. Re-measurement on this fixture may move the figure; it",
+          "must not move it below three quarters of the frame.",
+          "A tool that has a tier for this may legitimately add that the shape - a",
+          "cheap listener, a huge frame, zero style and layout duration, zero",
+          "attributable samples - is characteristic of style and layout in the",
+          "rendering update, and may suggest the forced scenario as the way to confirm",
+          "it. That is a named inference at stated confidence, which the tiering",
+          "invariant permits. Presenting it as a measurement is not."
+        ]
+      },
+      "mustNotReport": [
+        "The unattributed remainder distributed across the listener, `buildRowMarkup`, or any other script.",
+        "A single culprit function or line holding the whole frame's weight.",
+        "A smaller frame duration to make the residual look accounted for."
+      ]
+    },
+    {
+      "label": "forced",
+      "targetSelector": "[data-fixture=\"rebuild-forced\"]",
+      "description": "The same work plus one `offsetHeight` read at the end of the listener, which flushes style and layout synchronously inside the script.",
+      "whatLoafReports": {
+        "styleDurationMs": 0,
+        "layoutDurationMs": 0,
+        "forcedStyleAndLayoutDurationMsRange": [96.4, 116],
+        "$comment": [
+          "The same browser work, moved inside the script, is named exactly - and",
+          "`styleDuration` and `layoutDuration` still stay 0, which is the pair of",
+          "observations that together prove the unforced scenario's residual was style",
+          "and layout rather than something unknown.",
+          "`forcedStyleAndLayoutDuration` is nested inside the script entry's own",
+          "`duration`. Adding it to the sum as a separate slice double-counts it; the",
+          "range here is measured on the throwaway predecessor (see `observedJank`)."
+        ]
+      },
+      "correctAttribution": {
+        "mustReportUnattributedShare": false,
+        "$comment": [
+          "Here the frame does decompose: the script entry covers nearly all of it and",
+          "`forcedStyleAndLayoutDuration` names most of the script entry as browser",
+          "work rather than JavaScript. The tool must attribute that share to forced",
+          "style and layout, charged to the script that forced it, and must not charge",
+          "it to whatever function the profiler's few samples happened to land in.",
+          "Sampled stacks remain nearly empty in this scenario too, because the thread",
+          "is inside layout rather than inside JavaScript - so a tool that weights by",
+          "sample count alone will under-report this script entry badly."
+        ]
+      },
+      "mustNotReport": [
+        "`forcedStyleAndLayoutDuration` added to the script's `duration` as a separate slice; it is nested inside it.",
+        "Non-zero `styleDuration` or `layoutDuration` - they stay 0, and a tool that reads them as the frame's style and layout cost will report zero for a frame that spent ~100ms in exactly that."
+      ]
+    }
+  ],
+  "reproduction": {
+    "buildMode": "development",
+    "server": "vite dev, http://localhost:5188",
+    "cpuThrottleRate": 4,
+    "note": "Every millisecond figure derived from this fixture must be quoted with these two settings. Unthrottled dev-mode numbers on an M-series Mac are not the user's experience, and throttled numbers are not a benchmark.",
+    "productionParity": {
+      "$comment": [
+        "Unlike `derive-in-render`, this fixture should behave identically in a",
+        "production build, because there is nothing to build: the app is a classic",
+        "script in `public/`, which Vite copies byte-for-byte. The declared line",
+        "numbers below therefore hold in both modes, and a `sourceCharPosition` offset",
+        "means the same thing in both. Worth asserting rather than assuming - it is",
+        "the cheapest available check that the position-resolution path is not",
+        "silently dev-only."
+      ],
+      "expectedToMatchDevelopment": true,
+      "previewServer": "vite preview, http://localhost:5189"
+    }
+  },
+  "expected": {
+    "sourceFile": "fixtures/innerhtml-rebuild/public/app.js",
+    "culpritLines": [
+      {
+        "line": 144,
+        "expectedSourceText": "document.body.classList.toggle('wide');",
+        "role": "the invalidation: one class write that costs every existing row its computed style and its text metrics"
+      },
+      {
+        "line": 150,
+        "expectedSourceText": "list.innerHTML = markup;",
+        "role": "the rebuild: discards 4,000 rows and parses 4,000 replacements, then needs all of them styled and laid out"
+      },
+      {
+        "line": 166,
+        "expectedSourceText": "forcedHeight = list.offsetHeight;",
+        "role": "the forced scenario only: the geometry read that pulls style and layout inside the script, where LoAF can name it"
+      }
+    ],
+    "acceptableAttribution": {
+      "$comment": [
+        "There is no component here and no expensive function to find, so `expected`",
+        "is shaped differently from `derive-in-render`'s. The lines above are what a",
+        "human should be pointed at; they are not where samples land, because no",
+        "JavaScript is running while the cost is incurred. An attribution that names",
+        "line 144 or 150 as a *sampled* culprit is wrong for the right-looking reason,",
+        "and an attribution that names them as the write that preceded an",
+        "unattributable frame is correct."
+      ],
+      "lineRange": {
+        "from": 144,
+        "to": 150
+      },
+      "forcedScenarioLine": 166,
+      "note": "Correctness here is mostly about the shares, not the line. The required answer is: this frame's time is dominated by work that was not JavaScript, stated as such, with the script slice given its true few milliseconds."
+    },
+    "unattributedCrossCheck": {
+      "$comment": [
+        "The fixture's real assertion, and the reason it is worth keeping. Two",
+        "independent signals must agree that nothing was attributable:",
+        "  1. LoAF arithmetic - `duration - (scripts + style + layout + paint-ish)`",
+        "     left a residual of 93% of the frame.",
+        "  2. The sampled profile - 100% of in-frame samples had no JavaScript on the",
+        "     stack at all.",
+        "Either one alone is weak. Subtraction alone cannot distinguish browser work",
+        "from a gap in LoAF's own accounting, and an empty stack alone does not say",
+        "how much time it covers. Together they are a defensible unattributed tier.",
+        "For contrast, findings.md records the script-dominated case on",
+        "`derive-in-render`: a 7.7% residual coinciding with 1.9% empty-stack samples.",
+        "The two fixtures bracket the range the engine has to behave sanely across.",
+        "The percentages below were measured on the throwaway predecessor and are",
+        "pending re-measurement here; the *agreement* between the two signals is what",
+        "the suite should assert, not the exact figures."
+      ],
+      "loafResidualShare": 0.93,
+      "emptyStackSampleShare": 1,
+      "measuredOn": "throwaway predecessor",
+      "agreementToleranceShare": 0.2,
+      "delayProbe": {
+        "$comment": [
+          "The third, independent demonstration that the residual is work and not idle,",
+          "and the reason the app keeps a probe at all. At the end of the listener the",
+          "app posts a `MessageChannel` message, queues a `setTimeout` and requests an",
+          "animation frame. If the main thread were idle they would run promptly; if it",
+          "is busy with non-JS work they arrive late, and the lateness is a lower bound",
+          "on how long that work took. Records accumulate on the global named below;",
+          "the `delays` object of each record is filled in after the record is pushed,",
+          "so it must be read after the frame has ended."
+        ],
+        "globalName": "window.__frameblameRebuildProbe",
+        "expectation": "In the unforced scenario the message-channel and animation-frame delays should be within a few milliseconds of the LoAF residual, and the animation frame should fire at `renderStart`."
+      }
+    }
+  },
+  "notAtFault": {
+    "scripts": [
+      "fixtures/innerhtml-rebuild/public/app.js:204 - the unforced listener's registration site",
+      "fixtures/innerhtml-rebuild/public/app.js:207 - the forced listener's registration site",
+      "buildRowMarkup"
+    ],
+    "sourceFile": "fixtures/innerhtml-rebuild/public/app.js",
+    "registrationLines": [
+      {
+        "line": 204,
+        "expectedSourceText": "unforcedButton.addEventListener('click', () => {",
+        "role": "what LoAF's `sourceCharPosition` resolves to for the unforced scenario: where the listener was registered, not where the time went"
+      },
+      {
+        "line": 207,
+        "expectedSourceText": "forcedButton.addEventListener('click', () => {",
+        "role": "the same for the forced scenario"
+      },
+      {
+        "line": 112,
+        "expectedSourceText": "html.push(`<li class=\"row\">row ${String(i)} - some text to lay out</li>`);",
+        "role": "the only hot JavaScript in the fixture, and still only a few milliseconds of it; the most plausible wrong answer"
+      }
+    ],
+    "note": "These are the scripts a tool can see, which is exactly why they are the wrong answer. The specific failure mode this fixture tests for is distributing the unattributable residual across whatever script happens to be visible in the frame - charging ~130ms of style and layout to a listener that ran for 9ms, or to the loop at line 112 because it is the only place a stack trace ever pointed. Being honest about the residual is the whole test; a confident wrong answer here is worse than no answer."
+  },
+  "measuredOnThisFixture": {
+    "$comment": [
+      "Measured on THIS package from the capture currently in",
+      "corpus/innerhtml-rebuild/development. Chromium 159.0.8154.6 on Apple",
+      "silicon, 4x CPU throttling, vite dev server, four clicks per scenario.",
+      "Ranges rather than per-frame arrays: the per-frame values are in the",
+      "corpus, and this file records the claim rather than a transcription of",
+      "one run. Production agreed closely.",
+      "",
+      "The three columns are the whole point of the fixture, and they move",
+      "together. Unforced: LoAF can name about a tenth of the frame, the",
+      "profiler finds no JavaScript on the stack for ~90% of its in-frame",
+      "samples, and a task posted at the end of a ~15ms listener is not",
+      "delivered for 120-137ms. Three independent signals agreeing that the time",
+      "was real main-thread work that nothing can attribute.",
+      "Forced: adding one offsetHeight read moves all three at once - LoAF names",
+      "most of the frame, forcedStyleAndLayoutDuration appears, and the",
+      "empty-stack share collapses.",
+      "That is what makes an honest unattributed tier possible. Subtraction",
+      "alone would give the same residual for a frame whose time went somewhere",
+      "a tool simply failed to look.",
+      "",
+      "taskDeliveryDelayRangeMs comes from the fixture's own probe, published on",
+      "window.__frameblameFixtureProbe and stored verbatim under fixtureProbe in",
+      "the run's loaf.json. It cannot be measured from outside the page, and it",
+      "is the evidence that distinguishes a busy main thread from an idle one."
+    ],
+    "runId": "2026-11-15T02-26-52-628Z__innerhtml-rebuild__development",
+    "corpusPath": "corpus/innerhtml-rebuild/development",
+    "unforced": {
+      "frameDurationRangeMs": [130.1, 150.1],
+      "loafScriptDurationRangeMs": [14.4, 15.6],
+      "forcedStyleAndLayoutDurationRangeMs": [0, 0],
+      "styleDurationMs": 0,
+      "layoutDurationMs": 0,
+      "residualShareRange": [0.889, 0.896],
+      "emptyStackSampleShareRange": [0.909, 0.923],
+      "presentationBeyondDurationRangeMs": [27, 39],
+      "listenerTotalRangeMs": [14.3, 15.2],
+      "taskDeliveryDelayRangeMs": [119.5, 137.4],
+      "animationFrameDelayRangeMs": [115.3, 132.8],
+      "frames": 4
+    },
+    "forced": {
+      "frameDurationRangeMs": [132.6, 140.3],
+      "loafScriptDurationRangeMs": [110.3, 120.4],
+      "forcedStyleAndLayoutDurationRangeMs": [96, 105.5],
+      "forcedStyleDurationRangeMs": [23.4, 25.8],
+      "forcedLayoutDurationRangeMs": [72.4, 80.3],
+      "styleDurationMs": 0,
+      "layoutDurationMs": 0,
+      "residualShareRange": [0.137, 0.168],
+      "emptyStackSampleShareRange": [0.154, 0.167],
+      "presentationBeyondDurationRangeMs": [35.4, 42.5],
+      "listenerTotalRangeMs": [110.2, 120.3],
+      "taskDeliveryDelayRangeMs": [22.8, 24.7],
+      "animationFrameDelayRangeMs": [18.4, 20.7],
+      "frames": 4
+    },
+    "styleLayoutSplitIsInTheLoafEntry": {
+      "$comment": [
+        "Corrected. This block previously said LoAF exposes no field giving the",
+        "style-versus-layout split of forced work, and that findings.md's quoted",
+        "24.3-25.3 style and 71.8-90.6 layout therefore came from an unnamed",
+        "instrument. The instrument is the LoAF script entry itself: the spec",
+        "defines forcedStyleDuration and forcedLayoutDuration alongside the",
+        "combined forcedStyleAndLayoutDuration, which it defines as their sum,",
+        "and Chrome 159 serialises all three. They are in every capture, in",
+        "entries[].toJSON.scripts[] - though not in the collector's own",
+        "field-by-field projection beside it, which is why nobody saw them.",
+        "The split is asserted from the corpus in packages/corpus's record tests",
+        "rather than transcribed here. Note that the two halves do not sum to",
+        "the combined figure exactly: the spec coarsens each independently so",
+        "that summing them cannot recover withheld resolution, so they disagree",
+        "by up to one 100us grid step by design."
+      ]
+    }
+  },
+  "observedJank": {
+    "$comment": [
+      "Figures measured on the *throwaway predecessor* of this fixture, not on this",
+      "fixture, and recorded here only so re-measurement has something to be checked",
+      "against. Every one of them is pending re-capture under the `reproduction`",
+      "settings above; anything not measured at all is `null` rather than estimated.",
+      "Provenance: `spike/archive/probe-vanilla.ts` plus `spike/archive/vanilla/`,",
+      "Chromium 159.0.8154.6 on Apple silicon, 4x CPU throttling, quoted in",
+      "findings.md under 'Decomposing the frame'. Two differences from this fixture,",
+      "both of which could move the numbers:",
+      "  1. The predecessor was served by a bare `node:http` static server on port",
+      "     5185, not by Vite. The served bytes of `app.js` should be identical, since",
+      "     Vite copies `public/` verbatim, but the surrounding page is not: the",
+      "     predecessor also loaded a `vendor.js` and carried three further listeners",
+      "     for an unrelated claim.",
+      "  2. The predecessor pre-built 400 rows at load, so its first rebuild click",
+      "     invalidated 400 existing rows rather than 4,000. This fixture pre-builds",
+      "     all 4,000, which is why its first click should resemble the predecessor's",
+      "     later clicks rather than its first.",
+      "Frame indices below are the predecessor dump's, kept so the figures can be",
+      "traced back to the quoted table rather than renumbered to look tidy.",
+      "",
+      "`minimumFrameDurationMs` is the one figure here that is not a measurement: it",
+      "is a floor for the suite to assert that the fixture still janks, set well",
+      "under the 129ms low end of the predecessor's range so that a slower or faster",
+      "machine does not fail the fixture for the wrong reason. Unlike",
+      "`derive-in-render`, this fixture is far clear of LoAF's 50ms reporting",
+      "threshold, so every click should produce an entry and the",
+      "threshold-sensitivity caveat recorded there does not apply here."
+    ],
+    "measuredOn": "throwaway predecessor",
+    "pendingRemeasurement": false,
+    "$supersededBy": [
+      "measuredOnThisFixture, above. The re-measurement is done: this block is now",
+      "comparison evidence rather than an expectation, and the suite must not assert",
+      "on it. Where the two disagree, this one is about a different app.",
+      "Everything below that says 'pending the corpus capture' is answered there,",
+      "with one exception, which is called out in measuredOnThisFixture: the",
+      "style-versus-layout split of the forced cost, which LoAF exposes no field for",
+      "and which was therefore not reproduced.",
+      "Agreement was close. The predecessor's 93% residual came back as 89-90%, its",
+      "forced 96.4-116.0ms as 96-106ms, and style and layout stayed 0 throughout."
+    ],
+    "unforced": {
+      "frameDurationMs": {
+        "frame2": 145.9,
+        "frames3to5": [129, 156]
+      },
+      "loafScriptDurationMs": {
+        "frame2": 9.1,
+        "frames3to5": [14.5, 17.9]
+      },
+      "styleDurationMs": 0,
+      "layoutDurationMs": 0,
+      "residualMs": {
+        "frame2": 136.1,
+        "frames3to5": [112, 139]
+      },
+      "residualShare": {
+        "frame2": 0.93,
+        "frames3to5": null
+      },
+      "inPageListenerAgreementMs": 0.5,
+      "listenerPhaseMs": {
+        "$comment": [
+          "The listener's own breakdown - class toggle, string build, `innerHTML` - was",
+          "recorded per click by the predecessor's probe but is not quoted in",
+          "findings.md, so it is not reproduced here. Pending the corpus capture.",
+          "`inPageListenerAgreementMs` above is quoted: the in-page `performance.now()`",
+          "measurement around the listener agreed with LoAF's script figure to 0.5ms,",
+          "which is what establishes that the script number is correct and the frame",
+          "number is not wrong either - the gap between them is real."
+        ],
+        "classToggle": null,
+        "stringBuild": null,
+        "innerHtml": null
+      },
+      "delayProbeMs": {
+        "messageChannel": [122, 146],
+        "animationFrame": [118, 141],
+        "timeout": null,
+        "$comment": [
+          "Message-channel and animation-frame delays are quoted in findings.md. The",
+          "`setTimeout` delay was recorded by the same probe but not quoted, so it is",
+          "null pending the corpus capture. The animation frame fired exactly at",
+          "`renderStart`, which is what places the missing time before the rendering",
+          "update rather than inside it."
+        ]
+      },
+      "emptyStackSampleShare": 1
+    },
+    "forced": {
+      "$comment": [
+        "findings.md quotes only the forced scenario's style-and-layout figures, so",
+        "the frame duration, script duration and residual for this scenario are null",
+        "pending the corpus capture. The predecessor drove this case by setting",
+        "`window.__force` before the clicks; this fixture drives it by clicking the",
+        "second button."
+      ],
+      "frameDurationMs": null,
+      "loafScriptDurationMs": null,
+      "styleDurationMs": 0,
+      "layoutDurationMs": 0,
+      "forcedStyleAndLayoutDurationMs": [96.4, 116],
+      "forcedStyleAndLayoutSplitMs": {
+        "$comment": [
+          "findings.md reports this split as 24.3-25.3ms style and 71.8-90.6ms layout.",
+          "This block demanded that the re-measurement name the instrument or drop the",
+          "two figures. The instrument is named below: both halves are fields of the",
+          "LoAF script entry, specified and shipped by Chrome 159. The style range",
+          "reproduces and the layout range does not reach 90.6 - see the measured",
+          "block above, which is where the current figures live."
+        ],
+        "style": [24.3, 25.3],
+        "layout": [71.8, 90.6],
+        "sourceOfSplit": "PerformanceScriptTiming.forcedStyleDuration and .forcedLayoutDuration"
+      },
+      "residualMs": null,
+      "emptyStackSampleShare": null
+    },
+    "presentationDelayMs": {
+      "$comment": [
+        "`presentationTime` sat 23-42ms beyond the end of `duration` in every frame",
+        "the spike measured, but findings.md does not quote a figure for this fixture",
+        "specifically, so it is null here. It matters for this fixture more than most:",
+        "with a frame this long the denominator has to be named, or a percentage of",
+        "`duration` will be mistaken for a percentage of click-to-pixels."
+      ],
+      "range": null
+    },
+    "minimumFrameDurationMs": 100
+  }
+}

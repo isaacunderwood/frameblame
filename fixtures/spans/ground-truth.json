@@ -1,0 +1,600 @@
+{
+  "$comment": [
+    "Ground truth for fixture `spans`: what a correct attribution must say about",
+    "the frames this app produces. The accuracy suite reads this file; it is the",
+    "fixture's contract, not documentation of it.",
+    "",
+    "This fixture is a regression test for one specific mistake. The v0.1 spike's",
+    "first draft recommended promoting React's `performance.measure` render spans",
+    "to the primary component signal; its throwaway four-cause app disproved that,",
+    "and `findings.md` records the reversal as the most consequential error of the",
+    "round. The throwaway app was not kept, so the disproof was unreproducible.",
+    "This fixture is that app, promoted. See `guardsAgainst` below.",
+    "",
+    "Unlike `derive-in-render`, the declared outcome here is per interaction, not",
+    "per frame: the same five components render on nearly every interaction and",
+    "what changes is which of them React is willing to name. `expected.sequence`",
+    "is therefore the heart of the file, and a driver has to replay it in order.",
+    "",
+    "`expectedSourceText` exists so the ground truth validates itself. Line",
+    "numbers drift the moment someone edits a component, and a stale line number",
+    "fails as a wrong attribution rather than as a broken fixture. A test asserts",
+    "that each recorded line still contains the recorded text, after trimming",
+    "leading whitespace, before it asserts anything about the tool's output.",
+    "The same mechanism is used for the lines quoted out of React's own build, so",
+    "that a React upgrade that moves or changes the gate fails loudly here rather",
+    "than quietly invalidating every claim in this file.",
+    "",
+    "The line numbers in this file were recorded by reading the finished sources,",
+    "but those sources have not yet been through `pnpm format`. If a formatting",
+    "pass shifts a line, the `expectedSourceText` assertion is what will say so."
+  ],
+  "fixture": "spans",
+  "title": "Five re-render causes, and which of them React will name",
+  "bug": {
+    "summary": "Five sibling components, plus App, each burn about 25ms synchronously in their render bodies. They are identical in cost and differ only in why React re-rendered them: changed props, a changed context, their own setState, a first mount, or a fresh-but-deep-equal props object.",
+    "whyItIsRealistic": "The app itself is a lab specimen, not a realistic app — but each of the five causes is one of the real ways a component comes to re-render, and the two React declines to name (the setState owner and the context consumer) are the two most common real culprits. The realism is in the coverage, not in the app.",
+    "declaredBurnMsPerComponent": 25,
+    "burnIsWallClock": true,
+    "componentsThatBurn": [
+      "App",
+      "PropsChanged",
+      "ContextConsumer",
+      "StateOwner",
+      "DeepEqualProps",
+      "LateMount"
+    ]
+  },
+  "guardsAgainst": {
+    "$comment": [
+      "Named explicitly because a fixture whose purpose is not written down gets",
+      "deleted or 'simplified' by the next reader. Every component in this app",
+      "exists to keep one row of `expected.sequence` true."
+    ],
+    "reversal": 1,
+    "rejectedClaim": "Promote React's `performance.measure` spans to the primary component signal.",
+    "whyItIsWrong": "The props-identity gate means a tool keyed on spans reports 'nothing happened' for a 50ms frame caused by a leaf component's own setState, by a context update, or by a first mount. Worse, on some interactions the only component it does name is DeepEqualProps, which did nothing a user would call a change.",
+    "standingDecision": "Fiber `actualDuration`, read through the DevTools global hook, is the primary component signal in development. Spans are corroboration only, available for a subset of components.",
+    "source": "findings.md, section 'What the review round changed', reversal 1; mechanism in section 'React: a strong signal and a trap'"
+  },
+  "interaction": {
+    "description": "A fixed sequence of clicks, replayed in order from a cold load. Each interaction has a different re-render cause, so the sequence is the experiment and the order is load-bearing: LateMount's first mount can only be observed once, and `bump-again` is only meaningful after it.",
+    "kind": "sequence",
+    "selectors": {
+      "bump": "[data-fixture=\"bump\"]",
+      "stateOwnerSelf": "[data-fixture=\"state-owner-self\"]",
+      "mountToggle": "[data-fixture=\"mount-toggle\"]"
+    },
+    "order": ["initial-mount", "bump", "state-owner-self", "mount-toggle", "bump-again"],
+    "settleMsBetweenClicks": 600,
+    "$comment": [
+      "The sequence and the 600ms settle are taken from the archived driver,",
+      "spike/archive/spans/drive.ts, which is what produced the measured rows",
+      "quoted in `expected.sequence`. A re-capture must drive the same order or",
+      "the rows are not comparable.",
+      "The mount toggle toggles rather than mounting once. Clicking it a second",
+      "time unmounts LateMount, which is outside the declared sequence."
+    ]
+  },
+  "reproduction": {
+    "buildMode": "development",
+    "server": "vite dev, http://localhost:5186",
+    "cpuThrottleRate": 4,
+    "note": "Every millisecond figure derived from this fixture must be quoted with these two settings, as the project's invariant requires.",
+    "throttleSensitivity": {
+      "$comment": [
+        "Read this before comparing any number here with one from",
+        "`derive-in-render`. `burn(ms)` spins on `performance.now()`, so its exit",
+        "condition is a clock reading rather than an amount of work: it occupies",
+        "the main thread for the same wall-clock duration at 1x and at 4x, simply",
+        "completing less arithmetic when throttled. `derive-in-render` is the",
+        "opposite - a fixed amount of work whose duration scales with the throttle",
+        "rate. So the throttle rate is recorded here for the browser-side signals",
+        "it does affect, not because it scales this fixture's cost.",
+        "A consequence worth knowing: this fixture cannot be used to check that a",
+        "tool reports throttle-scaled durations correctly. Use derive-in-render."
+      ],
+      "costScalesWithThrottleRate": false,
+      "reason": "burn() busy-waits on performance.now() and therefore burns wall-clock time"
+    }
+  },
+  "expected": {
+    "$comment": [
+      "Two things are declared here: the gate React applies (the rule), and what",
+      "that rule produces for each interaction (the sequence). The rule is quoted",
+      "from React's own source so the sequence can be explained rather than just",
+      "asserted - a table of outcomes with no mechanism beside it is the kind of",
+      "thing a future reader assumes is stale."
+    ],
+    "gate": {
+      "rule": "React 19.3's development build emits a `performance.measure` for a rendered component only if fiber.memoizedProps !== null AND fiber.alternate !== null AND alternate.memoizedProps !== fiber.memoizedProps AND the resulting props diff contains at least one entry. Otherwise it calls console.timeStamp, which produces no PerformanceEntry at all, and the component is externally indistinguishable from one that never rendered.",
+      "theRuleIsNotCost": "Nothing in the gate consults duration. A 25ms component can be named and a 47ms one skipped in the same commit; derive-in-render measured exactly that.",
+      "source": {
+        "sourceFile": "fixtures/spans/node_modules/react-dom/cjs/react-dom-client.development.js",
+        "package": "react-dom",
+        "version": "19.3.1",
+        "resolvedVia": "pnpm; verified at node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/cjs/react-dom-client.development.js",
+        "$comment": [
+          "A minified production build has none of this - no spans, and null",
+          "actualDuration - so these line numbers describe the development build",
+          "only. They are exact for 19.3.1 and will move on any upgrade, which is",
+          "what the expectedSourceText entries below are for."
+        ],
+        "lines": [
+          {
+            "line": 4441,
+            "expectedSourceText": "null !== props &&",
+            "role": "gate, first clause: the fiber has props at all"
+          },
+          {
+            "line": 4442,
+            "expectedSourceText": "null !== alternate &&",
+            "role": "gate, second clause: there is a previous fiber, i.e. this is not a first mount. This clause alone makes every mount invisible."
+          },
+          {
+            "line": 4443,
+            "expectedSourceText": "alternate.memoizedProps !== props",
+            "role": "gate, third clause: the props object identity changed. A component with no props, or whose parent passed the same object, stops here - which is the setState owner and the context consumer."
+          },
+          {
+            "line": 4451,
+            "expectedSourceText": "1 < child.length",
+            "role": "gate, fourth clause: the props diff produced at least one entry beyond the single header row the array is seeded with on the line before. An empty props object diffed against an empty props object yields none."
+          },
+          {
+            "line": 4329,
+            "expectedSourceText": "properties.push(prevKind);",
+            "role": "why DeepEqualProps is named: for a referentially unequal plain object the diff walker pushes an entry BEFORE recursing into it, so the diff is non-empty whatever the recursion finds."
+          },
+          {
+            "line": 4339,
+            "expectedSourceText": "\"Referentially unequal but deeply equal objects. Consider memoization.\")",
+            "role": "and what it does when the recursion finds them equal: it relabels that entry. The span is still emitted."
+          },
+          {
+            "line": 4455,
+            "expectedSourceText": "100 < fiber.actualDuration",
+            "role": "React's own deep-equality warning is gated on duration, so at 25ms DeepEqualProps gets an ordinary-looking span with no warning attached. At a burn above 100ms it would be flagged."
+          },
+          {
+            "line": 4466,
+            "expectedSourceText": "(fiber = \"\\u200b\" + name),",
+            "role": "the span name is the component name prefixed with U+200B. See spanNamePrefix below."
+          },
+          {
+            "line": 4475,
+            "expectedSourceText": ": performance.measure(fiber, reusableComponentOptions),",
+            "role": "the emission itself: the only path that produces a PerformanceEntry"
+          },
+          {
+            "line": 4476,
+            "expectedSourceText": "performance.clearMeasures(fiber))",
+            "role": "React clears the measure immediately after emitting it, so entries must be observed and can never be polled for"
+          },
+          {
+            "line": 4479,
+            "expectedSourceText": "console.timeStamp.bind(",
+            "role": "the fallback taken whenever the gate fails: a devtools-only timestamp, with no PerformanceEntry"
+          },
+          {
+            "line": 4421,
+            "expectedSourceText": "selfTime = fiber.actualDuration;",
+            "role": "self time is actualDuration minus the sum of the children's, which is what React itself computes here - not selfBaseDuration, which is the previous render's base duration"
+          }
+        ]
+      },
+      "spanNamePrefix": {
+        "codepoint": "U+200B",
+        "name": "ZERO WIDTH SPACE",
+        "note": "Deliberately described rather than written literally here: an invisible character in a JSON string is a trap for the next reader and for grep. Consumers must strip the prefix before matching a span name against a component name, and must not assume it will survive a console or log round trip."
+      },
+      "detailIsNotTrustworthy": {
+        "note": "`entry.detail.devtools` is a mutated module singleton, so `properties`, `color` and `tooltipText` reflect the last measure emitted rather than the entry in hand. Only `name`, `startTime` and `duration` can be trusted.",
+        "sourceFile": "fixtures/spans/node_modules/react-dom/cjs/react-dom-client.development.js",
+        "sourceLines": [
+          {
+            "line": 28178,
+            "expectedSourceText": "reusableComponentDevToolDetails = {",
+            "role": "the one object that every emitted measure's detail.devtools points at, declared once at module scope and mutated per emission"
+          },
+          {
+            "line": 28187,
+            "expectedSourceText": "detail: { devtools: reusableComponentDevToolDetails }",
+            "role": "and the options object that hands it to performance.measure, likewise reused"
+          }
+        ]
+      }
+    },
+    "components": [
+      {
+        "name": "App",
+        "sourceFile": "fixtures/spans/src/App.tsx",
+        "line": 47,
+        "expectedSourceText": "export function App() {",
+        "burnLine": 53,
+        "burnLineExpectedSourceText": "burn(BURN_MS);",
+        "whyItRerenders": "owns the state both buttons update",
+        "gateVerdict": "never named: its own setState leaves its props unchanged",
+        "note": "The same shape that went unnamed in derive-in-render across 24 keypresses while having the largest actualDuration in the commit."
+      },
+      {
+        "name": "PropsChanged",
+        "sourceFile": "fixtures/spans/src/causes.tsx",
+        "line": 89,
+        "expectedSourceText": "export function PropsChanged({ n }: PropsChangedProps) {",
+        "whyItRerenders": "its `n` prop changes when App bumps",
+        "gateVerdict": "named whenever n changes"
+      },
+      {
+        "name": "ContextConsumer",
+        "sourceFile": "fixtures/spans/src/causes.tsx",
+        "line": 98,
+        "expectedSourceText": "export function ContextConsumer() {",
+        "whyItRerenders": "the context it reads changes; it has no props",
+        "gateVerdict": "never named: the props diff of {} against {} is empty"
+      },
+      {
+        "name": "StateOwner",
+        "sourceFile": "fixtures/spans/src/causes.tsx",
+        "line": 111,
+        "expectedSourceText": "export function StateOwner() {",
+        "triggerSelector": "[data-fixture=\"state-owner-self\"]",
+        "triggerLine": 118,
+        "triggerLineExpectedSourceText": "data-fixture=\"state-owner-self\"",
+        "whyItRerenders": "its own setState",
+        "gateVerdict": "never named: its props never change",
+        "note": "The most important component in the fixture. A tool keyed on spans has nothing whatsoever to report for its interaction."
+      },
+      {
+        "name": "LateMount",
+        "sourceFile": "fixtures/spans/src/causes.tsx",
+        "line": 135,
+        "expectedSourceText": "export function LateMount() {",
+        "mountedFromLine": 86,
+        "mountedFromFile": "fixtures/spans/src/App.tsx",
+        "mountedFromExpectedSourceText": "{showLateMount ? <LateMount /> : null}",
+        "whyItRerenders": "it mounts for the first time",
+        "gateVerdict": "not named on the render that is expensive: a first mount has no alternate"
+      },
+      {
+        "name": "DeepEqualProps",
+        "sourceFile": "fixtures/spans/src/causes.tsx",
+        "line": 157,
+        "expectedSourceText": "export function DeepEqualProps({ config }: DeepEqualPropsProps) {",
+        "propsFromLine": 85,
+        "propsFromFile": "fixtures/spans/src/App.tsx",
+        "propsFromExpectedSourceText": "<DeepEqualProps config={{ k: 'constant' }} />",
+        "whyItRerenders": "its parent re-renders and hands it a fresh object literal that is deep-equal to the last",
+        "gateVerdict": "named on every re-render, and on some interactions the only component named",
+        "note": "The inverse failure. Ranking components by span presence would put this one above whichever component actually caused the frame."
+      }
+    ],
+    "sequence": [
+      {
+        "id": "initial-mount",
+        "trigger": "cold load of http://localhost:5186",
+        "componentsThatRender": [
+          "App",
+          "PropsChanged",
+          "ContextConsumer",
+          "StateOwner",
+          "DeepEqualProps"
+        ],
+        "componentsGivenASpan": [],
+        "provenance": "measured",
+        "note": "Five components render for about 25ms each, roughly 140ms of main thread in total, and React emits zero spans. Every one of them is a first mount, so every one of them fails the alternate clause. This single row is the clearest statement of why spans cannot be the primary signal.",
+        "fiberActualDurationAvailable": true
+      },
+      {
+        "id": "bump",
+        "trigger": "click [data-fixture=\"bump\"] (App setState: n changes, so the context value changes too)",
+        "componentsThatRender": [
+          "App",
+          "PropsChanged",
+          "ContextConsumer",
+          "StateOwner",
+          "DeepEqualProps"
+        ],
+        "componentsGivenASpan": ["PropsChanged", "DeepEqualProps"],
+        "provenance": "measured",
+        "note": "Two of five named. PropsChanged because n changed; DeepEqualProps because its props object identity changed even though its contents did not. App, ContextConsumer and StateOwner render for the same ~25ms each and are not named.",
+        "fiberActualDurationAvailable": true
+      },
+      {
+        "id": "state-owner-self",
+        "trigger": "click [data-fixture=\"state-owner-self\"] (StateOwner's own setState, no prop change anywhere)",
+        "componentsThatRender": ["App", "StateOwner"],
+        "componentsGivenASpan": [],
+        "provenance": "measured",
+        "note": "No span at all, for either component. This is the regression row: a tool keyed on spans reports that nothing happened for an interaction that burned real main-thread time.",
+        "fiberActualDurationAvailable": true,
+        "$comment": [
+          "findings.md records this row as 'App 25.2ms, StateOwner 25.2ms' from the",
+          "commit walk's actualDuration. Whether App's figure is fresh work is not",
+          "settled by the archived output, and there is reason to think it is not:",
+          "a leaf's setState should let React bail out of App without re-invoking",
+          "its body, and a parent's actualDuration accumulates its children's, so",
+          "~25ms on App is exactly what a bailed-out parent above a 25ms child",
+          "would report. If that is right, a consumer that reads actualDuration as",
+          "self time will double-count this frame - which is why self time is",
+          "actualDuration minus the children's, per the gate source line 4421.",
+          "The re-capture of this fixture should settle it; until then treat the",
+          "App entry on this row as 'present in the commit', not as 'rendered'."
+        ]
+      },
+      {
+        "id": "mount-toggle",
+        "trigger": "click [data-fixture=\"mount-toggle\"] (App setState: LateMount mounts for the first time)",
+        "componentsThatRender": [
+          "App",
+          "PropsChanged",
+          "ContextConsumer",
+          "StateOwner",
+          "DeepEqualProps",
+          "LateMount"
+        ],
+        "componentsGivenASpan": ["DeepEqualProps"],
+        "provenance": "measured",
+        "note": "Six components render, about 150ms of main thread, and the only one named is the one that did nothing. PropsChanged is not named here because n did not change on this interaction, and LateMount - the component that genuinely did new work - is on its first mount and so cannot be named.",
+        "fiberActualDurationAvailable": true
+      },
+      {
+        "id": "bump-again",
+        "trigger": "click [data-fixture=\"bump\"] a second time, with LateMount now present",
+        "componentsThatRender": [
+          "App",
+          "PropsChanged",
+          "ContextConsumer",
+          "StateOwner",
+          "DeepEqualProps",
+          "LateMount"
+        ],
+        "componentsGivenASpan": ["PropsChanged", "DeepEqualProps"],
+        "provenance": "measured",
+        "$comment": [
+          "This row was written as a falsifiable prediction from the gate, before",
+          "anything had been measured, and the corpus capture confirmed it: all",
+          "six components render ~25ms each and only PropsChanged and",
+          "DeepEqualProps are named. LateMount re-renders for 25.2ms unnamed.",
+          "Recorded as having been predicted first, because that is what makes it",
+          "evidence the gate is understood rather than merely described.",
+          "Confirmed in two independent captures. The current one is named under",
+          "observedJank.$measured.runIds rather than quoted here, so that a",
+          "re-capture does not leave a stale id behind in a comment."
+        ]
+      }
+    ],
+    "acceptableAttribution": {
+      "note": "For every row above, a correct attribution names the components under `componentsThatRender` with their share of the frame, and states which tier it worked from. Naming only the components under `componentsGivenASpan` is wrong, and reporting nothing for `state-owner-self` is the specific failure this fixture exists to catch. Because all six components burn the same amount, a correct attribution must also not rank them by anything that correlates with span presence.",
+      "requiredTier": "React DevTools hook plus fiber actualDuration",
+      "corroborationOnly": "React performance.measure spans"
+    }
+  },
+  "notAtFault": {
+    "$comment": [
+      "Unlike derive-in-render, this fixture has no innocent component for a tool",
+      "to mistakenly blame - every component listed above really did burn ~25ms in",
+      "the interaction it appears in. The wrong answer here is silence, or a",
+      "ranking, rather than a misnaming, so `components` is empty by construction",
+      "and `wrongAnswers` carries the content."
+    ],
+    "components": [],
+    "wrongAnswers": [
+      "reporting no component for `state-owner-self`, or for `initial-mount`",
+      "reporting only PropsChanged and DeepEqualProps for `bump`",
+      "ranking DeepEqualProps as the dominant cause of `mount-toggle`, when it is the only component on that row that did nothing new",
+      "naming a react-dom internal, such as the event dispatcher LoAF itself blames",
+      "quoting any millisecond figure from this fixture as a throttled measurement, per reproduction.throttleSensitivity"
+    ]
+  },
+  "observedJank": {
+    "$comment": [
+      "Deliberately almost empty. The span and no-span outcomes in",
+      "`expected.sequence` are measured facts, quoted from findings.md, but they",
+      "were measured on the throwaway predecessor of this fixture rather than on",
+      "this package - which is precisely why the fixture is being promoted. No",
+      "frame duration has been measured for the code in this directory, and no",
+      "figure in this block is filled in from the predecessor, because a frame",
+      "duration depends on the app that produced it and this one has an extra",
+      "heading, paragraph and button wrapper. Every null here is pending the",
+      "corpus capture, and fabricating one would be the worst thing anybody could",
+      "do to this repo.",
+      "What may be stated without measurement: the fixture's intended cost, which",
+      "is a declared input (six components at burn(25)), not an observation."
+    ],
+    "longFramesObserved": {
+      "$comment": [
+        "Four long frames from five interactions, in both build modes, in every",
+        "capture. The missing one is state-owner-self; see $measured above."
+      ],
+      "development": 4,
+      "production": 4,
+      "interactionsDriven": 5,
+      "interactionWithoutAFrame": "state-owner-self"
+    },
+    "predecessorMeasurements": {
+      "$comment": [
+        "The only millisecond figures anyone has for this experiment, kept for",
+        "comparison when the re-capture lands. They were measured on the throwaway",
+        "four-cause app archived at spike/archive/spans/ - development build, 4x",
+        "CPU throttling, Chromium 159.0.8154.6, Apple silicon - and NOT on this",
+        "package. Do not copy them into the fields above.",
+        "They are also wall-clock burns, so the 4x is context rather than a",
+        "multiplier; see reproduction.throttleSensitivity."
+      ],
+      "source": "findings.md, section 'React: a strong signal and a trap'",
+      "initialMountTotalMs": 140,
+      "stateOwnerSelfMs": {
+        "App": 25.2,
+        "StateOwner": 25.2
+      },
+      "fiberActualDurationPopulatedInDevelopment": true
+    },
+    "$measured": {
+      "$comment": [
+        "Measured from the capture currently in corpus/spans. Chromium",
+        "159.0.8154.6 on Apple silicon, 4x CPU throttling. One capture per mode.",
+        "burn() busy-waits on performance.now(), so these are wall-clock figures",
+        "and the throttle rate is context rather than a multiplier - see",
+        "reproduction.throttleSensitivity.",
+        "",
+        "Read fiberActualDurationMs as SUBTREE time, not self time. App at ~151ms",
+        "is the whole tree, not App's own work; self time is actualDuration minus",
+        "the sum of the children's, which puts App's own share at about 25ms like",
+        "everyone else's. An engine that reads it as self time reports this frame",
+        "at roughly twice its real length.",
+        "",
+        "componentSpans holds only the U+200B-prefixed component spans. React also",
+        "emits phase markers - Update, Mount, Update Blocked - which are not",
+        "component attribution and are excluded here.",
+        "",
+        "state-owner-self has a null frame duration because it produced NO LONG",
+        "FRAME: only StateOwner re-renders on its own setState, so one burn(25)",
+        "runs and ~25ms is under LoAF's 50ms threshold. The one interaction React",
+        "declines to name is also the one the trigger never fires for, and the only",
+        "evidence for it is the fiber tree. That is an independent argument for the",
+        "hook being primary, and it is why this fixture matters."
+      ],
+      "runIds": {
+        "development": "2026-11-15T02-26-32-027Z__spans__development",
+        "production": "2026-11-15T02-26-42-592Z__spans__production"
+      },
+      "development": {
+        "initial-mount": {
+          "frameDurationMs": 180.9,
+          "loafScriptDurationMs": 155.1,
+          "componentSpans": {},
+          "fiberActualDurationMs": {
+            "App": 140.7,
+            "PropsChanged": 26.2,
+            "ContextConsumer": 25.8,
+            "StateOwner": 26.2,
+            "DeepEqualProps": 25.6
+          }
+        },
+        "bump": {
+          "frameDurationMs": 141.4,
+          "loafScriptDurationMs": 133,
+          "componentSpans": {
+            "PropsChanged": 25.3,
+            "DeepEqualProps": 25.2
+          },
+          "fiberActualDurationMs": {
+            "App": 127.7,
+            "PropsChanged": 25.3,
+            "ContextConsumer": 25.1,
+            "StateOwner": 25.1,
+            "DeepEqualProps": 25.2
+          }
+        },
+        "state-owner-self": {
+          "frameDurationMs": null,
+          "loafScriptDurationMs": null,
+          "componentSpans": {},
+          "fiberActualDurationMs": {
+            "App": 25.2,
+            "PropsChanged": 0,
+            "ContextConsumer": 0,
+            "StateOwner": 25.2,
+            "DeepEqualProps": 0
+          }
+        },
+        "mount-toggle": {
+          "frameDurationMs": 155.4,
+          "loafScriptDurationMs": 153.5,
+          "componentSpans": {
+            "DeepEqualProps": 25
+          },
+          "fiberActualDurationMs": {
+            "App": 151.7,
+            "PropsChanged": 25.3,
+            "ContextConsumer": 25.3,
+            "StateOwner": 25.1,
+            "DeepEqualProps": 25,
+            "LateMount": 25.4
+          }
+        },
+        "bump-again": {
+          "frameDurationMs": 155.3,
+          "loafScriptDurationMs": 152.6,
+          "componentSpans": {
+            "PropsChanged": 25,
+            "DeepEqualProps": 25.5
+          },
+          "fiberActualDurationMs": {
+            "App": 151.8,
+            "PropsChanged": 25,
+            "ContextConsumer": 25.5,
+            "StateOwner": 25.2,
+            "DeepEqualProps": 25.5,
+            "LateMount": 25
+          }
+        }
+      },
+      "production": {
+        "initial-mount": {
+          "frameDurationMs": 168.3,
+          "loafScriptDurationMs": 140.8,
+          "componentSpans": {},
+          "fiberActualDurationMs": {
+            "b": null,
+            "m": null,
+            "h": null,
+            "g": null,
+            "v": null
+          }
+        },
+        "bump": {
+          "frameDurationMs": 135.5,
+          "loafScriptDurationMs": 127.8,
+          "componentSpans": {},
+          "fiberActualDurationMs": {
+            "b": null,
+            "m": null,
+            "h": null,
+            "g": null,
+            "v": null
+          }
+        },
+        "state-owner-self": {
+          "frameDurationMs": null,
+          "loafScriptDurationMs": null,
+          "componentSpans": {},
+          "fiberActualDurationMs": {
+            "b": null,
+            "m": null,
+            "h": null,
+            "g": null,
+            "v": null
+          }
+        },
+        "mount-toggle": {
+          "frameDurationMs": 154.1,
+          "loafScriptDurationMs": 152,
+          "componentSpans": {},
+          "fiberActualDurationMs": {
+            "b": null,
+            "m": null,
+            "h": null,
+            "g": null,
+            "v": null,
+            "_": null
+          }
+        },
+        "bump-again": {
+          "frameDurationMs": 154.2,
+          "loafScriptDurationMs": 151.8,
+          "componentSpans": {},
+          "fiberActualDurationMs": {
+            "b": null,
+            "m": null,
+            "h": null,
+            "g": null,
+            "v": null,
+            "_": null
+          }
+        }
+      }
+    }
+  }
+}

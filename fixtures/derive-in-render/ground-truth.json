@@ -1,0 +1,208 @@
+{
+  "$comment": [
+    "Ground truth for fixture `derive-in-render`: what a correct attribution must",
+    "say about the frames this app produces. The accuracy suite reads this file;",
+    "it is the fixture's contract, not documentation of it.",
+    "",
+    "`expectedSourceText` exists so the ground truth validates itself. Line",
+    "numbers drift the moment someone edits the component, and a stale line number",
+    "fails as a wrong attribution rather than as a broken fixture. A test asserts",
+    "that each recorded line still contains the recorded text before it asserts",
+    "anything about the tool's output."
+  ],
+  "fixture": "derive-in-render",
+  "title": "Expensive derive in a render body",
+  "bug": {
+    "summary": "OrderTable filters and sorts 10,000 orders in its render body on every keystroke, comparing with localeCompare.",
+    "whyItIsRealistic": "Each decision is defensible alone: derive instead of caching a stale value, sort by the column the table is sorted by, and use localeCompare because `<` orders diacritics wrongly. Only the combination is slow.",
+    "approximateComparisons": 133000
+  },
+  "interaction": {
+    "description": "Type a single character into the customer filter.",
+    "targetSelector": "[data-fixture=\"filter-input\"]",
+    "kind": "keypress"
+  },
+  "reproduction": {
+    "buildMode": "development",
+    "server": "vite dev, http://localhost:5181",
+    "cpuThrottleRate": 4,
+    "note": "Every millisecond figure derived from this fixture must be quoted with these two settings. Unthrottled dev-mode numbers on an M-series Mac are not the user's experience, and throttled numbers are not a benchmark."
+  },
+  "expected": {
+    "component": "OrderTable",
+    "sourceFile": "fixtures/derive-in-render/src/OrderTable.tsx",
+    "culpritLines": [
+      {
+        "line": 34,
+        "expectedSourceText": "const visible = orders",
+        "role": "the derive itself: recomputed on every render because nothing caches it"
+      },
+      {
+        "line": 35,
+        "expectedSourceText": ".filter((order) => order.customer.toLowerCase().includes(query.toLowerCase()))",
+        "role": "10,000 lowercasing allocations per keystroke; the smaller half of the cost"
+      },
+      {
+        "line": 36,
+        "expectedSourceText": ".sort((a, b) => a.customer.localeCompare(b.customer))",
+        "role": "the dominant cost, and where sampled stacks are expected to land"
+      }
+    ],
+    "acceptableAttribution": {
+      "component": "OrderTable",
+      "lineRange": {
+        "from": 34,
+        "to": 36
+      },
+      "note": "Any of the three lines counts as correct: they are one expression split across three lines by the formatter, and which one a sampled frame reports depends on whether the sample landed in the comparator or in the enclosing render. Naming App, the input's onChange, or a React internal is wrong."
+    }
+  },
+  "notAtFault": {
+    "components": ["App"],
+    "note": "App owns the query state and re-renders on every keystroke, so it is on the stack for the whole frame and is the most likely wrong answer. Blaming it is the specific failure mode this fixture tests for."
+  },
+  "observedJank": {
+    "$comment": [
+      "Measured over three consecutive runs under the `reproduction` settings above,",
+      "on Chromium 159.0.8154.6 on Apple silicon. Arrays are in run order. Present so",
+      "the accuracy suite can assert the fixture still janks, and so a change in these",
+      "numbers is visible rather than silently absorbed. They are not a benchmark: see",
+      "findings.md on discarding the first run of a session, which behaved completely",
+      "differently.",
+      "`appRenderMs` is here because App rendered for longer than OrderTable in every",
+      "run and React gave it no performance.measure in any of them - it owns the state",
+      "the keystroke updates, which is the shape React's span gate excludes. A tool",
+      "that reads only the spans will miss the larger of these two components."
+    ],
+    "frameDurationMs": [79.3, 63.8, 64.2],
+    "loafScriptDurationMs": [57.3, 54.8, 55.5],
+    "orderTableRenderMs": {
+      "span": [46.1, 45, 45.6],
+      "fiber": [44.7, 45, 45.5]
+    },
+    "appRenderMs": {
+      "span": [null, null, null],
+      "fiber": [46.5, 46.7, 47]
+    },
+    "minimumFrameDurationMs": 50,
+    "$minimumFrameDurationComment": [
+      "Was 60, which the corpus capture contradicted: the development run's",
+      "shortest reported frame was 50.2ms. Lowered to 50 rather than re-tuned,",
+      "because above 50 the floor is not a property of this fixture at all - LoAF",
+      "does not report a frame under its 50ms threshold, so any reported frame is",
+      "already at least that long and a higher floor only asserts that the machine",
+      "was warm. See thresholdSensitivity below."
+    ],
+    "thresholdSensitivity": {
+      "$comment": [
+        "This fixture sits close enough to LoAF's 50ms reporting threshold that most",
+        "of its janky interactions produce no entry at all. A suite that asserts one",
+        "frame per interaction will be flaky; it must drive many presses and assert",
+        "over the aggregate.",
+        "Measured over 24 presses under the settings above: development produced 24",
+        "React commits of 42-58ms each but only 14-15 long frames, run to run.",
+        "Production produced 24 commits and only 6 long frames, with durations",
+        "clustered at 50.0, 50.0, 50.2 and 51.0 - so 18 of 24 interactions that",
+        "burned around 45ms of main thread were invisible to the trigger.",
+        "",
+        "THE COUNTS IN THE PARAGRAPH ABOVE ARE NOT REPEATABLE. Superseded by",
+        "longFramesObservedLater below, which explains why; no suite may assert on",
+        "either set. They are not wrong - production's 6 came back on the fifth",
+        "capture - they are unrepeatable, which is worse for a test and better as a",
+        "finding. The commit count and the '18 of 24 were invisible' shape did",
+        "reproduce; only the frame counts moved."
+      ],
+      "pressesPerReplay": 24,
+      "longFramesObserved": {
+        "development": [14, 15],
+        "production": [6]
+      },
+      "$longFramesObservedComment": "Superseded - see longFramesObservedLater.",
+      "longFramesObservedLater": {
+        "$comment": [
+          "Re-measured five times on 2026-11-15, same machine, same Chromium",
+          "159.0.8154.6, same 4x throttle, 24 presses each, all within one hour.",
+          "Development gave 14, 14, 14, 23 and 14. Production gave 14, then 6 -",
+          "so the 6 recorded above DID come back. The count is not wrong, it is",
+          "unrepeatable, which is worse for a test and better as a finding.",
+          "",
+          "The fixture has not changed. Its frames sit a few milliseconds either",
+          "side of LoAF's fixed 50ms threshold, so whether a given press clears it",
+          "depends on how warm the machine is. The consequence is absolute: the",
+          "long-frame COUNT is not a property of this fixture and no suite may",
+          "assert on it, because it measures where a distribution happens to sit",
+          "relative to a constant.",
+          "The aggregate line histogram is the stable quantity and is what the",
+          "accuracy suite asserts, at a floor of 60%. Shares seen so far: 73% when",
+          "findings.md was written, then 76%, 83%, 69% and 93%, with line 36 ranked",
+          "first every time. 69% is the lowest; the floor is doing real work.",
+          "",
+          "The arrays below describe the capture currently in corpus/. Per-frame",
+          "values live there; this file records the claim, not a transcription."
+        ],
+        "longFramesAcrossCaptures": {
+          "development": [14, 14, 14, 23, 14],
+          "production": [14, 6]
+        },
+        "shareInDeclaredRangeAcrossCaptures": [0.73, 0.76, 0.83, 0.69, 0.93],
+        "inCorpusNow": {
+          "development": {
+            "runId": "2026-11-15T02-23-47-811Z__derive-in-render__development",
+            "longFrames": 14,
+            "frameDurationRangeMs": [59.8, 66.1],
+            "orderTableSamples": 61,
+            "shareInDeclaredRange": 0.689
+          },
+          "production": {
+            "runId": "2026-11-15T02-24-50-407Z__derive-in-render__production",
+            "longFrames": 6,
+            "frameDurationRangeMs": [50.4, 144.4],
+            "orderTableSamples": 15,
+            "shareInDeclaredRange": 0.933
+          }
+        }
+      }
+    },
+    "replayedLineHistogram": {
+      "32": 8,
+      "35": 1,
+      "36": 46,
+      "49": 8,
+      "$comment": [
+        "Aggregate of the deepest OrderTable.tsx frame per in-window sample across a",
+        "24-press development replay: 63 samples over 14 long frames. Line 36 is the",
+        "declared dominant culprit; 32 is the component declaration, reached when a",
+        "sample lands in the sort but not in the comparator; 49 is the row-rendering",
+        "map callback, which is real render work rather than the bug.",
+        "The top-ranked line fell inside 34-36 in 13 of 14 frames. A single-frame",
+        "assertion is not a fair test of line attribution; this is."
+      ]
+    },
+    "replayedLineHistogramInCorpus": {
+      "$comment": [
+        "The same aggregate as replayedLineHistogram above, re-measured from the",
+        "captured corpus rather than from a probe that no longer exists. Line 36",
+        "is the declared dominant culprit; 32 is the component declaration,",
+        "reached when a sample lands in the sort but not in the comparator; 49 is",
+        "the row-rendering map callback, which is real render work rather than the",
+        "bug.",
+        "Production resolves better than development, which is findings.md's",
+        "reversal 2 reproduced. Run ids are under thresholdSensitivity above."
+      ],
+      "development": {
+        "32": 11,
+        "35": 1,
+        "36": 41,
+        "49": 8
+      },
+      "production": {
+        "32": 1,
+        "36": 14
+      }
+    },
+    "loafScriptAttribution": {
+      "sourceFunctionName": "dispatchDiscreteEvent",
+      "note": "LoAF blames react-dom's event dispatcher in every run, never the component. Recorded because a correct attribution must disagree with it."
+    }
+  }
+}

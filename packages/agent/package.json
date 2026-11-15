@@ -1,0 +1,24 @@
+{
+  "name": "@frameblame/agent",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "In-page collector: installs the observers and ships raw signal records to the viewer",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsdown": "0.23.7",
+    "typescript": "6.0.3"
+  }
+}

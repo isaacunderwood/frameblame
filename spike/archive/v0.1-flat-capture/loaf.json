@@ -1,0 +1,74 @@
+{
+  "fixture": "derive-in-render",
+  "url": "http://localhost:5181/",
+  "buildMode": "development",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-14T23:05:00.468Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds, relative to timeOrigin. Whether the profiler samples share this clock is the question the profile file answers.",
+    "timeOrigin": 1794697499701,
+    "interactionAt": 270.59999999962747,
+    "settledAt": 383.90000000037253
+  },
+  "entries": [
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 276.29999999981374,
+        "duration": 64.20000000018626,
+        "navigationId": 6960,
+        "paintTime": 340.5,
+        "presentationTime": 376,
+        "renderStart": 340,
+        "styleAndLayoutStart": 340,
+        "firstUIEventTimestamp": 277,
+        "blockingDuration": 9.5,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 283.59999999962747,
+            "duration": 55.5,
+            "navigationId": 6960,
+            "invoker": "DIV#root.oninput",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 283.59999999962747,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=d066c7b6",
+            "sourceFunctionName": "dispatchDiscreteEvent",
+            "sourceCharPosition": 747742
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 283.59999999962747,
+          "duration": 55.5,
+          "executionStart": 283.59999999962747,
+          "invoker": "DIV#root.oninput",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5181/node_modules/.vite/deps/react-dom_client.js?v=d066c7b6",
+          "sourceFunctionName": "dispatchDiscreteEvent",
+          "sourceCharPosition": 747742,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    }
+  ]
+}

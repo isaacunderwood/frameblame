@@ -1,0 +1,39 @@
+{
+  "name": "frameblame",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Attributes janky animation frames to the component and line that caused them",
+  "license": "MIT",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit && pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "dev:viewer": "pnpm --filter @frameblame/viewer dev",
+    "dev:fixture": "pnpm --filter @frameblame/fixture-derive-in-render dev",
+    "spike:dump": "node spike/dump-raw-streams.ts",
+    "spike:corpus": "node spike/capture-corpus.ts"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "@eslint/js": "10.0.1",
+    "@jridgewell/trace-mapping": "0.3.31",
+    "@playwright/test": "1.65.1",
+    "@types/node": "26.6.6",
+    "eslint": "10.15.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.14.0",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2"
+  }
+}

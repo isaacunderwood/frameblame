@@ -1,0 +1,63 @@
+<!doctype html>
+<!--
+  The whole page. One button, one list of rows, two classic scripts.
+
+  Role in the fixture: to be the smallest document that can produce a frame with
+  three attributed script slices. It deliberately does not load a framework, a
+  module, or anything else that could appear in a LoAF entry or a sampled stack
+  and compete with the three declared causes for the blame.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frameblame fixture — vendor-listener</title>
+    <style>
+      /*
+        Just enough styling to give the rows real layout cost. The forced-layout
+        listener writes `padding` inline and then reads `offsetHeight`, so each
+        row has to be a box whose height actually depends on what was written;
+        a bare `<li>` with no font or border would still work, but this keeps
+        the per-row layout closer to a real list.
+      */
+      .row {
+        font-family: ui-monospace, monospace;
+        border-bottom: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      `data-fixture` is the only selector contract. The ground truth names these
+      two attributes and nothing else, so the ids and classes a page would
+      normally carry are left off: an element's id and classes feed LoAF's
+      `invoker` string ("BUTTON#go.onclick" in the predecessor), and pinning a
+      selector that also changes a reported field invites the two to drift apart.
+    -->
+    <button data-fixture="run-work">do expensive work</button>
+    <ul data-fixture="rows"></ul>
+
+    <!--
+      Both scripts come from `public/`, referenced by root-relative path and
+      without `type="module"`. This is load-bearing, for two reasons.
+
+      First, a file in `public/` is copied and served byte for byte in dev and in
+      a production build alike — Vite neither transforms nor bundles it. LoAF
+      reports a script's source as a character offset into the served text
+      (`sourceCharPosition`), so a byte-identical file is what makes an offset,
+      and the line number it resolves to, mean the same thing in both modes. Put
+      `app.js` under `src/` instead and dev-mode ESM rewriting would move every
+      offset this fixture declares, differently in each build mode.
+
+      Second, an untransformed, separately-fetched `vendor.js` is what makes the
+      pretend third party credible: its own URL, its own offsets, no shared
+      module graph with first-party code.
+
+      `vendor.js` is first only to mirror how a real tag loads — ahead of the
+      app. `app.js` reaches it as a global at click time, so the order is not
+      actually required.
+    -->
+    <script src="/vendor.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

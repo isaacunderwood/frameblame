@@ -1,0 +1,246 @@
+{
+  "runId": "2026-11-15T02-26-32-027Z__spans__development",
+  "fixture": "spans",
+  "mode": "development",
+  "buildMode": "development (vite dev server)",
+  "url": "http://localhost:5186/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:26:42.519Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709592719.5,
+    "driveStartedAt": 325.8999999985099,
+    "driveFinishedAt": 9079.60000000149
+  },
+  "fixtureProbe": null,
+  "entries": [
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 106.69999999925494,
+        "duration": 180.90000000223517,
+        "navigationId": 5805,
+        "paintTime": 287.6000000014901,
+        "presentationTime": 320,
+        "renderStart": 261.8999999985099,
+        "styleAndLayoutStart": 261.8999999985099,
+        "firstUIEventTimestamp": 0,
+        "blockingDuration": 130.8,
+        "styleDuration": 0.6,
+        "layoutDuration": 24.3,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 106.69999999925494,
+            "duration": 155.10000000149012,
+            "navigationId": 5805,
+            "invoker": "MessagePort.onmessage",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 106.69999999925494,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+            "sourceFunctionName": "performWorkUntilDeadline",
+            "sourceCharPosition": 673
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 106.69999999925494,
+          "duration": 155.10000000149012,
+          "executionStart": 106.69999999925494,
+          "invoker": "MessagePort.onmessage",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+          "sourceFunctionName": "performWorkUntilDeadline",
+          "sourceCharPosition": 673,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 969.3999999985099,
+        "duration": 141.40000000223517,
+        "navigationId": 5805,
+        "paintTime": 1110.800000000745,
+        "presentationTime": 1136,
+        "renderStart": 1110.800000000745,
+        "styleAndLayoutStart": 1110.800000000745,
+        "firstUIEventTimestamp": 969.1999999992549,
+        "blockingDuration": 84.8,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 977.1000000014901,
+            "duration": 133,
+            "navigationId": 5805,
+            "invoker": "DIV#root.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 977.1000000014901,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+            "sourceFunctionName": "dispatchDiscreteEvent",
+            "sourceCharPosition": 747742
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 977.1000000014901,
+          "duration": 133,
+          "executionStart": 977.1000000014901,
+          "invoker": "DIV#root.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+          "sourceFunctionName": "dispatchDiscreteEvent",
+          "sourceCharPosition": 747742,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 7445.800000000745,
+        "duration": 155.39999999850988,
+        "navigationId": 5805,
+        "paintTime": 7601.199999999255,
+        "presentationTime": 7636,
+        "renderStart": 7601.199999999255,
+        "styleAndLayoutStart": 7601.199999999255,
+        "firstUIEventTimestamp": 7445,
+        "blockingDuration": 105.4,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 7446.89999999851,
+            "duration": 153.5,
+            "navigationId": 5805,
+            "invoker": "DIV#root.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 7446.89999999851,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+            "sourceFunctionName": "dispatchDiscreteEvent",
+            "sourceCharPosition": 747742
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 7446.89999999851,
+          "duration": 153.5,
+          "executionStart": 7446.89999999851,
+          "invoker": "DIV#root.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+          "sourceFunctionName": "dispatchDiscreteEvent",
+          "sourceCharPosition": 747742,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 8279.10000000149,
+        "duration": 155.29999999701977,
+        "navigationId": 5805,
+        "paintTime": 8434.39999999851,
+        "presentationTime": 8468,
+        "renderStart": 8434.300000000745,
+        "styleAndLayoutStart": 8434.39999999851,
+        "firstUIEventTimestamp": 8278.39999999851,
+        "blockingDuration": 105.3,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 8280.5,
+            "duration": 152.60000000149012,
+            "navigationId": 5805,
+            "invoker": "DIV#root.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 8280.5,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+            "sourceFunctionName": "dispatchDiscreteEvent",
+            "sourceCharPosition": 747742
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 8280.5,
+          "duration": 152.60000000149012,
+          "executionStart": 8280.5,
+          "invoker": "DIV#root.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+          "sourceFunctionName": "dispatchDiscreteEvent",
+          "sourceCharPosition": 747742,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    }
+  ]
+}

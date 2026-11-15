@@ -1,0 +1,16 @@
+{
+  "name": "@frameblame/fixture-vendor-listener",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Janks on purpose: three sibling click listeners on one button, one of them a third party's",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "8.3.8"
+  }
+}

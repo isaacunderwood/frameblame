@@ -1,0 +1,137 @@
+<title>LoAF Field Reference</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/lesson.css">
+
+<main class="sheet">
+
+  <header>
+    <p class="eyebrow">Reference · Long Animation Frames</p>
+    <h1>Every LoAF Field, and What It Excludes</h1>
+    <p class="standfirst">
+      What each field measures, in which clock, and the thing it quietly leaves out.
+      Built for reading beside a live trace.
+    </p>
+  </header>
+
+  <section class="block">
+    <h2>The frame</h2>
+    <p>
+      All timestamps are <code>performance.now()</code> milliseconds since the document's
+      <code>timeOrigin</code>, coarsened onto a randomised 100&nbsp;µs grid (5&nbsp;µs when
+      cross-origin isolated). Treat any difference under ~0.2&nbsp;ms as noise.
+    </p>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Is</th><th>Watch for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>startTime</td><td>frame begins</td><td>before the input event</td></tr>
+          <tr><td>firstUIEventTimestamp</td><td>input queued</td><td>0 if no UI event</td></tr>
+          <tr><td>renderStart</td><td>rendering update begins</td><td>rAF runs after this</td></tr>
+          <tr><td>styleAndLayoutStart</td><td>style phase begins</td><td>step 8 of 8</td></tr>
+          <tr><td>styleDuration</td><td>style, in the update</td><td>0 if run outside it</td></tr>
+          <tr><td>layoutDuration</td><td>layout, in the update</td><td>0 if run outside it</td></tr>
+          <tr><td>paintTime</td><td>painting finishes</td><td>where duration ends</td></tr>
+          <tr><td>presentationTime</td><td>pixels on screen</td><td>OUTSIDE duration</td></tr>
+          <tr><td>duration</td><td>startTime → paintTime</td><td>never includes display</td></tr>
+          <tr><td>blockingDuration</td><td>task time past 50ms</td><td>not a phase; don't sum</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <span class="label">Name your denominator</span>
+      <p>
+        <code>duration</code> stops at <code>paintTime</code>. In measured frames
+        <code>presentationTime</code> landed a further 23–42&nbsp;ms later. The same
+        45&nbsp;ms of component work is ~70% of <code>duration</code> and ~45% of
+        keystroke-to-pixels. State which one you mean, every time.
+      </p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>The script entries</h2>
+    <p>
+      <code>entry.scripts</code> is a list of <code>PerformanceScriptTiming</code>. It is
+      not a complete account of the frame's JavaScript.
+    </p>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Is</th><th>Watch for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>invoker</td><td>what called it</td><td>e.g. DIV#root.oninput</td></tr>
+          <tr><td>invokerType</td><td>how it was called</td><td>event-listener, module-script</td></tr>
+          <tr><td>sourceURL</td><td>script resource</td><td>the framework, not you</td></tr>
+          <tr><td>sourceFunctionName</td><td>entry function</td><td>empty for arrows</td></tr>
+          <tr><td>sourceCharPosition</td><td>0-based char offset</td><td>registration site only</td></tr>
+          <tr><td>sourceLine / sourceColumn</td><td>1-based position</td><td>absent by default</td></tr>
+          <tr><td>forcedStyleAndLayoutDuration</td><td>synchronous reflow</td><td>INSIDE duration</td></tr>
+          <tr><td>pauseDuration</td><td>alert, sync XHR</td><td>rare, but blocking</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout is-script">
+      <span class="label">Three rules</span>
+      <p>
+        <strong>Scripts under 5&nbsp;ms are not reported.</strong> A frame with no script
+        entries is not a frame with no JavaScript.
+      </p>
+      <p>
+        <strong>Nested entry points are merged.</strong> Once a frame has a pending
+        script, a new one is not started — which is why an entire React render arrives as
+        one entry rather than a tree.
+      </p>
+      <p>
+        <strong><code>forcedStyleAndLayoutDuration</code> is nested inside the script's
+        own <code>duration</code>.</strong> Adding it as a separate slice double-counts.
+      </p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Decomposing a frame</h2>
+    <p>The partition that closes to within 2–6% on script-dominated frames:</p>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Slice</th><th>Computed as</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>pre-script</td><td>scripts[0].startTime − startTime</td></tr>
+          <tr><td>each script</td><td>scripts[i].duration</td></tr>
+          <tr><td>gap</td><td>renderStart − last script end</td></tr>
+          <tr><td>pre-style</td><td>styleAndLayoutStart − renderStart</td></tr>
+          <tr><td>style, layout</td><td>styleDuration, layoutDuration</td></tr>
+          <tr><td>paint-ish</td><td>paintTime − styleAndLayoutStart − both</td></tr>
+          <tr><td>unattributed</td><td>duration − everything above</td></tr>
+          <tr><td>presentation</td><td>presentationTime − paintTime</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      On browser-work-dominated frames the unattributed slice reached 93%. Cross-check it
+      against the share of profiler samples with an empty JavaScript stack: the two agreed
+      closely (93% ↔ 100%, 7.7% ↔ 1.9%), which turns "we don't know" into a measurement
+      rather than a shrug.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>Sources</h2>
+    <ul class="refs">
+      <li><a href="https://w3c.github.io/long-animation-frames/">W3C — Long Animation Frames API</a>. The normative definition of every field above.</li>
+      <li><a href="https://developer.chrome.com/docs/web-platform/long-animation-frames">Chrome for Developers — Long Animation Frames API</a>. The practical guide, with the reporting thresholds explained.</li>
+      <li><a href="https://claude.ai/code/artifact/0617e3f3-8f47-4564-9de7-bd0c225cfff8">Lesson 01 — Inside the Rendering Update</a>. Why two of these fields can read zero.</li>
+    </ul>
+  </section>
+
+</main>

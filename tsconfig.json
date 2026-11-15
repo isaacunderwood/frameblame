@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // The spike runs under Node but its `page.evaluate` callbacks are browser
+    // code, so both sets of globals have to be in scope for one file. That is
+    // a property of Playwright, not something to design around.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["spike"],
+  // Evidence, not source: these were run once under their own assumptions and
+  // are kept verbatim. See spike/archive/README.md.
+  "exclude": ["spike/archive"]
+}

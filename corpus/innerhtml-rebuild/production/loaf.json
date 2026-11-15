@@ -1,0 +1,591 @@
+{
+  "runId": "2026-11-15T02-27-00-159Z__innerhtml-rebuild__production",
+  "fixture": "innerhtml-rebuild",
+  "mode": "production",
+  "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
+  "url": "http://localhost:5189/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:27:07.795Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709620982.4,
+    "driveStartedAt": 258.5999999977648,
+    "driveFinishedAt": 6784.099999997765
+  },
+  "fixtureProbe": [
+    {
+      "scenario": "unforced",
+      "listenerStartMs": 303.79999999701977,
+      "listenerEndMs": 318,
+      "classToggleMs": 0,
+      "stringBuildMs": 0.8000000007450581,
+      "innerHtmlMs": 13.400000002235174,
+      "listenerTotalMs": 14.200000002980232,
+      "forcedHeight": null,
+      "delays": {
+        "animationFrameMs": 131.69999999925494,
+        "messageChannelMs": 136.09999999776483,
+        "timeoutMs": 136.09999999776483
+      }
+    },
+    {
+      "scenario": "unforced",
+      "listenerStartMs": 1134.3999999985099,
+      "listenerEndMs": 1148.5,
+      "classToggleMs": 0,
+      "stringBuildMs": 1.1000000014901161,
+      "innerHtmlMs": 13,
+      "listenerTotalMs": 14.100000001490116,
+      "forcedHeight": null,
+      "delays": {
+        "animationFrameMs": 113.89999999850988,
+        "messageChannelMs": 117.5,
+        "timeoutMs": 117.5
+      }
+    },
+    {
+      "scenario": "unforced",
+      "listenerStartMs": 1932.3999999985099,
+      "listenerEndMs": 1947.5,
+      "classToggleMs": 0.10000000149011612,
+      "stringBuildMs": 0.6999999992549419,
+      "innerHtmlMs": 14.300000000745058,
+      "listenerTotalMs": 15.100000001490116,
+      "forcedHeight": null,
+      "delays": {
+        "animationFrameMs": 137.09999999776483,
+        "messageChannelMs": 141,
+        "timeoutMs": 141
+      }
+    },
+    {
+      "scenario": "unforced",
+      "listenerStartMs": 2766.5,
+      "listenerEndMs": 2780.7999999970198,
+      "classToggleMs": 0.09999999776482582,
+      "stringBuildMs": 0.10000000149011612,
+      "innerHtmlMs": 14.099999997764826,
+      "listenerTotalMs": 14.299999997019768,
+      "forcedHeight": null,
+      "delays": {
+        "animationFrameMs": 118.20000000298023,
+        "messageChannelMs": 122.40000000223517,
+        "timeoutMs": 122.40000000223517
+      }
+    },
+    {
+      "scenario": "forced",
+      "listenerStartMs": 3583.199999999255,
+      "listenerEndMs": 3700.89999999851,
+      "classToggleMs": 0,
+      "stringBuildMs": 0.8000000007450581,
+      "innerHtmlMs": 116.89999999850988,
+      "listenerTotalMs": 117.69999999925494,
+      "forcedHeight": 86000,
+      "delays": {
+        "animationFrameMs": 18.899999998509884,
+        "messageChannelMs": 22.899999998509884,
+        "timeoutMs": 22.899999998509884
+      }
+    },
+    {
+      "scenario": "forced",
+      "listenerStartMs": 4398.89999999851,
+      "listenerEndMs": 4508,
+      "classToggleMs": 0,
+      "stringBuildMs": 1.1000000014901161,
+      "innerHtmlMs": 108,
+      "listenerTotalMs": 109.10000000149012,
+      "forcedHeight": 80000,
+      "delays": {
+        "animationFrameMs": 20.699999999254942,
+        "messageChannelMs": 24.299999997019768,
+        "timeoutMs": 24.299999997019768
+      }
+    },
+    {
+      "scenario": "forced",
+      "listenerStartMs": 5200,
+      "listenerEndMs": 5319.29999999702,
+      "classToggleMs": 0,
+      "stringBuildMs": 0.5,
+      "innerHtmlMs": 118.79999999701977,
+      "listenerTotalMs": 119.29999999701977,
+      "forcedHeight": 86000,
+      "delays": {
+        "animationFrameMs": 18.5,
+        "messageChannelMs": 22.700000002980232,
+        "timeoutMs": 22.700000002980232
+      }
+    },
+    {
+      "scenario": "forced",
+      "listenerStartMs": 6015.89999999851,
+      "listenerEndMs": 6126.699999999255,
+      "classToggleMs": 0,
+      "stringBuildMs": 0.19999999925494194,
+      "innerHtmlMs": 110.60000000149012,
+      "listenerTotalMs": 110.80000000074506,
+      "forcedHeight": 80000,
+      "delays": {
+        "animationFrameMs": 21.099999997764826,
+        "messageChannelMs": 24.699999999254942,
+        "timeoutMs": 24.699999999254942
+      }
+    }
+  ],
+  "entries": [
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 301.69999999925494,
+        "duration": 148,
+        "navigationId": 9143,
+        "paintTime": 449.69999999925494,
+        "presentationTime": 488,
+        "renderStart": 449.19999999925494,
+        "styleAndLayoutStart": 449.69999999925494,
+        "firstUIEventTimestamp": 301.29999999701977,
+        "blockingDuration": 97.9,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 303.5,
+            "duration": 15.399999998509884,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 303.5,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9750
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 303.5,
+          "duration": 15.399999998509884,
+          "executionStart": 303.5,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9750,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 1133.3999999985099,
+        "duration": 129,
+        "navigationId": 9143,
+        "paintTime": 1262.3999999985099,
+        "presentationTime": 1288,
+        "renderStart": 1261.8999999985099,
+        "styleAndLayoutStart": 1262.3999999985099,
+        "firstUIEventTimestamp": 1133.199999999255,
+        "blockingDuration": 79,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 1134.3999999985099,
+            "duration": 14.199999999254942,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 1134.3999999985099,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9750
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 1134.3999999985099,
+          "duration": 14.199999999254942,
+          "executionStart": 1134.3999999985099,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9750,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 1931.7999999970198,
+        "duration": 152.80000000074506,
+        "navigationId": 9143,
+        "paintTime": 2084.599999997765,
+        "presentationTime": 2124,
+        "renderStart": 2084.599999997765,
+        "styleAndLayoutStart": 2084.599999997765,
+        "firstUIEventTimestamp": 1931.199999999255,
+        "blockingDuration": 102.7,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 1932.3999999985099,
+            "duration": 15.100000001490116,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 1932.3999999985099,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9750
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 1932.3999999985099,
+          "duration": 15.100000001490116,
+          "executionStart": 1932.3999999985099,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9750,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 2765.7999999970198,
+        "duration": 133.20000000298023,
+        "navigationId": 9143,
+        "paintTime": 2899,
+        "presentationTime": 2940,
+        "renderStart": 2899,
+        "styleAndLayoutStart": 2899,
+        "firstUIEventTimestamp": 2765.099999997765,
+        "blockingDuration": 83.1,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 2766.5,
+            "duration": 14.399999998509884,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 2766.5,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9750
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 2766.5,
+          "duration": 14.399999998509884,
+          "executionStart": 2766.5,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9750,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 3582.2999999970198,
+        "duration": 137.5,
+        "navigationId": 9143,
+        "paintTime": 3719.7999999970198,
+        "presentationTime": 3756,
+        "renderStart": 3719.7999999970198,
+        "styleAndLayoutStart": 3719.7999999970198,
+        "firstUIEventTimestamp": 3581.7999999970198,
+        "blockingDuration": 87.5,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 3583.099999997765,
+            "duration": 117.90000000223517,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 3583.099999997765,
+            "forcedStyleAndLayoutDuration": 103.3,
+            "forcedStyleDuration": 24.1,
+            "forcedLayoutDuration": 79.1,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9835
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 3583.099999997765,
+          "duration": 117.90000000223517,
+          "executionStart": 3583.099999997765,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9835,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 103.3,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 4398.699999999255,
+        "duration": 130,
+        "navigationId": 9143,
+        "paintTime": 4528.699999999255,
+        "presentationTime": 4556,
+        "renderStart": 4528.699999999255,
+        "styleAndLayoutStart": 4528.699999999255,
+        "firstUIEventTimestamp": 4398.5,
+        "blockingDuration": 79.4,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 4398.89999999851,
+            "duration": 109.19999999925494,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 4398.89999999851,
+            "forcedStyleAndLayoutDuration": 94.6,
+            "forcedStyleDuration": 23.6,
+            "forcedLayoutDuration": 71.1,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9835
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 4398.89999999851,
+          "duration": 109.19999999925494,
+          "executionStart": 4398.89999999851,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9835,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 94.6,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 5199.5,
+        "duration": 138.29999999701977,
+        "navigationId": 9143,
+        "paintTime": 5337.79999999702,
+        "presentationTime": 5372,
+        "renderStart": 5337.699999999255,
+        "styleAndLayoutStart": 5337.79999999702,
+        "firstUIEventTimestamp": 5199.199999999255,
+        "blockingDuration": 88.3,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 5200,
+            "duration": 119.29999999701977,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 5200,
+            "forcedStyleAndLayoutDuration": 105.5,
+            "forcedStyleDuration": 24.8,
+            "forcedLayoutDuration": 80.6,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9835
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 5200,
+          "duration": 119.29999999701977,
+          "executionStart": 5200,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9835,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 105.5,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 6015.5,
+        "duration": 132.29999999701977,
+        "navigationId": 9143,
+        "paintTime": 6147.79999999702,
+        "presentationTime": 6172,
+        "renderStart": 6147.199999999255,
+        "styleAndLayoutStart": 6147.79999999702,
+        "firstUIEventTimestamp": 6015.39999999851,
+        "blockingDuration": 82.3,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 6015.89999999851,
+            "duration": 110.80000000074506,
+            "navigationId": 9143,
+            "invoker": "BUTTON.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 6015.89999999851,
+            "forcedStyleAndLayoutDuration": 96.8,
+            "forcedStyleDuration": 23.8,
+            "forcedLayoutDuration": 73,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5189/app.js",
+            "sourceFunctionName": "",
+            "sourceCharPosition": 9835
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 6015.89999999851,
+          "duration": 110.80000000074506,
+          "executionStart": 6015.89999999851,
+          "invoker": "BUTTON.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5189/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9835,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 96.8,
+          "windowAttribution": "self"
+        }
+      ]
+    }
+  ]
+}

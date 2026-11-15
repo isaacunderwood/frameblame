@@ -1,0 +1,503 @@
+{
+  "runId": "2026-11-15T02-26-32-027Z__spans__development",
+  "fixture": "spans",
+  "mode": "development",
+  "buildMode": "development (vite dev server)",
+  "url": "http://localhost:5186/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:26:42.519Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709592719.5,
+    "driveStartedAt": 325.8999999985099,
+    "driveFinishedAt": 9079.60000000149
+  },
+  "commits": [
+    {
+      "kind": "commit",
+      "committedAt": 261.1000000014901,
+      "collectionCost": 0.09999999776482582,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 3,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 140.69999999925494,
+          "selfBaseDuration": 27.100000001490116
+        },
+        {
+          "name": "PropsChanged",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 26.199999999254942,
+          "selfBaseDuration": 25.599999997764826
+        },
+        {
+          "name": "ContextConsumer",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.800000000745058,
+          "selfBaseDuration": 25.600000001490116
+        },
+        {
+          "name": "StateOwner",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 26.199999999254942,
+          "selfBaseDuration": 25.099999997764826
+        },
+        {
+          "name": "DeepEqualProps",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.600000001490116,
+          "selfBaseDuration": 25.300000000745058
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 311.69999999925494,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 1108.1000000014901,
+      "collectionCost": 0.09999999776482582,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 127.69999999925494,
+          "selfBaseDuration": 26.5
+        },
+        {
+          "name": "PropsChanged",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.300000000745058,
+          "selfBaseDuration": 25.300000000745058
+        },
+        {
+          "name": "ContextConsumer",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.099999997764826,
+          "selfBaseDuration": 25.099999997764826
+        },
+        {
+          "name": "StateOwner",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.100000001490116,
+          "selfBaseDuration": 25.100000001490116
+        },
+        {
+          "name": "DeepEqualProps",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.199999999254942,
+          "selfBaseDuration": 25.199999999254942
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 1110.1000000014901,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 1806.300000000745,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.199999999254942,
+          "selfBaseDuration": 26.5
+        },
+        {
+          "name": "PropsChanged",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 0,
+          "selfBaseDuration": 25.300000000745058
+        },
+        {
+          "name": "ContextConsumer",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 0,
+          "selfBaseDuration": 25.099999997764826
+        },
+        {
+          "name": "StateOwner",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.199999999254942,
+          "selfBaseDuration": 25.100000001490116
+        },
+        {
+          "name": "DeepEqualProps",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 0,
+          "selfBaseDuration": 25.199999999254942
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 1806.800000000745,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 7600.300000000745,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 151.70000000298023,
+          "selfBaseDuration": 25.600000001490116
+        },
+        {
+          "name": "PropsChanged",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.300000000745058,
+          "selfBaseDuration": 25.300000000745058
+        },
+        {
+          "name": "ContextConsumer",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.300000000745058,
+          "selfBaseDuration": 25.300000000745058
+        },
+        {
+          "name": "StateOwner",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.099999997764826,
+          "selfBaseDuration": 25.099999997764826
+        },
+        {
+          "name": "DeepEqualProps",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25,
+          "selfBaseDuration": 25
+        },
+        {
+          "name": "LateMount",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.400000002235174,
+          "selfBaseDuration": 25.400000002235174
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 7600.39999999851,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 8433.10000000149,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 151.79999999701977,
+          "selfBaseDuration": 25.599999997764826
+        },
+        {
+          "name": "PropsChanged",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25,
+          "selfBaseDuration": 25
+        },
+        {
+          "name": "ContextConsumer",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.5,
+          "selfBaseDuration": 25.400000002235174
+        },
+        {
+          "name": "StateOwner",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.199999999254942,
+          "selfBaseDuration": 25.199999999254942
+        },
+        {
+          "name": "DeepEqualProps",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25.5,
+          "selfBaseDuration": 25.5
+        },
+        {
+          "name": "LateMount",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 25,
+          "selfBaseDuration": 25
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 8433.10000000149,
+      "rendererId": 1
+    }
+  ],
+  "measures": [
+    {
+      "name": "Update Blocked",
+      "startTime": 85.69999999925494,
+      "duration": 25.400000002235174,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Method name",
+              "root.render()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "Mount",
+      "startTime": 115.39999999850988,
+      "duration": 140.80000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "warning",
+          "properties": null,
+          "tooltipText": "Mount",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​PropsChanged",
+      "startTime": 1005.5,
+      "duration": 25.300000000745058,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- n",
+              "0"
+            ],
+            [
+              "+ n",
+              "1"
+            ]
+          ],
+          "tooltipText": "PropsChanged",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​DeepEqualProps",
+      "startTime": 1081,
+      "duration": 25.199999999254942,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "  config",
+              "Referentially unequal but deeply equal objects. Consider memoization."
+            ]
+          ],
+          "tooltipText": "DeepEqualProps",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Update",
+      "startTime": 1780.300000000745,
+      "duration": 0.5999999977648258,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Component name",
+              "StateOwner"
+            ],
+            [
+              "Method name",
+              "setState()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "​DeepEqualProps",
+      "startTime": 7549.199999999255,
+      "duration": 25,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "  config",
+              "Referentially unequal but deeply equal objects. Consider memoization."
+            ]
+          ],
+          "tooltipText": "DeepEqualProps",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Mount",
+      "startTime": 7574.199999999255,
+      "duration": 25.400000002235174,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "warning",
+          "properties": null,
+          "tooltipText": "Mount",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Update",
+      "startTime": 8280.5,
+      "duration": 0.10000000149011612,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Component name",
+              "App"
+            ],
+            [
+              "Method name",
+              "setState()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "​PropsChanged",
+      "startTime": 8306.199999999255,
+      "duration": 25,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- n",
+              "1"
+            ],
+            [
+              "+ n",
+              "2"
+            ]
+          ],
+          "tooltipText": "PropsChanged",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​DeepEqualProps",
+      "startTime": 8381.89999999851,
+      "duration": 25.5,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "  config",
+              "Referentially unequal but deeply equal objects. Consider memoization."
+            ]
+          ],
+          "tooltipText": "DeepEqualProps",
+          "track": "Components ⚛"
+        }
+      }
+    }
+  ]
+}

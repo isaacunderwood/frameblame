@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Playwright's own output, plus the raw signal dumps the spike writes. Both are
+# regenerable and the dumps are large.
+test-results/
+playwright-report/
+spike/out/

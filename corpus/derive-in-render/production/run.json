@@ -1,0 +1,210 @@
+{
+  "runId": "2026-11-15T02-24-50-407Z__derive-in-render__production",
+  "fixture": "derive-in-render",
+  "mode": "production",
+  "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
+  "url": "http://localhost:5182/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:26:31.963Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709491363.1,
+    "driveStartedAt": 232.69999999925494,
+    "driveFinishedAt": 100317.89999999851
+  },
+  "summary": {
+    "runId": "2026-11-15T02-24-50-407Z__derive-in-render__production",
+    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T02-24-50-407Z__derive-in-render__production",
+    "fixture": "derive-in-render",
+    "mode": "production",
+    "longFrames": 6,
+    "samples": 8552,
+    "commits": 24,
+    "measures": 0,
+    "sourceWindows": 25,
+    "unresolvedPositions": 0,
+    "actionsWithoutFrame": 19
+  },
+  "plan": [
+    {
+      "kind": "press",
+      "label": "replay",
+      "selector": "[data-fixture=\"filter-input\"]",
+      "keys": [
+        "n",
+        "Backspace"
+      ],
+      "repeat": 24
+    }
+  ],
+  "steps": [
+    {
+      "label": "replay",
+      "kind": "press",
+      "startedAtPageClock": 233.89999999850988,
+      "endedAtPageClock": 100316.59999999776,
+      "framesBefore": 0,
+      "framesAfter": 5,
+      "actions": [
+        {
+          "index": 0,
+          "what": "n",
+          "atPageClock": 235.69999999925494,
+          "sawNewFrame": true
+        },
+        {
+          "index": 1,
+          "what": "Backspace",
+          "atPageClock": 474,
+          "sawNewFrame": true
+        },
+        {
+          "index": 2,
+          "what": "n",
+          "atPageClock": 719.0999999977648,
+          "sawNewFrame": false
+        },
+        {
+          "index": 3,
+          "what": "Backspace",
+          "atPageClock": 5917.89999999851,
+          "sawNewFrame": false
+        },
+        {
+          "index": 4,
+          "what": "n",
+          "atPageClock": 11128.599999997765,
+          "sawNewFrame": false
+        },
+        {
+          "index": 5,
+          "what": "Backspace",
+          "atPageClock": 16326.099999997765,
+          "sawNewFrame": false
+        },
+        {
+          "index": 6,
+          "what": "n",
+          "atPageClock": 21535.79999999702,
+          "sawNewFrame": false
+        },
+        {
+          "index": 7,
+          "what": "Backspace",
+          "atPageClock": 26734,
+          "sawNewFrame": true
+        },
+        {
+          "index": 8,
+          "what": "n",
+          "atPageClock": 26985.89999999851,
+          "sawNewFrame": false
+        },
+        {
+          "index": 9,
+          "what": "Backspace",
+          "atPageClock": 32182.099999997765,
+          "sawNewFrame": true
+        },
+        {
+          "index": 10,
+          "what": "n",
+          "atPageClock": 32435.39999999851,
+          "sawNewFrame": false
+        },
+        {
+          "index": 11,
+          "what": "Backspace",
+          "atPageClock": 37632.199999999255,
+          "sawNewFrame": false
+        },
+        {
+          "index": 12,
+          "what": "n",
+          "atPageClock": 42840.599999997765,
+          "sawNewFrame": false
+        },
+        {
+          "index": 13,
+          "what": "Backspace",
+          "atPageClock": 48037.099999997765,
+          "sawNewFrame": true
+        },
+        {
+          "index": 14,
+          "what": "n",
+          "atPageClock": 48286.29999999702,
+          "sawNewFrame": false
+        },
+        {
+          "index": 15,
+          "what": "Backspace",
+          "atPageClock": 53480.5,
+          "sawNewFrame": false
+        },
+        {
+          "index": 16,
+          "what": "n",
+          "atPageClock": 58689,
+          "sawNewFrame": false
+        },
+        {
+          "index": 17,
+          "what": "Backspace",
+          "atPageClock": 63887.599999997765,
+          "sawNewFrame": false
+        },
+        {
+          "index": 18,
+          "what": "n",
+          "atPageClock": 69098.39999999851,
+          "sawNewFrame": false
+        },
+        {
+          "index": 19,
+          "what": "Backspace",
+          "atPageClock": 74295.89999999851,
+          "sawNewFrame": false
+        },
+        {
+          "index": 20,
+          "what": "n",
+          "atPageClock": 79505.19999999925,
+          "sawNewFrame": false
+        },
+        {
+          "index": 21,
+          "what": "Backspace",
+          "atPageClock": 84702.79999999702,
+          "sawNewFrame": false
+        },
+        {
+          "index": 22,
+          "what": "n",
+          "atPageClock": 89912.19999999925,
+          "sawNewFrame": false
+        },
+        {
+          "index": 23,
+          "what": "Backspace",
+          "atPageClock": 95107.69999999925,
+          "sawNewFrame": false
+        }
+      ]
+    }
+  ],
+  "sampling": {
+    "requestedSampleIntervalMs": 5,
+    "effectiveSampleIntervalMs": 10,
+    "maxBufferSize": 400000,
+    "note": "Chrome clamps the sampling period upward to a compile-time floor of 10ms (16 on Windows) that no flag reads, so a request of 5 is answered with 10 and measures out at a ~12ms median cadence."
+  },
+  "profilerWindow": {
+    "startedAt": 231.19999999925494,
+    "stoppedAt": 100325
+  }
+}

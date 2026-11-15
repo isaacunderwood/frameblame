@@ -1,0 +1,598 @@
+{
+  "runId": "2026-11-15T02-24-50-407Z__derive-in-render__production",
+  "fixture": "derive-in-render",
+  "mode": "production",
+  "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
+  "url": "http://localhost:5182/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:26:31.963Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709491363.1,
+    "driveStartedAt": 232.69999999925494,
+    "driveFinishedAt": 100317.89999999851
+  },
+  "commits": [
+    {
+      "kind": "commit",
+      "committedAt": 292.19999999925494,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 530,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 759.8999999985099,
+      "collectionCost": 0.10000000149011612,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 5970.89999999851,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 11169.599999997765,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 16379.29999999702,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 21577.699999999255,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 26789,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 27024.699999999255,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 32237.39999999851,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 32475.79999999702,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 37684.599999997765,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 42881,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 48090.5,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 48324.699999999255,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 53532.39999999851,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 58728.699999999255,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 63940.199999999255,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 69137.69999999925,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 74347.89999999851,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 79545.29999999702,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 84754.59999999776,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 89950.79999999702,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 95160.09999999776,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "re",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    }
+  ],
+  "measures": []
+}

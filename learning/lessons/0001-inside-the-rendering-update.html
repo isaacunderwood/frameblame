@@ -1,0 +1,238 @@
+<title>Inside the Rendering Update</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/lesson.css">
+
+<main class="sheet">
+
+  <header>
+    <p class="eyebrow">Lesson 01 · Web performance</p>
+    <h1>Inside the Rendering Update</h1>
+    <p class="standfirst">
+      You can now read every LoAF field off a real frame. This is the machinery those
+      fields are measuring — and the reason two of them can read zero while the browser
+      is doing a hundred milliseconds of work.
+    </p>
+  </header>
+
+  <section class="block">
+    <h2>The question the diagram left open</h2>
+    <p>
+      In <a href="https://claude.ai/code/artifact/d5a34307-1f12-41b8-a208-cb8637ffc246">figure
+      F1</a>, three markers collapsed into 0.7&nbsp;ms at the right-hand end of the frame:
+      <code>renderStart</code>, <code>styleAndLayoutStart</code> and <code>paintTime</code>.
+      Everything between them is what the browser does <em>after</em> your JavaScript
+      finishes and before pixels exist.
+    </p>
+    <p>
+      That span has a name in the HTML standard — the <strong>update the rendering</strong>
+      step of the event loop — and it is not one operation but eight, in a fixed order.
+      Knowing the order is what lets you place any performance API on the timeline instead
+      of memorising each one separately.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>The eight steps, in order</h2>
+    <p>
+      Once per frame, after the current task finishes, the event loop runs these in
+      sequence:
+    </p>
+
+    <ol class="ladder">
+      <li>Resize<span class="note">fires <code>resize</code></span></li>
+      <li>Scroll<span class="note">fires <code>scroll</code></span></li>
+      <li>Media queries<span class="note">evaluates and fires</span></li>
+      <li>Update animations, fire animation events</li>
+      <li>Fire fullscreen events</li>
+      <li class="is-key">Run animation frame callbacks<span class="note">your <code>requestAnimationFrame</code></span></li>
+      <li>Update intersection observations<span class="note">feeds <code>IntersectionObserver</code></span></li>
+      <li class="is-key">Update the rendering<span class="note">draws to the screen</span></li>
+    </ol>
+
+    <p>
+      Two consequences fall straight out of the ordering. Your
+      <code>requestAnimationFrame</code> callback runs at step&nbsp;6 — <em>before</em>
+      intersection observations and before anything is drawn, which is exactly why it is
+      the right place to mutate the DOM for an animation and the wrong place to measure
+      the result. And <code>IntersectionObserver</code> reports at step&nbsp;7, once per
+      frame, which is why it can never fire more often than the display refreshes.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>The part that is missing on purpose</h2>
+
+    <div class="callout">
+      <span class="label">The trap</span>
+      <p>
+        Style and layout are not in the list. The HTML standard has no concept of style or
+        layout computation at all: it assumes they are synchronously implied by DOM
+        changes, which can happen at any point — including before step&nbsp;1 of the
+        sequence above.
+      </p>
+    </div>
+
+    <p>
+      This single omission explains two things that otherwise look like browser bugs.
+    </p>
+    <p>
+      <strong>Forced synchronous layout.</strong> Because layout is implied by DOM state
+      rather than scheduled, reading a geometric property — <code>offsetHeight</code>,
+      <code>getBoundingClientRect()</code> — forces the browser to compute it right there,
+      inside your script. The cost lands in your call stack, not in the rendering update.
+    </p>
+    <p>
+      <strong>And the inverse.</strong> Style and layout performed while no script was
+      running, before the rendering update, are counted by nothing. LoAF's
+      <code>styleDuration</code> and <code>layoutDuration</code> measure only the work
+      inside step&nbsp;8.
+    </p>
+  </section>
+
+  <section class="block">
+    <h2>What that looks like in real data</h2>
+    <p>
+      A page that rebuilds four thousand list items via <code>innerHTML</code>, measured
+      under 4× CPU throttling:
+    </p>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th>Frame</th>
+            <th class="num">duration</th>
+            <th class="num">Σ scripts</th>
+            <th class="num">styleDuration</th>
+            <th class="num">layoutDuration</th>
+            <th class="num">unexplained</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2</td>
+            <td class="num">145.9</td>
+            <td class="num">9.1</td>
+            <td class="num">0</td>
+            <td class="num">0</td>
+            <td class="num">136.1</td>
+          </tr>
+          <tr>
+            <td>3–5</td>
+            <td class="num">129–156</td>
+            <td class="num">14.5–17.9</td>
+            <td class="num">0</td>
+            <td class="num">0</td>
+            <td class="num">112–139</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="stamp">Milliseconds · vanilla fixture · Chromium 159 · 4× CPU throttle</p>
+
+    <p>
+      Ninety-three per cent of that frame is attributed to nothing, and the profiler
+      confirms it is not idle: every sample in it had an empty JavaScript stack. The work
+      was real style and layout, running outside the rendering update where no field
+      counts it.
+    </p>
+
+    <div class="callout is-script">
+      <span class="label">The proof</span>
+      <p>
+        Change one line so the listener reads <code>offsetHeight</code> after the
+        mutation, and the identical work moves inside the script — where LoAF names it
+        exactly: <code>forcedStyleAndLayoutDuration</code> of 96–116&nbsp;ms, split into
+        24–25&nbsp;ms style and 72–91&nbsp;ms layout. <code>styleDuration</code> and
+        <code>layoutDuration</code> still read zero.
+      </p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Check yourself</h2>
+    <p>
+      Answer before scrolling back. Retrieving it from memory is what makes it stick;
+      recognising it on the page is not the same thing.
+    </p>
+
+    <div class="quiz">
+
+      <div class="q" data-answer="0">
+        <p class="prompt">A frame spends 130&nbsp;ms in style and layout, yet LoAF reports <code>styleDuration: 0</code>. Why?</p>
+        <div class="options">
+          <button type="button">It ran outside the frame's own rendering update step</button>
+          <button type="button">It ran below the five millisecond script reporting threshold</button>
+          <button type="button">It ran after paint, outside the measured frame duration</button>
+          <button type="button">It ran on the compositor thread, not the main thread</button>
+        </div>
+        <p class="why" hidden>
+          Style and layout are implied by DOM changes and can run at any point. LoAF's
+          <code>styleDuration</code> counts only step 8. Work done before the rendering
+          update begins is counted by no field at all — which is why an explicit
+          <em>unattributed</em> slice is not optional in an honest tool.
+        </p>
+      </div>
+
+      <div class="q" data-answer="0">
+        <p class="prompt">Where do <code>requestAnimationFrame</code> callbacks run in the eight steps?</p>
+        <div class="options">
+          <button type="button">Before the intersection observations, sixth of the steps</button>
+          <button type="button">After the intersection observations, eighth of the steps</button>
+          <button type="button">Before the resize and scroll events, first of them</button>
+          <button type="button">After the paint has been committed, last of them</button>
+        </div>
+        <p class="why" hidden>
+          Step 6, immediately before intersection observations at step 7 and the drawing
+          at step 8. So a <code>rAF</code> callback is your last chance to mutate the DOM
+          before this frame is drawn — and measuring layout inside one forces the very
+          work you are trying to observe.
+        </p>
+      </div>
+
+      <div class="q" data-answer="0">
+        <p class="prompt">Why does the HTML standard not list style and layout among the rendering-update steps?</p>
+        <div class="options">
+          <button type="button">It treats them as implied by changes to the DOM</button>
+          <button type="button">It leaves them defined entirely to each browser engine</button>
+          <button type="button">It folds them into the compositing and commit step</button>
+          <button type="button">It defines them inside the paint step of the frame</button>
+        </div>
+        <p class="why" hidden>
+          The spec assumes style and layout are synchronously implied by DOM changes,
+          even before step 1. Engines add their own internal steps on top. This is the
+          root cause of both forced synchronous layout and the unattributable frame.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Read this next</h2>
+    <div class="source">
+      <h3>The rendering event loop — Chris Harrelson</h3>
+      <p>
+        Written by the engineer who leads Chromium's rendering team. Short, authoritative,
+        and the source of the eight steps above. Read the whole thing; it is two screens.
+      </p>
+      <p><a href="https://github.com/chrishtr/rendering/blob/master/rendering-event-loop.md">github.com/chrishtr/rendering</a></p>
+    </div>
+
+    <ul class="refs">
+      <li>Primary spec — <a href="https://html.spec.whatwg.org/multipage/webappapis.html#event-loop-processing-model">HTML Standard, event loop processing model</a>. Dense, but it is the authority the above summarises.</li>
+      <li>Reference sheet — <a href="reference/loaf-fields.html">Every LoAF field, and what it excludes</a>. Printable; keep it beside you when reading a trace.</li>
+      <li>Diagrams — <a href="https://claude.ai/code/artifact/d5a34307-1f12-41b8-a208-cb8637ffc246">Anatomy of a Janky Frame</a>, figure F1 for the frame this lesson opens from.</li>
+    </ul>
+
+    <p class="ask">
+      Something here not landing? Ask me — I am your teacher for this, and a confusion
+      named out loud is worth more than a lesson read twice. Good next questions: why
+      <code>presentationTime</code> sits outside <code>duration</code>, or what the
+      compositor is doing in those 39&nbsp;ms.
+    </p>
+  </section>
+
+</main>
+
+<script src="assets/quiz.js"></script>

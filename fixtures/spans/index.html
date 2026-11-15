@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--
+      The document shell, and nothing more. It deliberately carries no inline
+      script: anything measuring this page is injected from outside it, and an
+      inline observer would be script running inside the frames the fixture
+      exists to produce. The `Document-Policy: js-profiling` header the
+      profiler needs is a response header and cannot be set from here — see
+      `vite.config.ts`.
+    -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frameblame fixture — spans</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

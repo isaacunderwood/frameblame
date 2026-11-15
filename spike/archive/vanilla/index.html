@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>vanilla jank fixture</title>
+    <style>
+      .row {
+        font-family: ui-monospace, monospace;
+        border-bottom: 1px solid #ccc;
+      }
+      body.wide .row {
+        letter-spacing: 0.08em;
+        font-size: 1.1rem;
+        padding-left: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="go" data-fixture="go">do expensive work</button>
+    <button id="layout" data-fixture="layout">rebuild rows</button>
+    <ul id="list"></ul>
+    <script src="/vendor.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,261 @@
+{
+  "runId": "2026-11-15T02-26-42-592Z__spans__production",
+  "fixture": "spans",
+  "mode": "production",
+  "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
+  "url": "http://localhost:5187/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:26:52.542Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709603425.5,
+    "driveStartedAt": 260.69999999925494,
+    "driveFinishedAt": 9006.89999999851
+  },
+  "commits": [
+    {
+      "kind": "commit",
+      "committedAt": 198.59999999776483,
+      "collectionCost": 0.10000000149011612,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 1026,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 1733.2999999970198,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 7525.599999997765,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "_",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "committedAt": 8359.5,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "name": "_",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ]
+    }
+  ],
+  "measures": []
+}

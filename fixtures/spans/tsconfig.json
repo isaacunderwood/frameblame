@@ -1,0 +1,14 @@
+{
+  // The workspace's strict settings, plus the three things a browser fixture
+  // needs that the shared base deliberately leaves out: the DOM libs, React's
+  // automatic JSX runtime, and Vite's client types. It adds no path mappings —
+  // a fixture must not import the tool it is used to test, or the measured app
+  // would contain the measurer.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

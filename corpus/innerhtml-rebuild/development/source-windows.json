@@ -1,0 +1,124 @@
+{
+  "runId": "2026-11-15T02-26-52-628Z__innerhtml-rebuild__development",
+  "fixture": "innerhtml-rebuild",
+  "mode": "development",
+  "buildMode": "development (vite dev server)",
+  "url": "http://localhost:5188/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:27:00.094Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709613223.1,
+    "driveStartedAt": 300.1000000014901,
+    "driveFinishedAt": 6844
+  },
+  "note": "A window of the text each script actually served, around every position the signals attributed work to. This is the middle link of findings.md's resolution chain, which the v0.1 dumps could not reproduce because they stored each script's length but not its text.",
+  "byResource": {
+    "http://localhost:5188/app.js": 5
+  },
+  "unresolved": [],
+  "windows": [
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5188/app.js",
+      "label": "rebuildRows",
+      "reported": {
+        "line": 133,
+        "column": 21
+      },
+      "resolved": {
+        "line": 133,
+        "column": 20,
+        "charPosition": 6942
+      },
+      "servedLine": "function rebuildRows(scenario, forceStyleAndLayout) {",
+      "servedText": {
+        "startCharPosition": 6692,
+        "caretOffset": 250,
+        "text": "hout any reconciliation.\n *\n * Assumes it is called from a click listener. Outside an event listener the\n * work would land in a frame with no script attribution at all, which is a\n * different and much less interesting case.\n */\nfunction rebuildRows(scenario, forceStyleAndLayout) {\n  const listenerStart = performance.now();\n\n  /*\n   * The invalidation. Toggling one class on `body` changes `letter-spacing`,\n   * `font-size` and `padding-left` for every `.row` at once (see the stylesheet\n   * in "
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5188/app.js",
+      "label": "(anonymous)",
+      "reported": {
+        "line": 204,
+        "column": 42
+      },
+      "resolved": {
+        "line": 204,
+        "column": 41,
+        "charPosition": 9750
+      },
+      "servedLine": "unforcedButton.addEventListener('click', () => {",
+      "servedText": {
+        "startCharPosition": 9500,
+        "caretOffset": 250,
+        "text": "how little they say: identical shape, a few milliseconds\n * of script each, and no hint that one of the two frames spends ~100ms in\n * forced layout and the other spends ~130ms somewhere LoAF cannot name.\n */\nunforcedButton.addEventListener('click', () => {\n  rebuildRows('unforced', false);\n});\nforcedButton.addEventListener('click', () => {\n  rebuildRows('forced', true);\n});\n\n/*\n * Start with a full list so the first click is representative of the rest. On\n * an empty `<ul>` the class toggle inv"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5188/app.js",
+      "label": "(anonymous)",
+      "reported": {
+        "line": 207,
+        "column": 40
+      },
+      "resolved": {
+        "line": 207,
+        "column": 39,
+        "charPosition": 9835
+      },
+      "servedLine": "forcedButton.addEventListener('click', () => {",
+      "servedText": {
+        "startCharPosition": 9585,
+        "caretOffset": 250,
+        "text": "nt that one of the two frames spends ~100ms in\n * forced layout and the other spends ~130ms somewhere LoAF cannot name.\n */\nunforcedButton.addEventListener('click', () => {\n  rebuildRows('unforced', false);\n});\nforcedButton.addEventListener('click', () => {\n  rebuildRows('forced', true);\n});\n\n/*\n * Start with a full list so the first click is representative of the rest. On\n * an empty `<ul>` the class toggle invalidates nothing and the frame measures\n * only the parse and first layout of 4,000 n"
+      }
+    },
+    {
+      "origin": "loaf-script",
+      "resourceUrl": "http://localhost:5188/app.js",
+      "label": "BUTTON.onclick",
+      "reported": {
+        "charPosition": 9750
+      },
+      "resolved": {
+        "line": 204,
+        "column": 41,
+        "charPosition": 9750
+      },
+      "servedLine": "unforcedButton.addEventListener('click', () => {",
+      "servedText": {
+        "startCharPosition": 9500,
+        "caretOffset": 250,
+        "text": "how little they say: identical shape, a few milliseconds\n * of script each, and no hint that one of the two frames spends ~100ms in\n * forced layout and the other spends ~130ms somewhere LoAF cannot name.\n */\nunforcedButton.addEventListener('click', () => {\n  rebuildRows('unforced', false);\n});\nforcedButton.addEventListener('click', () => {\n  rebuildRows('forced', true);\n});\n\n/*\n * Start with a full list so the first click is representative of the rest. On\n * an empty `<ul>` the class toggle inv"
+      }
+    },
+    {
+      "origin": "loaf-script",
+      "resourceUrl": "http://localhost:5188/app.js",
+      "label": "BUTTON.onclick",
+      "reported": {
+        "charPosition": 9835
+      },
+      "resolved": {
+        "line": 207,
+        "column": 39,
+        "charPosition": 9835
+      },
+      "servedLine": "forcedButton.addEventListener('click', () => {",
+      "servedText": {
+        "startCharPosition": 9585,
+        "caretOffset": 250,
+        "text": "nt that one of the two frames spends ~100ms in\n * forced layout and the other spends ~130ms somewhere LoAF cannot name.\n */\nunforcedButton.addEventListener('click', () => {\n  rebuildRows('unforced', false);\n});\nforcedButton.addEventListener('click', () => {\n  rebuildRows('forced', true);\n});\n\n/*\n * Start with a full list so the first click is representative of the rest. On\n * an empty `<ul>` the class toggle invalidates nothing and the frame measures\n * only the parse and first layout of 4,000 n"
+      }
+    }
+  ]
+}

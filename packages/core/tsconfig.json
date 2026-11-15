@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // No "DOM": `core` is pure, and omitting the DOM lib makes an accidental
+    // reach for `window` or `performance` a compile error.
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src", "tsdown.config.ts"]
+}

@@ -1,0 +1,1482 @@
+{
+  "runId": "2026-11-15T02-23-47-811Z__derive-in-render__development",
+  "fixture": "derive-in-render",
+  "mode": "development",
+  "buildMode": "development (vite dev server)",
+  "url": "http://localhost:5181/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:24:50.327Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709428545,
+    "driveStartedAt": 314.80000000074506,
+    "driveFinishedAt": 60972.400000002235
+  },
+  "commits": [
+    {
+      "kind": "commit",
+      "committedAt": 384,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 47.599999997764826,
+          "selfBaseDuration": 1.1000000014901161
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 46.19999999552965,
+          "selfBaseDuration": 45
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 384.5,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 638,
+      "collectionCost": 0.7000000029802322,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 58.29999999701977,
+          "selfBaseDuration": 0.29999999701976776
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.899999998509884,
+          "selfBaseDuration": 55.600000001490116
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 638.8000000007451,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 887.7000000029802,
+      "collectionCost": 0.5999999977648258,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 43.599999997764826,
+          "selfBaseDuration": 0.5
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 43.099999997764826,
+          "selfBaseDuration": 41.599999997764826
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 888.9000000022352,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 6112,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.19999999925494,
+          "selfBaseDuration": 0.20000000298023224
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 56.99999999627471,
+          "selfBaseDuration": 56
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 6112,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 6352.70000000298,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 42,
+          "selfBaseDuration": 0.6999999992549419
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 41.30000000074506,
+          "selfBaseDuration": 40.400000002235174
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 6352.70000000298,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 11573.10000000149,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 55.5,
+          "selfBaseDuration": 0.19999999925494194
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 55.30000000074506,
+          "selfBaseDuration": 53.600000001490116
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 11573.20000000298,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 11821.5,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 42.600000001490116,
+          "selfBaseDuration": 0.19999999925494194
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 42.400000002235174,
+          "selfBaseDuration": 41.19999999925494
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 11822.5,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 17045.5,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 58,
+          "selfBaseDuration": 0.10000000149011612
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.80000000074506,
+          "selfBaseDuration": 56.900000002235174
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 17046.20000000298,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 17289,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 44.099999997764826,
+          "selfBaseDuration": 0.8000000007450581
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 43.19999999925494,
+          "selfBaseDuration": 42.80000000074506
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 17289,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 22513.10000000149,
+      "collectionCost": 0.10000000149011612,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.400000002235174,
+          "selfBaseDuration": 0.09999999776482582
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.30000000447035,
+          "selfBaseDuration": 56.100000001490116
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 22513.20000000298,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 22754.5,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 43.900000002235174,
+          "selfBaseDuration": 0.8000000007450581
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 43,
+          "selfBaseDuration": 42.80000000074506
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 22754.5,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 27975.400000002235,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 58,
+          "selfBaseDuration": 0.10000000149011612
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.80000000074506,
+          "selfBaseDuration": 56.100000001490116
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 27975.400000002235,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 28221.900000002235,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 45.100000001490116,
+          "selfBaseDuration": 0.10000000149011612
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 45,
+          "selfBaseDuration": 44.100000001490116
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 28221.900000002235,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 33446.5,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 59.29999999701977,
+          "selfBaseDuration": 0.5999999977648258
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 58.599999997764826,
+          "selfBaseDuration": 58.30000000074506
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 33447.10000000149,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 33688.900000002235,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 45.69999999925494,
+          "selfBaseDuration": 0.8999999985098839
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 44.80000000074506,
+          "selfBaseDuration": 44.100000001490116
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 33689,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 38911.60000000149,
+      "collectionCost": 0.3999999985098839,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.80000000074506,
+          "selfBaseDuration": 0.5
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.30000000074506,
+          "selfBaseDuration": 56.099999997764826
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 38912,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 39155.20000000298,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 44.599999997764826,
+          "selfBaseDuration": 0.6999999992549419
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 43.899999998509884,
+          "selfBaseDuration": 43
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 39155.20000000298,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 44377.70000000298,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.400000002235174,
+          "selfBaseDuration": 0.19999999925494194
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.20000000298023,
+          "selfBaseDuration": 56.899999998509884
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 44377.800000000745,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 44621.70000000298,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 44.900000002235174,
+          "selfBaseDuration": 0.10000000149011612
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 44.80000000074506,
+          "selfBaseDuration": 44.19999999925494
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 44621.70000000298,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 49842,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57,
+          "selfBaseDuration": 0.09999999776482582
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 56.900000002235174,
+          "selfBaseDuration": 55.69999999925494
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 49842.10000000149,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 50088.10000000149,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 45.19999999925494,
+          "selfBaseDuration": 1.1000000014901161
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 44.099999997764826,
+          "selfBaseDuration": 43.399999998509884
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 50088.10000000149,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 55309.800000000745,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 56.899999998509884,
+          "selfBaseDuration": 0.3999999985098839
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 56.399999998509884,
+          "selfBaseDuration": 55.19999999925494
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 55309.800000000745,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 55556.70000000298,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 45.100000001490116,
+          "selfBaseDuration": 0.4000000022351742
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 44.69999999925494,
+          "selfBaseDuration": 44.5
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 55556.70000000298,
+      "rendererId": 1
+    },
+    {
+      "kind": "commit",
+      "committedAt": 60777.900000002235,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.600000001490116,
+          "selfBaseDuration": 0.10000000149011612
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 57.399999998509884,
+          "selfBaseDuration": 57.19999999925494
+        }
+      ]
+    },
+    {
+      "kind": "post-commit",
+      "postCommitAt": 60777.900000002235,
+      "rendererId": 1
+    }
+  ],
+  "measures": [
+    {
+      "name": "​OrderTable",
+      "startTime": 330.9000000022352,
+      "duration": 48.19999999925494,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 578.6000000014901,
+      "duration": 58,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Update",
+      "startTime": 842.2000000029802,
+      "duration": 0.7999999970197678,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Component name",
+              "App"
+            ],
+            [
+              "Method name",
+              "setState()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 843.7000000029802,
+      "duration": 43.099999997764826,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 6052.70000000298,
+      "duration": 57.599999997764826,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 6309.800000000745,
+      "duration": 41.30000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 11517.10000000149,
+      "duration": 55.30000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 11778.300000000745,
+      "duration": 42.5,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Update",
+      "startTime": 16985.900000002235,
+      "duration": 0.5999999977648258,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Component name",
+              "App"
+            ],
+            [
+              "Method name",
+              "setState()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 16986.800000000745,
+      "duration": 57.900000002235174,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 17244.300000000745,
+      "duration": 43.5,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 22454,
+      "duration": 57.70000000298023,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 22710.5,
+      "duration": 43.30000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Update",
+      "startTime": 27916.20000000298,
+      "duration": 0.09999999776482582,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Component name",
+              "App"
+            ],
+            [
+              "Method name",
+              "setState()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 27916.5,
+      "duration": 57.80000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 28176.10000000149,
+      "duration": 45,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Update",
+      "startTime": 33386.10000000149,
+      "duration": 0.10000000149011612,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Component name",
+              "App"
+            ],
+            [
+              "Method name",
+              "setState()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 33386.900000002235,
+      "duration": 58.80000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 33643.10000000149,
+      "duration": 44.80000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 38852.900000002235,
+      "duration": 57.69999999925494,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 39110.400000002235,
+      "duration": 43.899999998509884,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 44318.60000000149,
+      "duration": 57.399999998509884,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 44576.400000002235,
+      "duration": 44.80000000074506,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 49784.300000000745,
+      "duration": 56.900000002235174,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 50043.20000000298,
+      "duration": 44.099999997764826,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 55252.60000000149,
+      "duration": 56.399999998509884,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 55510.70000000298,
+      "duration": 44.79999999701977,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"\""
+            ],
+            [
+              "+ query",
+              "\"n\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    },
+    {
+      "name": "Update",
+      "startTime": 60718.70000000298,
+      "duration": 0.3999999985098839,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "properties": [
+            [
+              "Component name",
+              "App"
+            ],
+            [
+              "Method name",
+              "setState()"
+            ]
+          ],
+          "track": "Blocking",
+          "trackGroup": "Scheduler ⚛",
+          "color": "primary-light"
+        }
+      }
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 60719.20000000298,
+      "duration": 57.5,
+      "entryType": "measure",
+      "detail": {
+        "devtools": {
+          "color": "primary-dark",
+          "properties": [
+            [
+              "Changed Props",
+              ""
+            ],
+            [
+              "- query",
+              "\"n\""
+            ],
+            [
+              "+ query",
+              "\"\""
+            ]
+          ],
+          "tooltipText": "OrderTable",
+          "track": "Components ⚛"
+        }
+      }
+    }
+  ]
+}

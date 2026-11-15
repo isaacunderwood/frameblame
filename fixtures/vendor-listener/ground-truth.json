@@ -1,0 +1,395 @@
+{
+  "$comment": [
+    "Ground truth for fixture `vendor-listener`: what a correct attribution must",
+    "say about the frame this app produces. The accuracy suite reads this file; it",
+    "is the fixture's contract, not documentation of it.",
+    "",
+    "This fixture is unusual in that the contract has two halves that disagree.",
+    "`expected.slices[].loafAttributesTo` is what LoAF will say, and",
+    "`expected.slices[].trueOwner` is what is true. For two of the three slices",
+    "those are the same file; for the vendor slice they are not, and that gap is",
+    "the finding. Collapsing them into one answer would make the fixture",
+    "unfalsifiable: a tool that reported the frame as 100% first-party would pass.",
+    "",
+    "`expectedSourceText` exists so the ground truth validates itself. Line numbers",
+    "drift the moment someone edits a file, and a stale line number fails as a",
+    "wrong attribution rather than as a broken fixture. A test asserts that each",
+    "recorded line still contains the recorded text before it asserts anything",
+    "about the tool's output. The three registration lines are byte-identical, so",
+    "each slice records the line below it as well — that one is unique."
+  ],
+  "fixture": "vendor-listener",
+  "title": "Three sibling listeners, one of them a third party's",
+  "bug": {
+    "summary": "One button carries three separate click listeners. A single click runs first-party compute, a pretend third-party analytics call, and a forced-layout thrash over 400 rows, all inside one event dispatch and therefore inside one animation frame.",
+    "whyItIsRealistic": "Listeners accumulate. Feature code adds one, an analytics wrapper adds another, and a layout-dependent widget adds a third; nobody writes the slow frame, it assembles itself. The vendor call in particular is the ordinary shape of an analytics tag: first-party code registers the listener and calls into the vendor's global.",
+    "whatItIsFor": [
+      "Claim 1: `sourceCharPosition` is valuable outside a framework. All three LoAF entries have an empty `sourceFunctionName` (anonymous arrows), so the character offset is the only attribution available — and it lands in the user's own file, not in a dispatcher. Contrast `derive-in-render`, where LoAF names only react-dom's `dispatchDiscreteEvent`.",
+      "Claim 2: LoAF's script attribution cannot produce a third-party share. The vendor slice is attributed to `app.js`, because that is where its listener was registered; `vendor.js` appears in no field of the LoAF entry. Wherever first-party code calls into a vendor library, LoAF's share is first-party by construction, so a third-party share requires the profiler."
+    ],
+    "promotedFrom": "spike/archive/vanilla, the throwaway fixture behind findings.md, \"What made it hard\", point 5. The predecessor also carried a second button that rebuilt 4,000 rows via innerHTML, for the unrelated browser-work-residual finding; that half was dropped on promotion so this fixture janks for exactly one reason."
+  },
+  "interaction": {
+    "description": "Click the button once. One click, three listeners, one frame.",
+    "targetSelector": "[data-fixture=\"run-work\"]",
+    "kind": "click",
+    "$comment": [
+      "`data-fixture` is the only selector contract; the predecessor's `id=\"go\"` was",
+      "dropped, which is why `observedJank` cannot carry its `invoker` string over.",
+      "LoAF composes `invoker` from the element's tag, id and classes, so removing",
+      "the id changes a reported field."
+    ]
+  },
+  "reproduction": {
+    "buildMode": "development",
+    "server": "vite dev, http://localhost:5190",
+    "cpuThrottleRate": 4,
+    "note": "Every millisecond figure derived from this fixture must be quoted with these two settings. Two of the three slices are wall-clock budgeted and so barely move with the throttle rate, while the forced layout is real browser work and scales with it — so the throttle rate does not just scale this fixture's numbers, it changes the frame's composition.",
+    "repeatability": {
+      "$comment": [
+        "The predecessor janked only on the first click of a page load, and did so",
+        "silently. It wrote a padding value derived from the row index alone, so from",
+        "the second click onwards the same value was written to the same rows, style",
+        "was never invalidated, and `offsetHeight` cost nothing: in `vanilla4.json`,",
+        "six clicks produced a single long frame. This fixture mixes a run counter",
+        "into the padding so every click genuinely forces layout, which is what makes",
+        "a replay possible — and findings.md is clear that replay is what turns",
+        "single-frame line attribution into a stable distribution."
+      ],
+      "clicksJankIdentically": true
+    }
+  },
+  "expected": {
+    "frame": {
+      "scriptEntryCount": 3,
+      "$comment": [
+        "Three listeners, three script entries, in registration order. Three siblings",
+        "are the cheapest way to get a frame with more than one slice at all: nested",
+        "entry points are merged by spec — a new script entry is not started while one",
+        "is pending — which is why React's whole render arrives as one entry in",
+        "`derive-in-render`. One listener calling three functions would do the same.",
+        "Entries under 5ms are not reported, so all three slices are deliberately well",
+        "clear of that floor."
+      ]
+    },
+    "slices": [
+      {
+        "slice": "first-party-compute",
+        "loafAttributesTo": {
+          "sourceFile": "fixtures/vendor-listener/public/app.js",
+          "line": 188,
+          "expectedSourceText": "button.addEventListener('click', () => {",
+          "nextLine": 189,
+          "nextLineExpectedSourceText": "// slice 1 of 3: first-party compute, truly owned by computeTotals below",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9092,
+          "$comment": [
+            "`sourceCharPosition` is measured, against this fixture's own served text,",
+            "and verified by the accuracy suite: resolving it with `lineColumnAt` over",
+            "the repo's copy of app.js lands on the line recorded above. That check is",
+            "possible at all because app.js is served from public/, which Vite copies",
+            "byte-for-byte, so the repo's copy IS the served text - identically in both",
+            "build modes. The predecessor's offsets (1336, 1422, 1509) were measured",
+            "against a different, shorter app.js and were deliberately not carried over.",
+            "`sourceFunctionName` is the empty string by construction, not by",
+            "measurement: the callback is an anonymous arrow. It is part of the",
+            "contract because it is what forces the character offset to do the work."
+          ]
+        },
+        "trueOwner": {
+          "sourceFile": "fixtures/vendor-listener/public/app.js",
+          "function": "computeTotals",
+          "definedAtLine": 71,
+          "expectedSourceText": "function computeTotals() {",
+          "note": "LoAF names the registration line; the cost is one line of indirection away, in a first-party function in the same file. This is the easy case, and it is here as the control for the vendor slice."
+        },
+        "isThirdParty": false,
+        "expectedRank": 2
+      },
+      {
+        "slice": "vendor-call",
+        "loafAttributesTo": {
+          "sourceFile": "fixtures/vendor-listener/public/app.js",
+          "line": 192,
+          "expectedSourceText": "button.addEventListener('click', () => {",
+          "nextLine": 193,
+          "nextLineExpectedSourceText": "// slice 2 of 3: truly owned by vendor.js, which LoAF will not mention",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9268,
+          "$comment": [
+            "Measured, as above. This is the entry the fixture exists for: every field",
+            "LoAF populates here points at `app.js`, and no field mentions `vendor.js`",
+            "at all. The attribution is not imprecise, it is about the wrong file, and",
+            "resolving the offset more carefully cannot fix it — the registration site",
+            "really is in `app.js`. A third-party share needs the profiler."
+          ]
+        },
+        "trueOwner": {
+          "sourceFile": "fixtures/vendor-listener/public/vendor.js",
+          "function": "vendorTrack",
+          "definedAtLine": 42,
+          "expectedSourceText": "window.vendorTrack = function vendorTrack() {",
+          "note": "A separately-fetched classic script with its own sourceURL, untransformed by Vite because it is served from public/. Reached as a global from the first-party listener, which is how analytics tags are actually wired up."
+        },
+        "isThirdParty": true,
+        "recoverableFrom": {
+          "tier": "profiler",
+          "why": "Sampled stacks carry a resource id per frame, so samples inside the vendor's hot loop name `vendor.js` and `vendorTrack` directly. LoAF cannot: it reports one registration site per listener and has no field for what that listener went on to call.",
+          "$comment": [
+            "Note the sampling floor when asserting on this: ~10ms requested becomes a",
+            "~12ms median cadence in practice (findings.md, point 1), so a 12ms vendor",
+            "slice is about one sample. The share is only stable over a replay, and a",
+            "per-frame percentage for this slice is not a fair assertion."
+          ]
+        },
+        "expectedRank": 3
+      },
+      {
+        "slice": "forced-layout",
+        "loafAttributesTo": {
+          "sourceFile": "fixtures/vendor-listener/public/app.js",
+          "line": 196,
+          "expectedSourceText": "button.addEventListener('click', () => {",
+          "nextLine": 197,
+          "nextLineExpectedSourceText": "// slice 3 of 3: forced layout, the dominant cost of the frame",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 9443,
+          "$comment": ["Measured, as above."]
+        },
+        "trueOwner": {
+          "sourceFile": "fixtures/vendor-listener/public/app.js",
+          "function": "thrashLayout",
+          "definedAtLine": 119,
+          "expectedSourceText": "function thrashLayout() {",
+          "forcingLines": [
+            {
+              "line": 125,
+              "expectedSourceText": "row.style.padding = `${String(1 + ((i + thrashCount) % 3))}px`;",
+              "role": "invalidates style and layout for this row"
+            },
+            {
+              "line": 126,
+              "expectedSourceText": "total += row.offsetHeight; // forces style and layout, every iteration",
+              "role": "demands a clean layout tree immediately after invalidating it; this is the line the cost belongs to"
+            }
+          ],
+          "note": "Most of this slice's duration is not JavaScript at all but browser layout work the script provoked. Sampled stacks inside it are expected to be sparse or empty, which is the cross-check rather than a failure: an empty stack means no JS was running, not that nothing happened."
+        },
+        "isThirdParty": false,
+        "expectedRank": 1
+      }
+    ],
+    "frameDecomposition": {
+      "$comment": [
+        "The trap this fixture pins down, from findings.md, \"Decomposing the frame\":",
+        "`forcedStyleAndLayoutDuration` on the third entry is browser work nested",
+        "INSIDE that entry's own `duration`, not a sibling of it. Adding it as a",
+        "fourth slice double-counts the largest cost in the frame — on the",
+        "predecessor that was ~107ms of a ~150ms frame, so the arithmetic would",
+        "report well over 100% of the frame as accounted for.",
+        "The rendering-phase fields stay at zero for the same reason: style and",
+        "layout performed inside a script are reported as the script's forced figure,",
+        "while `styleDuration` and `layoutDuration` count only the frame's own",
+        "rendering update. Both were 0 in all four predecessor runs. That is",
+        "specified behaviour, not a Chrome bug."
+      ],
+      "forcedStyleAndLayoutIsNestedInScriptDuration": true,
+      "forcedStyleAndLayoutBelongsToSlice": "forced-layout",
+      "expectedStyleDurationMs": 0,
+      "expectedLayoutDurationMs": 0,
+      "honestSum": "startTime→scripts[0].startTime (pre-script) + Σ scripts[i].duration + (renderStart − last script end) + style/layout/paint of the rendering update, with forcedStyleAndLayoutDuration NEVER added."
+    },
+    "acceptableAttribution": {
+      "mustName": [
+        "three distinct slices of the one frame, ranked with the forced layout first",
+        "`app.js` as the registration site of all three, at lines 188, 192 and 196",
+        "`vendor.js` as the true owner of the second slice, at whatever confidence the available tier supports"
+      ],
+      "mustNotName": [
+        "a single culprit for the frame",
+        "`vendor.js` for the first or third slice",
+        "a share of the frame that attributes the vendor slice's cost to first-party code"
+      ],
+      "note": "The degenerate single-culprit shape is wrong here even if it picks the forced layout: the forced layout is the largest slice, not the whole frame. This fixture is the concrete case for the `frame → ranked candidate causes with weights` invariant."
+    }
+  },
+  "notAtFault": {
+    "files": [],
+    "note": "Nothing in this fixture is innocent-but-accused in the way `derive-in-render`'s App is; the failure modes here are about the shape of the answer rather than the identity of a bystander.",
+    "failureModesThisFixtureTestsFor": [
+      {
+        "failure": "crediting vendor.js with zero cost",
+        "why": "Every LoAF field for the vendor slice says `app.js`, so a tool that trusts LoAF's script attribution for provenance reports the third party as having done nothing at all. This is the specific failure the fixture exists to catch."
+      },
+      {
+        "failure": "reporting a 100% first-party frame",
+        "why": "The same error stated as a share. Roughly 8% of the predecessor's frame was a third party's code, and LoAF alone will put that 8% in the first-party column rather than in an unattributed one. Reporting it as first-party is worse than reporting it as unknown."
+      },
+      {
+        "failure": "double-counting forcedStyleAndLayoutDuration",
+        "why": "See `expected.frameDecomposition`. It makes the slices sum past the frame duration, which also destroys any honest `unattributed` remainder."
+      },
+      {
+        "failure": "collapsing the three entries into one cause",
+        "why": "All three share an invoker and a source file, so a naive grouping key merges them into one 140ms `app.js` cause and loses both of this fixture's findings at once."
+      }
+    ]
+  },
+  "observedJank": {
+    "$comment": [
+      "NOTHING IN THIS SECTION WAS MEASURED AGAINST THIS PACKAGE. The flat fields",
+      "mirror `derive-in-render`'s and are null until this fixture is run under the",
+      "`reproduction` settings above; `predecessorMeasurement` holds real numbers",
+      "from the throwaway fixture this one was promoted from, which is a different",
+      "file with different line numbers, different character offsets and a",
+      "deliberately changed thrash (see `reproduction.repeatability`). They are",
+      "recorded as the expectation to check against, not as this fixture's result.",
+      "The accuracy suite must not assert on them."
+    ],
+    "$measured": {
+      "$comment": [
+        "Measured from the captures currently in corpus/vendor-listener. Chromium",
+        "159.0.8154.6 on Apple silicon, 4x CPU throttling, six clicks per mode.",
+        "Ranges rather than per-frame arrays; per-frame values are in the corpus.",
+        "",
+        "Development and production agree to noise, and that is structural rather",
+        "than lucky: both scripts are served from public/, which Vite copies",
+        "byte-for-byte, so the character offsets index the same text in both modes.",
+        "That is also what lets the accuracy suite resolve those offsets against",
+        "the repo's own copy of app.js with no capture of the text at all.",
+        "",
+        "sourceCharPositions resolve to the three registration lines declared under",
+        "expected.slices. sourceFunctionNames are empty on all three because the",
+        "listeners are anonymous arrows, which is what forces the character offset",
+        "to do the work. sourceURLs contains only app.js: the vendor owns one of",
+        "these three slices entirely and LoAF never names vendor.js, because it",
+        "attributes to the registration site. A third-party share is not available",
+        "from this signal - it needs the profiler.",
+        "",
+        "forcedStyleAndLayoutDuration is nested INSIDE the third slice's duration.",
+        "Adding it as a separate slice double-counts."
+      ],
+      "development": {
+        "runId": "2026-11-15T02-27-07-855Z__vendor-listener__development",
+        "longFrames": 6,
+        "framesWithThreeSlices": 6,
+        "frameDurationRangeMs": [137.1, 144.8],
+        "sliceDurationRangeMs": {
+          "first-party-compute": [18, 18.6],
+          "vendor-call": [12, 12.8],
+          "forced-layout": [103.8, 109]
+        },
+        "loafScriptDurationRangeMs": [134.5, 139.8],
+        "forcedStyleAndLayoutDurationRangeMs": [101.4, 105.6],
+        "styleDurationMs": 0,
+        "layoutDurationMs": 0,
+        "presentationBeyondDurationRangeMs": [27, 36.3],
+        "sourceCharPositions": [9092, 9268, 9443],
+        "sourceFunctionNames": ["", "", ""],
+        "invoker": "BUTTON.onclick",
+        "sourceURLs": ["/app.js"]
+      },
+      "production": {
+        "runId": "2026-11-15T02-27-12-906Z__vendor-listener__production",
+        "longFrames": 6,
+        "framesWithThreeSlices": 6,
+        "frameDurationRangeMs": [137.4, 144.3],
+        "sliceDurationRangeMs": {
+          "first-party-compute": [18, 18.4],
+          "vendor-call": [12, 12.5],
+          "forced-layout": [105.2, 108.6]
+        },
+        "loafScriptDurationRangeMs": [135.2, 139.2],
+        "forcedStyleAndLayoutDurationRangeMs": [102.3, 106.4],
+        "styleDurationMs": 0,
+        "layoutDurationMs": 0,
+        "presentationBeyondDurationRangeMs": [28.6, 36.6],
+        "sourceCharPositions": [9092, 9268, 9443],
+        "sourceFunctionNames": ["", "", ""],
+        "invoker": "BUTTON.onclick",
+        "sourceURLs": ["/app.js"]
+      }
+    },
+    "minimumFrameDurationMs": 120,
+    "loafScriptAttribution": {
+      "invokerType": "event-listener",
+      "invoker": "BUTTON.onclick",
+      "sourceFunctionName": "",
+      "$comment": [
+        "`invokerType` is spec-determined and safe to declare. `invoker` is null",
+        "because the predecessor's \"BUTTON#go.onclick\" cannot be carried over: this",
+        "fixture's button has no id, and LoAF builds the string from the element's",
+        "tag, id and classes. `sourceFunctionName` is expected to be the empty string",
+        "on all three entries, declared under `expected` as a contract; it is null",
+        "here because this section is reserved for what was measured.",
+        "All three entries are expected to share one invoker, which is what makes the",
+        "fourth failure mode above easy to walk into."
+      ]
+    },
+    "predecessorMeasurement": {
+      "$comment": [
+        "Source: spike/archive/vanilla (code) and spike/archive/vanilla{,2,3,4}.json",
+        "(dumps), read back from the retained dumps rather than rounded by hand.",
+        "Chromium 159.0.8154.6 on Apple silicon, 4x CPU throttling, static file",
+        "server with the js-profiling header, development-equivalent (the files were",
+        "served verbatim, exactly as this fixture serves them from `public/`).",
+        "Arrays are in run order across the four dumps. The frame below is the only",
+        "frame in each run that carried script entries from the button — see",
+        "`reproduction.repeatability` for why there was only one.",
+        "PENDING RE-MEASUREMENT against this fixture."
+      ],
+      "frameDurationMs": [152.1, 149.1, 146.6, 160.9],
+      "blockingDurationMs": [94.5, 98.3, 96, 110.9],
+      "styleDurationMs": [0, 0, 0, 0],
+      "layoutDurationMs": [0, 0, 0, 0],
+      "sliceDurationMs": {
+        "first-party-compute": [19, 18.5, 18.5, 18.7],
+        "vendor-call": [12, 12.8, 12.1, 12.6],
+        "forced-layout": [109.4, 111.7, 110.1, 111.8]
+      },
+      "forcedStyleAndLayoutDurationMs": {
+        "forced-layout": [106.9, 109.4, 106.6, 106.6],
+        "$comment": [
+          "Nested inside `sliceDurationMs[\"forced-layout\"]`, which is why each figure",
+          "here is slightly smaller than the slice that contains it. The other two",
+          "slices reported 0 in every run."
+        ]
+      },
+      "loafScriptAttribution": {
+        "sourceFunctionName": ["", "", ""],
+        "invoker": "BUTTON#go.onclick",
+        "sourceCharPosition": [1336, 1422, 1509],
+        "resolvedTo": ["app.js:47", "app.js:50", "app.js:53"],
+        "$comment": [
+          "The offsets and lines belong to the predecessor's `app.js`, not to this",
+          "one. They are kept only as evidence that the resolution worked and landed",
+          "on the three registration lines; see `expected` for this fixture's lines,",
+          "and note that its own offsets are still unmeasured."
+        ]
+      },
+      "profilerCrossCheck": {
+        "$comment": [
+          "The other half of the finding, and the reason claim 2 has a remedy. From",
+          "the same dump (vanilla.json): the trace's `resources` list both scripts,",
+          "and the profiler's own frames name the vendor's function in the vendor's",
+          "file — something LoAF never did in any run.",
+          "Leaf-frame counts are over the whole 642-sample session rather than one",
+          "frame, and the session included clicks on the predecessor's dropped second",
+          "button, so they are indicative of provenance only and not a frame share.",
+          "The 549 empty-stack samples are mostly idle time between clicks, not the",
+          "forced layout."
+        ],
+        "resources": ["app.js", "vendor.js"],
+        "leafFrameSamples": {
+          "computeTotals @ app.js": 44,
+          "vendorTrack @ vendor.js": 35,
+          "thrashLayout @ app.js": 9,
+          "buildRows @ app.js": 4,
+          "anonymous @ app.js (a listener callback)": 1,
+          "(no JS on the stack)": 549
+        },
+        "totalSamples": 642
+      }
+    }
+  }
+}

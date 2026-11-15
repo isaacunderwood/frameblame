@@ -1,0 +1,59 @@
+{
+  "fixture": "derive-in-render",
+  "url": "http://localhost:5181/",
+  "buildMode": "development",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-14T23:05:00.468Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds, relative to timeOrigin. Whether the profiler samples share this clock is the question the profile file answers.",
+    "timeOrigin": 1794697499701,
+    "interactionAt": 270.59999999962747,
+    "settledAt": 383.90000000037253
+  },
+  "commits": [
+    {
+      "committedAt": 337.79999999981374,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": 1,
+      "components": [
+        {
+          "name": "App",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 47,
+          "selfBaseDuration": 1
+        },
+        {
+          "name": "OrderTable",
+          "tag": 0,
+          "lanes": 0,
+          "actualDuration": 45.5,
+          "selfBaseDuration": 42.09999999962747
+        }
+      ]
+    },
+    {
+      "postCommitAt": 338.90000000037253,
+      "rendererId": 1
+    }
+  ],
+  "measures": [
+    {
+      "name": "Update",
+      "startTime": 284.59999999962747,
+      "duration": 0.6000000005587935,
+      "entryType": "measure"
+    },
+    {
+      "name": "​OrderTable",
+      "startTime": 287.20000000018626,
+      "duration": 45.59999999962747,
+      "entryType": "measure"
+    }
+  ]
+}

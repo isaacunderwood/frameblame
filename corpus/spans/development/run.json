@@ -1,0 +1,152 @@
+{
+  "runId": "2026-11-15T02-26-32-027Z__spans__development",
+  "fixture": "spans",
+  "mode": "development",
+  "buildMode": "development (vite dev server)",
+  "url": "http://localhost:5186/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:26:42.519Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709592719.5,
+    "driveStartedAt": 325.8999999985099,
+    "driveFinishedAt": 9079.60000000149
+  },
+  "summary": {
+    "runId": "2026-11-15T02-26-32-027Z__spans__development",
+    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T02-26-32-027Z__spans__development",
+    "fixture": "spans",
+    "mode": "development",
+    "longFrames": 4,
+    "samples": 777,
+    "commits": 10,
+    "measures": 10,
+    "sourceWindows": 45,
+    "unresolvedPositions": 0,
+    "actionsWithoutFrame": 1
+  },
+  "plan": [
+    {
+      "kind": "settle",
+      "label": "initial-mount",
+      "forMs": 600
+    },
+    {
+      "kind": "click",
+      "label": "bump",
+      "selector": "[data-fixture=\"bump\"]",
+      "repeat": 1,
+      "settleMs": 600
+    },
+    {
+      "kind": "click",
+      "label": "state-owner-self",
+      "selector": "[data-fixture=\"state-owner-self\"]",
+      "repeat": 1,
+      "settleMs": 600
+    },
+    {
+      "kind": "click",
+      "label": "mount-toggle",
+      "selector": "[data-fixture=\"mount-toggle\"]",
+      "repeat": 1,
+      "settleMs": 600
+    },
+    {
+      "kind": "click",
+      "label": "bump-again",
+      "selector": "[data-fixture=\"bump\"]",
+      "repeat": 1,
+      "settleMs": 600
+    }
+  ],
+  "steps": [
+    {
+      "label": "initial-mount",
+      "kind": "settle",
+      "startedAtPageClock": 0,
+      "endedAtPageClock": 929.5,
+      "framesBefore": 1,
+      "framesAfter": 1,
+      "actions": []
+    },
+    {
+      "label": "bump",
+      "kind": "click",
+      "startedAtPageClock": 930.5,
+      "endedAtPageClock": 1745.6000000014901,
+      "framesBefore": 1,
+      "framesAfter": 2,
+      "actions": [
+        {
+          "index": 0,
+          "what": "click",
+          "atPageClock": 932.8000000007451,
+          "sawNewFrame": true
+        }
+      ]
+    },
+    {
+      "label": "state-owner-self",
+      "kind": "click",
+      "startedAtPageClock": 1747.1000000014901,
+      "endedAtPageClock": 7410.800000000745,
+      "framesBefore": 2,
+      "framesAfter": 2,
+      "actions": [
+        {
+          "index": 0,
+          "what": "click",
+          "atPageClock": 1748.800000000745,
+          "sawNewFrame": false
+        }
+      ]
+    },
+    {
+      "label": "mount-toggle",
+      "kind": "click",
+      "startedAtPageClock": 7412.199999999255,
+      "endedAtPageClock": 8245.39999999851,
+      "framesBefore": 2,
+      "framesAfter": 3,
+      "actions": [
+        {
+          "index": 0,
+          "what": "click",
+          "atPageClock": 7414.10000000149,
+          "sawNewFrame": true
+        }
+      ]
+    },
+    {
+      "label": "bump-again",
+      "kind": "click",
+      "startedAtPageClock": 8247.5,
+      "endedAtPageClock": 9078.39999999851,
+      "framesBefore": 3,
+      "framesAfter": 4,
+      "actions": [
+        {
+          "index": 0,
+          "what": "click",
+          "atPageClock": 8249.300000000745,
+          "sawNewFrame": true
+        }
+      ]
+    }
+  ],
+  "sampling": {
+    "requestedSampleIntervalMs": 5,
+    "effectiveSampleIntervalMs": 10,
+    "maxBufferSize": 400000,
+    "note": "Chrome clamps the sampling period upward to a compile-time floor of 10ms (16 on Windows) that no flag reads, so a request of 5 is answered with 10 and measures out at a ~12ms median cadence."
+  },
+  "profilerWindow": {
+    "startedAt": 27,
+    "stoppedAt": 9081.89999999851
+  }
+}

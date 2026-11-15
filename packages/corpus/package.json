@@ -1,0 +1,21 @@
+{
+  "name": "@frameblame/corpus",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reads captured dumps and fixture ground truth off disk, so the pure engine can be tested without a browser",
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@frameblame/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@jridgewell/trace-mapping": "0.3.31",
+    "@types/node": "26.6.6",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

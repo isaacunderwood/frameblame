@@ -1,0 +1,2424 @@
+{
+  "throttle": 4,
+  "browser": "159.0.8154.6",
+  "afterGoFrames": 1,
+  "loaf": [
+    {
+      "name": "long-animation-frame",
+      "entryType": "long-animation-frame",
+      "startTime": 154.5,
+      "duration": 160.89999999850988,
+      "navigationId": 7038,
+      "paintTime": 315.3999999985099,
+      "presentationTime": 340,
+      "renderStart": 303,
+      "styleAndLayoutStart": 315.3999999985099,
+      "firstUIEventTimestamp": 154.09999999962747,
+      "blockingDuration": 110.9,
+      "styleDuration": 0,
+      "layoutDuration": 0,
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 156.7999999988824,
+          "duration": 18.700000001117587,
+          "navigationId": 7038,
+          "invoker": "BUTTON#go.onclick",
+          "invokerType": "event-listener",
+          "windowAttribution": "self",
+          "executionStart": 156.7999999988824,
+          "forcedStyleAndLayoutDuration": 0,
+          "forcedStyleDuration": 0,
+          "forcedLayoutDuration": 0,
+          "pauseDuration": 0,
+          "sourceURL": "http://localhost:5185/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 1336
+        },
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 175.5,
+          "duration": 12.599999999627471,
+          "navigationId": 7038,
+          "invoker": "BUTTON#go.onclick",
+          "invokerType": "event-listener",
+          "windowAttribution": "self",
+          "executionStart": 175.5,
+          "forcedStyleAndLayoutDuration": 0,
+          "forcedStyleDuration": 0,
+          "forcedLayoutDuration": 0,
+          "pauseDuration": 0,
+          "sourceURL": "http://localhost:5185/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 1422
+        },
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 188.09999999962747,
+          "duration": 111.79999999888241,
+          "navigationId": 7038,
+          "invoker": "BUTTON#go.onclick",
+          "invokerType": "event-listener",
+          "windowAttribution": "self",
+          "executionStart": 188.09999999962747,
+          "forcedStyleAndLayoutDuration": 106.6,
+          "forcedStyleDuration": 2.6,
+          "forcedLayoutDuration": 104,
+          "pauseDuration": 0,
+          "sourceURL": "http://localhost:5185/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 1509
+        }
+      ]
+    },
+    {
+      "name": "long-animation-frame",
+      "entryType": "long-animation-frame",
+      "startTime": 3684.0999999996275,
+      "duration": 146,
+      "navigationId": 7038,
+      "paintTime": 3830.0999999996275,
+      "presentationTime": 3860,
+      "renderStart": 3830.0999999996275,
+      "styleAndLayoutStart": 3830.0999999996275,
+      "firstUIEventTimestamp": 3683.39999999851,
+      "blockingDuration": 95.6,
+      "styleDuration": 0,
+      "layoutDuration": 0,
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 3684.5999999996275,
+          "duration": 123.90000000037253,
+          "navigationId": 7038,
+          "invoker": "BUTTON#layout.onclick",
+          "invokerType": "event-listener",
+          "windowAttribution": "self",
+          "executionStart": 3684.5999999996275,
+          "forcedStyleAndLayoutDuration": 113,
+          "forcedStyleDuration": 24.3,
+          "forcedLayoutDuration": 88.8,
+          "pauseDuration": 0,
+          "sourceURL": "http://localhost:5185/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 1811
+        }
+      ]
+    },
+    {
+      "name": "long-animation-frame",
+      "entryType": "long-animation-frame",
+      "startTime": 4451.5,
+      "duration": 141.2999999988824,
+      "navigationId": 7038,
+      "paintTime": 4592.799999998882,
+      "presentationTime": 4624,
+      "renderStart": 4592.39999999851,
+      "styleAndLayoutStart": 4592.799999998882,
+      "firstUIEventTimestamp": 4451,
+      "blockingDuration": 91.3,
+      "styleDuration": 0,
+      "layoutDuration": 0,
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 4452,
+          "duration": 119.89999999850988,
+          "navigationId": 7038,
+          "invoker": "BUTTON#layout.onclick",
+          "invokerType": "event-listener",
+          "windowAttribution": "self",
+          "executionStart": 4452,
+          "forcedStyleAndLayoutDuration": 104.6,
+          "forcedStyleDuration": 25.3,
+          "forcedLayoutDuration": 79.2,
+          "pauseDuration": 0,
+          "sourceURL": "http://localhost:5185/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 1811
+        }
+      ]
+    },
+    {
+      "name": "long-animation-frame",
+      "entryType": "long-animation-frame",
+      "startTime": 5235.39999999851,
+      "duration": 153.40000000037253,
+      "navigationId": 7038,
+      "paintTime": 5388.799999998882,
+      "presentationTime": 5424,
+      "renderStart": 5388.799999998882,
+      "styleAndLayoutStart": 5388.799999998882,
+      "firstUIEventTimestamp": 5234.89999999851,
+      "blockingDuration": 103.5,
+      "styleDuration": 0,
+      "layoutDuration": 0,
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 5236.199999999255,
+          "duration": 134,
+          "navigationId": 7038,
+          "invoker": "BUTTON#layout.onclick",
+          "invokerType": "event-listener",
+          "windowAttribution": "self",
+          "executionStart": 5236.199999999255,
+          "forcedStyleAndLayoutDuration": 116,
+          "forcedStyleDuration": 25.3,
+          "forcedLayoutDuration": 90.6,
+          "pauseDuration": 0,
+          "sourceURL": "http://localhost:5185/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 1811
+        }
+      ]
+    },
+    {
+      "name": "long-animation-frame",
+      "entryType": "long-animation-frame",
+      "startTime": 6034.5999999996275,
+      "duration": 132.69999999925494,
+      "navigationId": 7038,
+      "paintTime": 6167.299999998882,
+      "presentationTime": 6208,
+      "renderStart": 6167.299999998882,
+      "styleAndLayoutStart": 6167.299999998882,
+      "firstUIEventTimestamp": 6034.5,
+      "blockingDuration": 82.6,
+      "styleDuration": 0,
+      "layoutDuration": 0,
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 6034.799999998882,
+          "duration": 112.30000000074506,
+          "navigationId": 7038,
+          "invoker": "BUTTON#layout.onclick",
+          "invokerType": "event-listener",
+          "windowAttribution": "self",
+          "executionStart": 6034.799999998882,
+          "forcedStyleAndLayoutDuration": 96.4,
+          "forcedStyleDuration": 24.8,
+          "forcedLayoutDuration": 71.8,
+          "pauseDuration": 0,
+          "sourceURL": "http://localhost:5185/app.js",
+          "sourceFunctionName": "",
+          "sourceCharPosition": 1811
+        }
+      ]
+    }
+  ],
+  "trace": {
+    "frames": [
+      {
+        "column": 23,
+        "line": 14,
+        "name": "computeTotals",
+        "resourceId": 0
+      },
+      {
+        "column": 34,
+        "line": 47,
+        "name": "",
+        "resourceId": 0
+      },
+      {
+        "column": 42,
+        "line": 2,
+        "name": "vendorTrack",
+        "resourceId": 1
+      },
+      {
+        "column": 34,
+        "line": 50,
+        "name": "",
+        "resourceId": 0
+      },
+      {
+        "column": 22,
+        "line": 26,
+        "name": "thrashLayout",
+        "resourceId": 0
+      },
+      {
+        "column": 34,
+        "line": 53,
+        "name": "",
+        "resourceId": 0
+      },
+      {
+        "column": 40,
+        "line": 61,
+        "name": "",
+        "resourceId": 0
+      }
+    ],
+    "resources": [
+      "http://localhost:5185/app.js",
+      "http://localhost:5185/vendor.js"
+    ],
+    "samples": [
+      {
+        "timestamp": 20.899999998509884
+      },
+      {
+        "timestamp": 31.699999999254942
+      },
+      {
+        "timestamp": 44
+      },
+      {
+        "timestamp": 56.79999999888241
+      },
+      {
+        "timestamp": 67.59999999962747
+      },
+      {
+        "timestamp": 77.59999999962747
+      },
+      {
+        "timestamp": 90.09999999962747
+      },
+      {
+        "timestamp": 101.5
+      },
+      {
+        "timestamp": 111.79999999888241
+      },
+      {
+        "timestamp": 123.39999999850988
+      },
+      {
+        "timestamp": 135.7999999988824
+      },
+      {
+        "timestamp": 148.39999999850988
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.09999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.09999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.19999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.19999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.5
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.5
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.5
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.59999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.69999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 159.69999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.09999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.09999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.09999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.19999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.19999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.5
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.5
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.59999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.59999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.59999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.59999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.59999999962747
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.69999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 160.69999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 161.19999999925494
+      },
+      {
+        "stackId": 1,
+        "timestamp": 161.39999999850988
+      },
+      {
+        "stackId": 1,
+        "timestamp": 171.09999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.09999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.09999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.09999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.09999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.59999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.59999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.59999999962747
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.69999999925494
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.7999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.7999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.7999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.7999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.7999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.89999999850988
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.89999999850988
+      },
+      {
+        "stackId": 3,
+        "timestamp": 177.89999999850988
+      },
+      {
+        "stackId": 3,
+        "timestamp": 181.59999999962747
+      },
+      {
+        "stackId": 5,
+        "timestamp": 193.69999999925494
+      },
+      {
+        "stackId": 5,
+        "timestamp": 206.19999999925494
+      },
+      {
+        "stackId": 5,
+        "timestamp": 216.59999999962747
+      },
+      {
+        "stackId": 5,
+        "timestamp": 227.69999999925494
+      },
+      {
+        "stackId": 5,
+        "timestamp": 239.5
+      },
+      {
+        "stackId": 5,
+        "timestamp": 251.5
+      },
+      {
+        "stackId": 5,
+        "timestamp": 262.2999999988824
+      },
+      {
+        "stackId": 5,
+        "timestamp": 272.8999999985099
+      },
+      {
+        "stackId": 5,
+        "timestamp": 283.09999999962747
+      },
+      {
+        "stackId": 5,
+        "timestamp": 293.5
+      },
+      {
+        "timestamp": 303.69999999925494
+      },
+      {
+        "timestamp": 315.59999999962747
+      },
+      {
+        "timestamp": 328.19999999925494
+      },
+      {
+        "timestamp": 340.19999999925494
+      },
+      {
+        "timestamp": 353.09999999962747
+      },
+      {
+        "timestamp": 364.59999999962747
+      },
+      {
+        "timestamp": 377
+      },
+      {
+        "timestamp": 389.5
+      },
+      {
+        "timestamp": 402.19999999925494
+      },
+      {
+        "timestamp": 414.8999999985099
+      },
+      {
+        "timestamp": 427
+      },
+      {
+        "timestamp": 438
+      },
+      {
+        "timestamp": 449
+      },
+      {
+        "timestamp": 459.19999999925494
+      },
+      {
+        "timestamp": 470.19999999925494
+      },
+      {
+        "timestamp": 479.8999999985099
+      },
+      {
+        "timestamp": 492.19999999925494
+      },
+      {
+        "timestamp": 504.7999999988824
+      },
+      {
+        "timestamp": 517.1999999992549
+      },
+      {
+        "timestamp": 528.2999999988824
+      },
+      {
+        "timestamp": 538.7999999988824
+      },
+      {
+        "timestamp": 549.2999999988824
+      },
+      {
+        "timestamp": 559.7999999988824
+      },
+      {
+        "timestamp": 570.2999999988824
+      },
+      {
+        "timestamp": 580.5
+      },
+      {
+        "timestamp": 590.3999999985099
+      },
+      {
+        "timestamp": 600.3999999985099
+      },
+      {
+        "timestamp": 610.3999999985099
+      },
+      {
+        "timestamp": 623.1999999992549
+      },
+      {
+        "timestamp": 635.8999999985099
+      },
+      {
+        "timestamp": 648.3999999985099
+      },
+      {
+        "timestamp": 658
+      },
+      {
+        "timestamp": 668.3999999985099
+      },
+      {
+        "timestamp": 680.8999999985099
+      },
+      {
+        "timestamp": 693.5999999996275
+      },
+      {
+        "timestamp": 705.7999999988824
+      },
+      {
+        "timestamp": 716
+      },
+      {
+        "timestamp": 727.5
+      },
+      {
+        "timestamp": 740.0999999996275
+      },
+      {
+        "timestamp": 753.0999999996275
+      },
+      {
+        "timestamp": 765.1999999992549
+      },
+      {
+        "timestamp": 777.5999999996275
+      },
+      {
+        "timestamp": 790.5
+      },
+      {
+        "timestamp": 802.5999999996275
+      },
+      {
+        "timestamp": 815.5
+      },
+      {
+        "timestamp": 827.7999999988824
+      },
+      {
+        "timestamp": 840.6999999992549
+      },
+      {
+        "timestamp": 850.5
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.1999999992549
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.1999999992549
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.1999999992549
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.1999999992549
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.1999999992549
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.2999999988824
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.2999999988824
+      },
+      {
+        "stackId": 1,
+        "timestamp": 852.2999999988824
+      },
+      {
+        "stackId": 1,
+        "timestamp": 853
+      },
+      {
+        "stackId": 1,
+        "timestamp": 853
+      },
+      {
+        "stackId": 1,
+        "timestamp": 853
+      },
+      {
+        "stackId": 1,
+        "timestamp": 853.2999999988824
+      },
+      {
+        "stackId": 1,
+        "timestamp": 862.6999999992549
+      },
+      {
+        "stackId": 3,
+        "timestamp": 869.6999999992549
+      },
+      {
+        "stackId": 3,
+        "timestamp": 870.2999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 870.2999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 871.1999999992549
+      },
+      {
+        "stackId": 3,
+        "timestamp": 873.2999999988824
+      },
+      {
+        "timestamp": 883.6999999992549
+      },
+      {
+        "timestamp": 894.6999999992549
+      },
+      {
+        "timestamp": 904.7999999988824
+      },
+      {
+        "timestamp": 914.8999999985099
+      },
+      {
+        "timestamp": 927.3999999985099
+      },
+      {
+        "timestamp": 939.7999999988824
+      },
+      {
+        "timestamp": 952.3999999985099
+      },
+      {
+        "timestamp": 964.6999999992549
+      },
+      {
+        "timestamp": 977.1999999992549
+      },
+      {
+        "timestamp": 990.0999999996275
+      },
+      {
+        "timestamp": 1002.1999999992549
+      },
+      {
+        "timestamp": 1014.7999999988824
+      },
+      {
+        "timestamp": 1027.699999999255
+      },
+      {
+        "timestamp": 1039.7999999988824
+      },
+      {
+        "timestamp": 1052.3999999985099
+      },
+      {
+        "timestamp": 1064.8999999985099
+      },
+      {
+        "timestamp": 1075.3999999985099
+      },
+      {
+        "timestamp": 1085.3999999985099
+      },
+      {
+        "timestamp": 1097.7999999988824
+      },
+      {
+        "timestamp": 1110.3999999985099
+      },
+      {
+        "timestamp": 1122.5999999996275
+      },
+      {
+        "timestamp": 1135.0999999996275
+      },
+      {
+        "timestamp": 1147.5999999996275
+      },
+      {
+        "timestamp": 1160.2999999988824
+      },
+      {
+        "timestamp": 1172.5999999996275
+      },
+      {
+        "timestamp": 1185.199999999255
+      },
+      {
+        "timestamp": 1198.3999999985099
+      },
+      {
+        "timestamp": 1210.0999999996275
+      },
+      {
+        "timestamp": 1222.5999999996275
+      },
+      {
+        "timestamp": 1233.3999999985099
+      },
+      {
+        "timestamp": 1243.2999999988824
+      },
+      {
+        "timestamp": 1256
+      },
+      {
+        "timestamp": 1268.2999999988824
+      },
+      {
+        "timestamp": 1280.5
+      },
+      {
+        "timestamp": 1293
+      },
+      {
+        "timestamp": 1305.5
+      },
+      {
+        "timestamp": 1318.2999999988824
+      },
+      {
+        "timestamp": 1330.7999999988824
+      },
+      {
+        "timestamp": 1343.0999999996275
+      },
+      {
+        "timestamp": 1355.7999999988824
+      },
+      {
+        "timestamp": 1368.199999999255
+      },
+      {
+        "timestamp": 1380.7999999988824
+      },
+      {
+        "timestamp": 1391.2999999988824
+      },
+      {
+        "timestamp": 1400.8999999985099
+      },
+      {
+        "timestamp": 1411.199999999255
+      },
+      {
+        "stackId": 1,
+        "timestamp": 1424
+      },
+      {
+        "stackId": 1,
+        "timestamp": 1434.5
+      },
+      {
+        "stackId": 3,
+        "timestamp": 1444.3999999985099
+      },
+      {
+        "timestamp": 1454.699999999255
+      },
+      {
+        "timestamp": 1464.5999999996275
+      },
+      {
+        "timestamp": 1477.199999999255
+      },
+      {
+        "timestamp": 1490.0999999996275
+      },
+      {
+        "timestamp": 1502.199999999255
+      },
+      {
+        "timestamp": 1515
+      },
+      {
+        "timestamp": 1525.199999999255
+      },
+      {
+        "timestamp": 1535.8999999985099
+      },
+      {
+        "timestamp": 1548.2999999988824
+      },
+      {
+        "timestamp": 1558.3999999985099
+      },
+      {
+        "timestamp": 1569.2999999988824
+      },
+      {
+        "timestamp": 1580
+      },
+      {
+        "timestamp": 1590.2999999988824
+      },
+      {
+        "timestamp": 1599.8999999985099
+      },
+      {
+        "timestamp": 1612.2999999988824
+      },
+      {
+        "timestamp": 1624.8999999985099
+      },
+      {
+        "timestamp": 1637.2999999988824
+      },
+      {
+        "timestamp": 1648.2999999988824
+      },
+      {
+        "timestamp": 1661.199999999255
+      },
+      {
+        "timestamp": 1673.5
+      },
+      {
+        "timestamp": 1685.7999999988824
+      },
+      {
+        "timestamp": 1698.199999999255
+      },
+      {
+        "timestamp": 1708.8999999985099
+      },
+      {
+        "timestamp": 1719.2999999988824
+      },
+      {
+        "timestamp": 1730
+      },
+      {
+        "timestamp": 1740
+      },
+      {
+        "timestamp": 1752.5999999996275
+      },
+      {
+        "timestamp": 1765.0999999996275
+      },
+      {
+        "timestamp": 1777.699999999255
+      },
+      {
+        "timestamp": 1790.0999999996275
+      },
+      {
+        "timestamp": 1802.5999999996275
+      },
+      {
+        "timestamp": 1815.3999999985099
+      },
+      {
+        "timestamp": 1825.199999999255
+      },
+      {
+        "timestamp": 1835.699999999255
+      },
+      {
+        "timestamp": 1848.0999999996275
+      },
+      {
+        "timestamp": 1859.3999999985099
+      },
+      {
+        "timestamp": 1869.699999999255
+      },
+      {
+        "timestamp": 1880.5
+      },
+      {
+        "timestamp": 1890.8999999985099
+      },
+      {
+        "timestamp": 1901.199999999255
+      },
+      {
+        "timestamp": 1911.199999999255
+      },
+      {
+        "timestamp": 1923.5999999996275
+      },
+      {
+        "timestamp": 1936.5
+      },
+      {
+        "timestamp": 1948.2999999988824
+      },
+      {
+        "timestamp": 1959
+      },
+      {
+        "timestamp": 1969.8999999985099
+      },
+      {
+        "timestamp": 1982.199999999255
+      },
+      {
+        "stackId": 1,
+        "timestamp": 1985.0999999996275
+      },
+      {
+        "stackId": 1,
+        "timestamp": 1994.0999999996275
+      },
+      {
+        "stackId": 3,
+        "timestamp": 2003.2999999988824
+      },
+      {
+        "stackId": 3,
+        "timestamp": 2006.8999999985099
+      },
+      {
+        "timestamp": 2017.0999999996275
+      },
+      {
+        "timestamp": 2029.5
+      },
+      {
+        "timestamp": 2041.5999999996275
+      },
+      {
+        "timestamp": 2054.0999999996275
+      },
+      {
+        "timestamp": 2065
+      },
+      {
+        "timestamp": 2077.5
+      },
+      {
+        "timestamp": 2089.199999999255
+      },
+      {
+        "timestamp": 2101
+      },
+      {
+        "timestamp": 2111.699999999255
+      },
+      {
+        "timestamp": 2123.89999999851
+      },
+      {
+        "timestamp": 2136.39999999851
+      },
+      {
+        "timestamp": 2149
+      },
+      {
+        "timestamp": 2161.5999999996275
+      },
+      {
+        "timestamp": 2173.7999999988824
+      },
+      {
+        "timestamp": 2186.7999999988824
+      },
+      {
+        "timestamp": 2198.89999999851
+      },
+      {
+        "timestamp": 2211.89999999851
+      },
+      {
+        "timestamp": 2224
+      },
+      {
+        "timestamp": 2236.5999999996275
+      },
+      {
+        "timestamp": 2248.5999999996275
+      },
+      {
+        "timestamp": 2258.5999999996275
+      },
+      {
+        "timestamp": 2269
+      },
+      {
+        "timestamp": 2279
+      },
+      {
+        "timestamp": 2289.89999999851
+      },
+      {
+        "timestamp": 2300.2999999988824
+      },
+      {
+        "timestamp": 2311.2999999988824
+      },
+      {
+        "timestamp": 2321.199999999255
+      },
+      {
+        "timestamp": 2331.89999999851
+      },
+      {
+        "timestamp": 2342.39999999851
+      },
+      {
+        "timestamp": 2352.5
+      },
+      {
+        "timestamp": 2363.5
+      },
+      {
+        "timestamp": 2373.0999999996275
+      },
+      {
+        "timestamp": 2385.2999999988824
+      },
+      {
+        "timestamp": 2397.89999999851
+      },
+      {
+        "timestamp": 2410.7999999988824
+      },
+      {
+        "timestamp": 2422.7999999988824
+      },
+      {
+        "timestamp": 2435.5
+      },
+      {
+        "timestamp": 2448
+      },
+      {
+        "timestamp": 2460.39999999851
+      },
+      {
+        "timestamp": 2472.89999999851
+      },
+      {
+        "timestamp": 2485.5999999996275
+      },
+      {
+        "timestamp": 2498.199999999255
+      },
+      {
+        "timestamp": 2510.5999999996275
+      },
+      {
+        "timestamp": 2522.89999999851
+      },
+      {
+        "timestamp": 2535.39999999851
+      },
+      {
+        "timestamp": 2548.199999999255
+      },
+      {
+        "stackId": 1,
+        "timestamp": 2551.5999999996275
+      },
+      {
+        "stackId": 1,
+        "timestamp": 2560.39999999851
+      },
+      {
+        "stackId": 3,
+        "timestamp": 2570
+      },
+      {
+        "stackId": 3,
+        "timestamp": 2570.89999999851
+      },
+      {
+        "stackId": 3,
+        "timestamp": 2582.2999999988824
+      },
+      {
+        "timestamp": 2592
+      },
+      {
+        "timestamp": 2604.7999999988824
+      },
+      {
+        "timestamp": 2616
+      },
+      {
+        "timestamp": 2628.5999999996275
+      },
+      {
+        "timestamp": 2638.5999999996275
+      },
+      {
+        "timestamp": 2649
+      },
+      {
+        "timestamp": 2659.2999999988824
+      },
+      {
+        "timestamp": 2671.39999999851
+      },
+      {
+        "timestamp": 2682.2999999988824
+      },
+      {
+        "timestamp": 2693.5999999996275
+      },
+      {
+        "timestamp": 2703.199999999255
+      },
+      {
+        "timestamp": 2713.2999999988824
+      },
+      {
+        "timestamp": 2723.39999999851
+      },
+      {
+        "timestamp": 2734.5
+      },
+      {
+        "timestamp": 2744.5
+      },
+      {
+        "timestamp": 2757
+      },
+      {
+        "timestamp": 2769.5999999996275
+      },
+      {
+        "timestamp": 2782.199999999255
+      },
+      {
+        "timestamp": 2792.699999999255
+      },
+      {
+        "timestamp": 2803.5
+      },
+      {
+        "timestamp": 2813.699999999255
+      },
+      {
+        "timestamp": 2825.39999999851
+      },
+      {
+        "timestamp": 2835.699999999255
+      },
+      {
+        "timestamp": 2846.39999999851
+      },
+      {
+        "timestamp": 2858.699999999255
+      },
+      {
+        "timestamp": 2870.199999999255
+      },
+      {
+        "timestamp": 2882.199999999255
+      },
+      {
+        "timestamp": 2892.89999999851
+      },
+      {
+        "timestamp": 2904.0999999996275
+      },
+      {
+        "timestamp": 2915.5
+      },
+      {
+        "timestamp": 2925.199999999255
+      },
+      {
+        "timestamp": 2935.0999999996275
+      },
+      {
+        "timestamp": 2947.89999999851
+      },
+      {
+        "timestamp": 2960.39999999851
+      },
+      {
+        "timestamp": 2972.5999999996275
+      },
+      {
+        "timestamp": 2985.39999999851
+      },
+      {
+        "timestamp": 2997.5999999996275
+      },
+      {
+        "timestamp": 3010.5999999996275
+      },
+      {
+        "timestamp": 3022.7999999988824
+      },
+      {
+        "timestamp": 3035.0999999996275
+      },
+      {
+        "timestamp": 3047.7999999988824
+      },
+      {
+        "timestamp": 3058.89999999851
+      },
+      {
+        "timestamp": 3070
+      },
+      {
+        "timestamp": 3080.89999999851
+      },
+      {
+        "timestamp": 3091.5
+      },
+      {
+        "timestamp": 3101.199999999255
+      },
+      {
+        "timestamp": 3111.2999999988824
+      },
+      {
+        "stackId": 1,
+        "timestamp": 3123.7999999988824
+      },
+      {
+        "stackId": 1,
+        "timestamp": 3136.39999999851
+      },
+      {
+        "stackId": 3,
+        "timestamp": 3149.0999999996275
+      },
+      {
+        "timestamp": 3159
+      },
+      {
+        "timestamp": 3169.0999999996275
+      },
+      {
+        "timestamp": 3179.5
+      },
+      {
+        "timestamp": 3191.5999999996275
+      },
+      {
+        "timestamp": 3204.2999999988824
+      },
+      {
+        "timestamp": 3216.2999999988824
+      },
+      {
+        "timestamp": 3226.0999999996275
+      },
+      {
+        "timestamp": 3237.5
+      },
+      {
+        "timestamp": 3248.5
+      },
+      {
+        "timestamp": 3259.2999999988824
+      },
+      {
+        "timestamp": 3270.39999999851
+      },
+      {
+        "timestamp": 3281.89999999851
+      },
+      {
+        "timestamp": 3294.5999999996275
+      },
+      {
+        "timestamp": 3306.7999999988824
+      },
+      {
+        "timestamp": 3319.39999999851
+      },
+      {
+        "timestamp": 3331.699999999255
+      },
+      {
+        "timestamp": 3342.5999999996275
+      },
+      {
+        "timestamp": 3355.2999999988824
+      },
+      {
+        "timestamp": 3367.89999999851
+      },
+      {
+        "timestamp": 3380.2999999988824
+      },
+      {
+        "timestamp": 3393.199999999255
+      },
+      {
+        "timestamp": 3405.0999999996275
+      },
+      {
+        "timestamp": 3417.5999999996275
+      },
+      {
+        "timestamp": 3430.0999999996275
+      },
+      {
+        "timestamp": 3442.5999999996275
+      },
+      {
+        "timestamp": 3455.699999999255
+      },
+      {
+        "timestamp": 3467.5999999996275
+      },
+      {
+        "timestamp": 3480.5
+      },
+      {
+        "timestamp": 3492.699999999255
+      },
+      {
+        "timestamp": 3505.5999999996275
+      },
+      {
+        "timestamp": 3517.699999999255
+      },
+      {
+        "timestamp": 3530.199999999255
+      },
+      {
+        "timestamp": 3542.5999999996275
+      },
+      {
+        "timestamp": 3555.2999999988824
+      },
+      {
+        "timestamp": 3567.89999999851
+      },
+      {
+        "timestamp": 3580.2999999988824
+      },
+      {
+        "timestamp": 3593.199999999255
+      },
+      {
+        "timestamp": 3605.2999999988824
+      },
+      {
+        "timestamp": 3617.7999999988824
+      },
+      {
+        "timestamp": 3630.5
+      },
+      {
+        "timestamp": 3640.39999999851
+      },
+      {
+        "timestamp": 3653.2999999988824
+      },
+      {
+        "timestamp": 3663
+      },
+      {
+        "timestamp": 3673.5
+      },
+      {
+        "timestamp": 3684.0999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3694.199999999255
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3706.199999999255
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3716.39999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3726.5999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3737
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3747.39999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3757.5
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3769.699999999255
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3782.39999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3795.2999999988824
+      },
+      {
+        "stackId": 6,
+        "timestamp": 3805.5
+      },
+      {
+        "timestamp": 3815.199999999255
+      },
+      {
+        "timestamp": 3825.39999999851
+      },
+      {
+        "timestamp": 3837.89999999851
+      },
+      {
+        "timestamp": 3849.2999999988824
+      },
+      {
+        "timestamp": 3861.0999999996275
+      },
+      {
+        "timestamp": 3873.699999999255
+      },
+      {
+        "timestamp": 3885
+      },
+      {
+        "timestamp": 3895
+      },
+      {
+        "timestamp": 3907.5999999996275
+      },
+      {
+        "timestamp": 3918
+      },
+      {
+        "timestamp": 3928.39999999851
+      },
+      {
+        "timestamp": 3938.7999999988824
+      },
+      {
+        "timestamp": 3951.39999999851
+      },
+      {
+        "timestamp": 3963.89999999851
+      },
+      {
+        "timestamp": 3976.5999999996275
+      },
+      {
+        "timestamp": 3988.5999999996275
+      },
+      {
+        "timestamp": 4001.2999999988824
+      },
+      {
+        "timestamp": 4013.7999999988824
+      },
+      {
+        "timestamp": 4024.199999999255
+      },
+      {
+        "timestamp": 4035.2999999988824
+      },
+      {
+        "timestamp": 4045.2999999988824
+      },
+      {
+        "timestamp": 4056.5999999996275
+      },
+      {
+        "timestamp": 4068.39999999851
+      },
+      {
+        "timestamp": 4080.89999999851
+      },
+      {
+        "timestamp": 4093.5999999996275
+      },
+      {
+        "timestamp": 4105.89999999851
+      },
+      {
+        "timestamp": 4118.89999999851
+      },
+      {
+        "timestamp": 4129.199999999255
+      },
+      {
+        "timestamp": 4138.89999999851
+      },
+      {
+        "timestamp": 4149.0999999996275
+      },
+      {
+        "timestamp": 4160
+      },
+      {
+        "timestamp": 4170.0999999996275
+      },
+      {
+        "timestamp": 4182
+      },
+      {
+        "timestamp": 4192.5999999996275
+      },
+      {
+        "timestamp": 4203
+      },
+      {
+        "timestamp": 4214.0999999996275
+      },
+      {
+        "timestamp": 4226.5
+      },
+      {
+        "timestamp": 4239.39999999851
+      },
+      {
+        "timestamp": 4251.0999999996275
+      },
+      {
+        "timestamp": 4264.299999998882
+      },
+      {
+        "timestamp": 4274.89999999851
+      },
+      {
+        "timestamp": 4285.799999998882
+      },
+      {
+        "timestamp": 4296.699999999255
+      },
+      {
+        "timestamp": 4309.0999999996275
+      },
+      {
+        "timestamp": 4321.39999999851
+      },
+      {
+        "timestamp": 4331.799999998882
+      },
+      {
+        "timestamp": 4342.5999999996275
+      },
+      {
+        "timestamp": 4353.699999999255
+      },
+      {
+        "timestamp": 4363.5999999996275
+      },
+      {
+        "timestamp": 4374.699999999255
+      },
+      {
+        "timestamp": 4387.39999999851
+      },
+      {
+        "timestamp": 4398.5
+      },
+      {
+        "timestamp": 4408.799999998882
+      },
+      {
+        "timestamp": 4419.199999999255
+      },
+      {
+        "timestamp": 4431.39999999851
+      },
+      {
+        "timestamp": 4443.89999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4456.5
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4467.0999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4477.799999998882
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4487.799999998882
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4499.5
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4509.89999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4519.89999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4530.299999998882
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4540.39999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4552.5999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 4565
+      },
+      {
+        "timestamp": 4577.39999999851
+      },
+      {
+        "timestamp": 4588.39999999851
+      },
+      {
+        "timestamp": 4600.5
+      },
+      {
+        "timestamp": 4610.299999998882
+      },
+      {
+        "timestamp": 4620.299999998882
+      },
+      {
+        "timestamp": 4631.0999999996275
+      },
+      {
+        "timestamp": 4641.5999999996275
+      },
+      {
+        "timestamp": 4654
+      },
+      {
+        "timestamp": 4664.89999999851
+      },
+      {
+        "timestamp": 4677.39999999851
+      },
+      {
+        "timestamp": 4689.89999999851
+      },
+      {
+        "timestamp": 4702.39999999851
+      },
+      {
+        "timestamp": 4715.299999998882
+      },
+      {
+        "timestamp": 4727.5
+      },
+      {
+        "timestamp": 4740.299999998882
+      },
+      {
+        "timestamp": 4752.5999999996275
+      },
+      {
+        "timestamp": 4764.89999999851
+      },
+      {
+        "timestamp": 4777.5
+      },
+      {
+        "timestamp": 4790.299999998882
+      },
+      {
+        "timestamp": 4802.89999999851
+      },
+      {
+        "timestamp": 4815
+      },
+      {
+        "timestamp": 4827.699999999255
+      },
+      {
+        "timestamp": 4840.39999999851
+      },
+      {
+        "timestamp": 4852.5999999996275
+      },
+      {
+        "timestamp": 4865.0999999996275
+      },
+      {
+        "timestamp": 4877.5
+      },
+      {
+        "timestamp": 4890.39999999851
+      },
+      {
+        "timestamp": 4902.5999999996275
+      },
+      {
+        "timestamp": 4915.199999999255
+      },
+      {
+        "timestamp": 4927.699999999255
+      },
+      {
+        "timestamp": 4940.39999999851
+      },
+      {
+        "timestamp": 4952.5999999996275
+      },
+      {
+        "timestamp": 4965
+      },
+      {
+        "timestamp": 4977.799999998882
+      },
+      {
+        "timestamp": 4990.0999999996275
+      },
+      {
+        "timestamp": 5002.5
+      },
+      {
+        "timestamp": 5015.0999999996275
+      },
+      {
+        "timestamp": 5027.799999998882
+      },
+      {
+        "timestamp": 5040.0999999996275
+      },
+      {
+        "timestamp": 5053.0999999996275
+      },
+      {
+        "timestamp": 5065.199999999255
+      },
+      {
+        "timestamp": 5078.0999999996275
+      },
+      {
+        "timestamp": 5090.5
+      },
+      {
+        "timestamp": 5101
+      },
+      {
+        "timestamp": 5111.5999999996275
+      },
+      {
+        "timestamp": 5122.199999999255
+      },
+      {
+        "timestamp": 5132.299999998882
+      },
+      {
+        "timestamp": 5142.5
+      },
+      {
+        "timestamp": 5152.299999998882
+      },
+      {
+        "timestamp": 5164.5999999996275
+      },
+      {
+        "timestamp": 5177.5999999996275
+      },
+      {
+        "timestamp": 5190.0999999996275
+      },
+      {
+        "timestamp": 5201.199999999255
+      },
+      {
+        "timestamp": 5212.5
+      },
+      {
+        "timestamp": 5224.89999999851
+      },
+      {
+        "timestamp": 5235.39999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5245.39999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5255.5999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5266.0999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5278.199999999255
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5290.699999999255
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5303.699999999255
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5315.5999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5328.299999998882
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5340.0999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5350.799999998882
+      },
+      {
+        "stackId": 6,
+        "timestamp": 5361.0999999996275
+      },
+      {
+        "timestamp": 5373.0999999996275
+      },
+      {
+        "timestamp": 5383.5999999996275
+      },
+      {
+        "timestamp": 5394.0999999996275
+      },
+      {
+        "timestamp": 5406
+      },
+      {
+        "timestamp": 5418.5999999996275
+      },
+      {
+        "timestamp": 5429.5
+      },
+      {
+        "timestamp": 5439.5999999996275
+      },
+      {
+        "timestamp": 5452.199999999255
+      },
+      {
+        "timestamp": 5464.699999999255
+      },
+      {
+        "timestamp": 5475.799999998882
+      },
+      {
+        "timestamp": 5488.39999999851
+      },
+      {
+        "timestamp": 5499.0999999996275
+      },
+      {
+        "timestamp": 5510.0999999996275
+      },
+      {
+        "timestamp": 5520.799999998882
+      },
+      {
+        "timestamp": 5530.89999999851
+      },
+      {
+        "timestamp": 5541
+      },
+      {
+        "timestamp": 5553.39999999851
+      },
+      {
+        "timestamp": 5563.199999999255
+      },
+      {
+        "timestamp": 5575.199999999255
+      },
+      {
+        "timestamp": 5587.699999999255
+      },
+      {
+        "timestamp": 5600.299999998882
+      },
+      {
+        "timestamp": 5612.699999999255
+      },
+      {
+        "timestamp": 5625.5
+      },
+      {
+        "timestamp": 5638.299999998882
+      },
+      {
+        "timestamp": 5648.699999999255
+      },
+      {
+        "timestamp": 5658.699999999255
+      },
+      {
+        "timestamp": 5670.89999999851
+      },
+      {
+        "timestamp": 5681.89999999851
+      },
+      {
+        "timestamp": 5693.89999999851
+      },
+      {
+        "timestamp": 5706.699999999255
+      },
+      {
+        "timestamp": 5719
+      },
+      {
+        "timestamp": 5731.39999999851
+      },
+      {
+        "timestamp": 5744
+      },
+      {
+        "timestamp": 5756.5
+      },
+      {
+        "timestamp": 5769.299999998882
+      },
+      {
+        "timestamp": 5779.39999999851
+      },
+      {
+        "timestamp": 5791.699999999255
+      },
+      {
+        "timestamp": 5804.5
+      },
+      {
+        "timestamp": 5816.89999999851
+      },
+      {
+        "timestamp": 5829.199999999255
+      },
+      {
+        "timestamp": 5842.0999999996275
+      },
+      {
+        "timestamp": 5854.299999998882
+      },
+      {
+        "timestamp": 5866.799999998882
+      },
+      {
+        "timestamp": 5879.299999998882
+      },
+      {
+        "timestamp": 5892.0999999996275
+      },
+      {
+        "timestamp": 5904.299999998882
+      },
+      {
+        "timestamp": 5916.799999998882
+      },
+      {
+        "timestamp": 5929.5
+      },
+      {
+        "timestamp": 5942.299999998882
+      },
+      {
+        "timestamp": 5954.299999998882
+      },
+      {
+        "timestamp": 5966.799999998882
+      },
+      {
+        "timestamp": 5979.699999999255
+      },
+      {
+        "timestamp": 5991.799999998882
+      },
+      {
+        "timestamp": 6003.299999998882
+      },
+      {
+        "timestamp": 6013.89999999851
+      },
+      {
+        "timestamp": 6024.89999999851
+      },
+      {
+        "timestamp": 6034.5999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6045
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6055.199999999255
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6066.0999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6076.299999998882
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6086.5
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6098.89999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6111.39999999851
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6123.799999998882
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6134.0999999996275
+      },
+      {
+        "stackId": 6,
+        "timestamp": 6145.0999999996275
+      },
+      {
+        "timestamp": 6157.199999999255
+      },
+      {
+        "timestamp": 6167.799999998882
+      },
+      {
+        "timestamp": 6179.5999999996275
+      },
+      {
+        "timestamp": 6191.89999999851
+      },
+      {
+        "timestamp": 6204.799999998882
+      },
+      {
+        "timestamp": 6215.799999998882
+      },
+      {
+        "timestamp": 6225.699999999255
+      },
+      {
+        "timestamp": 6235.699999999255
+      },
+      {
+        "timestamp": 6246.799999998882
+      },
+      {
+        "timestamp": 6257.5
+      },
+      {
+        "timestamp": 6267.5999999996275
+      },
+      {
+        "timestamp": 6278.299999998882
+      },
+      {
+        "timestamp": 6288.39999999851
+      },
+      {
+        "timestamp": 6299.699999999255
+      },
+      {
+        "timestamp": 6309.199999999255
+      },
+      {
+        "timestamp": 6320.199999999255
+      },
+      {
+        "timestamp": 6331.799999998882
+      },
+      {
+        "timestamp": 6341.799999998882
+      },
+      {
+        "timestamp": 6352.299999998882
+      },
+      {
+        "timestamp": 6362.89999999851
+      },
+      {
+        "timestamp": 6373
+      },
+      {
+        "timestamp": 6383.799999998882
+      },
+      {
+        "timestamp": 6394.5999999996275
+      },
+      {
+        "timestamp": 6404.799999998882
+      },
+      {
+        "timestamp": 6415.699999999255
+      },
+      {
+        "timestamp": 6425.699999999255
+      },
+      {
+        "timestamp": 6436.299999998882
+      },
+      {
+        "timestamp": 6446.5
+      },
+      {
+        "timestamp": 6458.5
+      },
+      {
+        "timestamp": 6471.199999999255
+      },
+      {
+        "timestamp": 6484
+      },
+      {
+        "timestamp": 6496.5
+      },
+      {
+        "timestamp": 6509
+      },
+      {
+        "timestamp": 6520.39999999851
+      },
+      {
+        "timestamp": 6532.89999999851
+      },
+      {
+        "timestamp": 6543.0999999996275
+      },
+      {
+        "timestamp": 6555.5999999996275
+      },
+      {
+        "timestamp": 6568.299999998882
+      },
+      {
+        "timestamp": 6580.5999999996275
+      },
+      {
+        "timestamp": 6593.0999999996275
+      },
+      {
+        "timestamp": 6605.89999999851
+      },
+      {
+        "timestamp": 6618.5999999996275
+      },
+      {
+        "timestamp": 6630.5999999996275
+      },
+      {
+        "timestamp": 6642.299999998882
+      },
+      {
+        "timestamp": 6652.699999999255
+      },
+      {
+        "timestamp": 6663.199999999255
+      },
+      {
+        "timestamp": 6675.39999999851
+      },
+      {
+        "timestamp": 6685.699999999255
+      },
+      {
+        "timestamp": 6698
+      },
+      {
+        "timestamp": 6710.5
+      },
+      {
+        "timestamp": 6723.0999999996275
+      },
+      {
+        "timestamp": 6735.5
+      },
+      {
+        "timestamp": 6747.39999999851
+      },
+      {
+        "timestamp": 6757.799999998882
+      },
+      {
+        "timestamp": 6770.0999999996275
+      }
+    ],
+    "stacks": [
+      {
+        "frameId": 1
+      },
+      {
+        "frameId": 0,
+        "parentId": 0
+      },
+      {
+        "frameId": 3
+      },
+      {
+        "frameId": 2,
+        "parentId": 2
+      },
+      {
+        "frameId": 5
+      },
+      {
+        "frameId": 4,
+        "parentId": 4
+      },
+      {
+        "frameId": 6
+      }
+    ]
+  },
+  "sources": {
+    "app.js": "/*\n * Vanilla jank fixture for the adversarial review.\n *\n * Three listeners on one button, so one frame carries three script entries:\n * first-party compute, third-party compute, and a forced-layout thrash.\n * A fourth button produces style+layout work in the rendering phase itself.\n */\n\nconst button = document.querySelector('#go');\nconst layoutButton = document.querySelector('#layout');\nconst list = document.querySelector('#list');\n\n/** First-party hot function. The `while` on line 18 is the cost. */\nfunction computeTotals() {\n  const start = performance.now();\n  let acc = 0;\n  while (performance.now() - start < 18) {\n    for (let i = 0; i < 2000; i += 1) {\n      acc += Math.sqrt(i) * Math.cos(i);\n    }\n  }\n  return acc;\n}\n\n/** Forced synchronous layout: read geometry, write style, repeat. */\nfunction thrashLayout() {\n  const rows = list.children;\n  let total = 0;\n  for (let i = 0; i < rows.length; i += 1) {\n    const row = rows[i];\n    row.style.padding = `${String(1 + (i % 3))}px`;\n    total += row.offsetHeight; // forces layout every iteration\n  }\n  return total;\n}\n\nfunction buildRows(n) {\n  const html = [];\n  for (let i = 0; i < n; i += 1) {\n    html.push(`<li class=\"row\">row ${String(i)} — some text to lay out</li>`);\n  }\n  list.innerHTML = html.join('');\n}\n\nbuildRows(400);\n\nbutton.addEventListener('click', () => {\n  window.__firstParty = computeTotals();\n});\nbutton.addEventListener('click', () => {\n  window.__vendor = window.vendorTrack();\n});\nbutton.addEventListener('click', () => {\n  window.__thrash = thrashLayout();\n});\n\n// Style+layout inside the rendering phase: mutate a class that invalidates\n// every row, then yield so style and layout happen in the frame's render steps\n// rather than inside the listener.\nwindow.__timing = [];\nlayoutButton.addEventListener('click', () => {\n  const t0 = performance.now();\n  document.body.classList.toggle('wide');\n  const t1 = performance.now();\n  const html = [];\n  for (let i = 0; i < 4000; i += 1) {\n    html.push(`<li class=\"row\">row ${String(i)} — some text to lay out</li>`);\n  }\n  const t2 = performance.now();\n  list.innerHTML = html.join('');\n  // Forcing style+layout synchronously here moves the same work inside the\n  // script, where LoAF can name it as forcedStyleAndLayoutDuration.\n  if (window.__force) window.__h = list.offsetHeight;\n  const t3 = performance.now();\n  // Is the rest of the frame browser *work* or main-thread *idle*? A task\n  // posted at the end of the listener runs promptly if the thread is idle and\n  // late if the thread is busy with non-JS work.\n  const record = {};\n  const port = new MessageChannel();\n  port.port1.onmessage = () => {\n    record.messageChannelDelay = performance.now() - t3;\n  };\n  port.port2.postMessage(0);\n  setTimeout(() => {\n    record.timeoutDelay = performance.now() - t3;\n  }, 0);\n  requestAnimationFrame(() => {\n    record.rafDelay = performance.now() - t3;\n  });\n  window.__timing.push({\n    probe: record,\n    listenerStart: t0,\n    classToggle: t1 - t0,\n    buildString: t2 - t1,\n    innerHTML: t3 - t2,\n    listenerTotal: t3 - t0,\n    listenerEnd: t3,\n  });\n});\n",
+    "vendor.js": "/* Pretend third party. Line 8 is the hot loop. */\nwindow.vendorTrack = function vendorTrack() {\n  const start = performance.now();\n  let acc = 0;\n  while (performance.now() - start < 12) {\n    for (let i = 0; i < 2000; i += 1) {\n      acc += Math.sqrt(i) * Math.sin(i);\n    }\n  }\n  return acc;\n};\n"
+  },
+  "timing": [
+    {
+      "probe": {
+        "rafDelay": 22.800000000745058,
+        "messageChannelDelay": 27.300000000745058,
+        "timeoutDelay": 27.300000000745058
+      },
+      "listenerStart": 3685.39999999851,
+      "classToggle": 0.40000000037252903,
+      "buildString": 1.200000001117587,
+      "innerHTML": 120.29999999888241,
+      "listenerTotal": 121.90000000037253,
+      "listenerEnd": 3807.2999999988824
+    },
+    {
+      "probe": {
+        "rafDelay": 20.90000000037253,
+        "messageChannelDelay": 24.800000000745058,
+        "timeoutDelay": 24.800000000745058
+      },
+      "listenerStart": 4452,
+      "classToggle": 0.3999999985098839,
+      "buildString": 0.6000000014901161,
+      "innerHTML": 118.89999999850988,
+      "listenerTotal": 119.89999999850988,
+      "listenerEnd": 4571.89999999851
+    },
+    {
+      "probe": {
+        "rafDelay": 18.799999998882413,
+        "messageChannelDelay": 23.299999998882413,
+        "timeoutDelay": 23.299999998882413
+      },
+      "listenerStart": 5236.299999998882,
+      "classToggle": 0,
+      "buildString": 0.09999999962747097,
+      "innerHTML": 133.60000000149012,
+      "listenerTotal": 133.7000000011176,
+      "listenerEnd": 5370
+    },
+    {
+      "probe": {
+        "rafDelay": 21,
+        "messageChannelDelay": 25.40000000037253,
+        "timeoutDelay": 25.5
+      },
+      "listenerStart": 6034.799999998882,
+      "classToggle": 0,
+      "buildString": 0.8000000007450581,
+      "innerHTML": 110.69999999925494,
+      "listenerTotal": 111.5,
+      "listenerEnd": 6146.299999998882
+    }
+  ]
+}

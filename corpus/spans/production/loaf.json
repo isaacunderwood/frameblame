@@ -1,0 +1,246 @@
+{
+  "runId": "2026-11-15T02-26-42-592Z__spans__production",
+  "fixture": "spans",
+  "mode": "production",
+  "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
+  "url": "http://localhost:5187/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:26:52.542Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709603425.5,
+    "driveStartedAt": 260.69999999925494,
+    "driveFinishedAt": 9006.89999999851
+  },
+  "fixtureProbe": null,
+  "entries": [
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 57.79999999701977,
+        "duration": 168.30000000074506,
+        "navigationId": 280,
+        "paintTime": 226.09999999776483,
+        "presentationTime": 264,
+        "renderStart": 199.59999999776483,
+        "styleAndLayoutStart": 199.59999999776483,
+        "firstUIEventTimestamp": 0,
+        "blockingDuration": 117.5,
+        "styleDuration": 0.1,
+        "layoutDuration": 25.1,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 57.899999998509884,
+            "duration": 140.80000000074506,
+            "navigationId": 280,
+            "invoker": "MessagePort.onmessage",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 57.899999998509884,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+            "sourceFunctionName": "S",
+            "sourceCharPosition": 2050
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 57.899999998509884,
+          "duration": 140.80000000074506,
+          "executionStart": 57.899999998509884,
+          "invoker": "MessagePort.onmessage",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+          "sourceFunctionName": "S",
+          "sourceCharPosition": 2050,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 892.2999999970198,
+        "duration": 135.5,
+        "navigationId": 280,
+        "paintTime": 1027.7999999970198,
+        "presentationTime": 1064,
+        "renderStart": 1027.699999999255,
+        "styleAndLayoutStart": 1027.699999999255,
+        "firstUIEventTimestamp": 891.7999999970198,
+        "blockingDuration": 85.3,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 898.1999999992549,
+            "duration": 127.80000000074506,
+            "navigationId": 280,
+            "invoker": "DIV#root.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 898.1999999992549,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+            "sourceFunctionName": "_h",
+            "sourceCharPosition": 210714
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 898.1999999992549,
+          "duration": 127.80000000074506,
+          "executionStart": 898.1999999992549,
+          "invoker": "DIV#root.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+          "sourceFunctionName": "_h",
+          "sourceCharPosition": 210714,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 7372.199999999255,
+        "duration": 154.09999999776483,
+        "navigationId": 280,
+        "paintTime": 7526.29999999702,
+        "presentationTime": 7564,
+        "renderStart": 7526.29999999702,
+        "styleAndLayoutStart": 7526.29999999702,
+        "firstUIEventTimestamp": 7372.099999997765,
+        "blockingDuration": 102.9,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 7374.199999999255,
+            "duration": 152,
+            "navigationId": 280,
+            "invoker": "DIV#root.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 7374.199999999255,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+            "sourceFunctionName": "_h",
+            "sourceCharPosition": 210714
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 7374.199999999255,
+          "duration": 152,
+          "executionStart": 7374.199999999255,
+          "invoker": "DIV#root.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+          "sourceFunctionName": "_h",
+          "sourceCharPosition": 210714,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    },
+    {
+      "toJSON": {
+        "name": "long-animation-frame",
+        "entryType": "long-animation-frame",
+        "startTime": 8206.099999997765,
+        "duration": 154.19999999925494,
+        "navigationId": 280,
+        "paintTime": 8360.29999999702,
+        "presentationTime": 8396,
+        "renderStart": 8360.199999999255,
+        "styleAndLayoutStart": 8360.29999999702,
+        "firstUIEventTimestamp": 8206.099999997765,
+        "blockingDuration": 103,
+        "styleDuration": 0,
+        "layoutDuration": 0,
+        "scripts": [
+          {
+            "name": "script",
+            "entryType": "script",
+            "startTime": 8207.699999999255,
+            "duration": 151.80000000074506,
+            "navigationId": 280,
+            "invoker": "DIV#root.onclick",
+            "invokerType": "event-listener",
+            "windowAttribution": "self",
+            "executionStart": 8207.699999999255,
+            "forcedStyleAndLayoutDuration": 0,
+            "forcedStyleDuration": 0,
+            "forcedLayoutDuration": 0,
+            "pauseDuration": 0,
+            "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+            "sourceFunctionName": "_h",
+            "sourceCharPosition": 210714
+          }
+        ]
+      },
+      "scripts": [
+        {
+          "name": "script",
+          "entryType": "script",
+          "startTime": 8207.699999999255,
+          "duration": 151.80000000074506,
+          "executionStart": 8207.699999999255,
+          "invoker": "DIV#root.onclick",
+          "invokerType": "event-listener",
+          "sourceURL": "http://localhost:5187/assets/index-Bu92n-HK.js",
+          "sourceFunctionName": "_h",
+          "sourceCharPosition": 210714,
+          "sourceLine": null,
+          "sourceColumn": null,
+          "pauseDuration": 0,
+          "forcedStyleAndLayoutDuration": 0,
+          "windowAttribution": "self"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@frameblame/fixture-innerhtml-rebuild",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Janks on purpose: a class toggle that invalidates 4,000 rows plus an innerHTML rebuild, so the cost is browser work rather than script",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "8.3.8"
+  }
+}

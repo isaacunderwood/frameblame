@@ -1,0 +1,51 @@
+<!doctype html>
+<!--
+  The fixture's document: two trigger buttons, one list, and the stylesheet
+  that makes a single class write expensive.
+
+  The stylesheet is the fixture. `body.wide .row` changes `letter-spacing`,
+  `font-size` and `padding-left`, so toggling `wide` invalidates the computed
+  style of every row and forces the text of every row to be measured again.
+  Those three properties were chosen because each one defeats a different
+  shortcut: `letter-spacing` and `font-size` change text metrics, so no cached
+  line box survives, and `padding-left` changes the box the text is laid out
+  into. A class that only changed `color` would repaint cheaply and the fixture
+  would not jank.
+
+  The app is loaded as `<script src="/app.js">` - a root-relative, non-module
+  script served from `public/`, byte-identical in dev and in a production
+  build, so the line numbers in `ground-truth.json` hold in both. See the
+  comment at the top of `public/app.js`.
+
+  Deliberately not here: no stylesheet link, no fonts, no favicon, no module
+  graph. Every extra request is another thing that could land in the frame
+  being measured, and this fixture's whole claim is about what else is in the
+  frame.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frameblame fixture - innerhtml-rebuild</title>
+    <style>
+      .row {
+        font-family: ui-monospace, monospace;
+        border-bottom: 1px solid #ccc;
+      }
+
+      body.wide .row {
+        letter-spacing: 0.08em;
+        font-size: 1.1rem;
+        padding-left: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>innerhtml-rebuild</h1>
+    <p>Both buttons do the same work. Only the second one lets LoAF name it.</p>
+    <button type="button" data-fixture="rebuild-unforced">Rebuild (unforced)</button>
+    <button type="button" data-fixture="rebuild-forced">Rebuild (forced)</button>
+    <ul data-fixture="row-list"></ul>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,423 @@
+/*
+ * Shared stylesheet for every lesson and reference sheet in this workspace.
+ *
+ * The palette borrows the performance-trace vocabulary deliberately, so that a
+ * colour means the same thing in a lesson as it does in the diagrams: amber is
+ * script, teal is the rendering update, red flags a trap. Continuity of type
+ * with the diagram page is also deliberate — the course should look like one
+ * course.
+ */
+
+:root {
+  /* Light palette, complete. Every token used anywhere is defined here. */
+  --ground: #f6f8fa;
+  --surface: #ffffff;
+  --ink: #1b2430;
+  --ink-soft: #5a6675;
+  --ink-faint: #8a94a2;
+  --rule: #d9dfe7;
+  --rule-soft: #eaeff4;
+
+  --script: #a26a12; /* the script phase */
+  --script-wash: #f6ecd9;
+  --render: #1f6f6a; /* the rendering update */
+  --render-wash: #dceceb;
+  --flag: #b23c33; /* a trap, a correction */
+  --flag-wash: #f7e4e2;
+
+  --measure: 63ch;
+  --step: clamp(0.75rem, 2vw, 1.5rem);
+
+  --display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ground: #10141a;
+    --surface: #161c24;
+    --ink: #dde3ea;
+    --ink-soft: #9aa5b4;
+    --ink-faint: #6d788a;
+    --rule: #272f3a;
+    --rule-soft: #1d242d;
+
+    --script: #d9a650;
+    --script-wash: #2b2317;
+    --render: #5bb8b0;
+    --render-wash: #142725;
+    --flag: #e2756a;
+    --flag-wash: #2a1a19;
+  }
+}
+
+:root[data-theme='dark'] {
+  --ground: #10141a;
+  --surface: #161c24;
+  --ink: #dde3ea;
+  --ink-soft: #9aa5b4;
+  --ink-faint: #6d788a;
+  --rule: #272f3a;
+  --rule-soft: #1d242d;
+
+  --script: #d9a650;
+  --script-wash: #2b2317;
+  --render: #5bb8b0;
+  --render-wash: #142725;
+  --flag: #e2756a;
+  --flag-wash: #2a1a19;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  margin: 0;
+  padding: clamp(2rem, 5vw, 4.5rem) var(--step) 6rem;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin: 0 auto;
+  max-width: var(--measure);
+}
+
+/* --- masthead ---------------------------------------------------------- */
+
+.eyebrow {
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin: 0.35rem 0 0;
+  text-wrap: balance;
+}
+
+.standfirst {
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+  margin: 0.75rem 0 0;
+  text-wrap: pretty;
+}
+
+h2 {
+  border-top: 1px solid var(--rule);
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  padding-top: 1.25rem;
+  text-wrap: balance;
+}
+
+h3 {
+  font-family: var(--display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--render);
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-color: var(--ink);
+}
+
+a:focus-visible,
+button:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--render);
+  outline-offset: 3px;
+}
+
+code {
+  background: var(--rule-soft);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.86em;
+  padding: 0.1em 0.32em;
+}
+
+/* --- the step ladder --------------------------------------------------- */
+
+.ladder {
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ladder li {
+  align-items: baseline;
+  background: var(--surface);
+  border-left: 3px solid var(--rule);
+  display: flex;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  gap: 0.85rem;
+  padding: 0.5rem 0.85rem;
+}
+
+.ladder li::before {
+  color: var(--ink-faint);
+  content: counter(step, decimal-leading-zero);
+  counter-increment: step;
+  font-size: 0.78rem;
+}
+
+.ladder li.is-key {
+  background: var(--render-wash);
+  border-left-color: var(--render);
+}
+
+.ladder li.is-key::before {
+  color: var(--render);
+}
+
+.ladder .note {
+  color: var(--ink-soft);
+  font-family: var(--body);
+  font-size: 0.92rem;
+  margin-left: auto;
+  padding-left: 1rem;
+  text-align: right;
+}
+
+/* --- callouts ---------------------------------------------------------- */
+
+.callout {
+  border-left: 3px solid var(--flag);
+  background: var(--flag-wash);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+}
+
+.callout.is-script {
+  background: var(--script-wash);
+  border-left-color: var(--script);
+}
+
+.callout .label {
+  color: var(--flag);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.callout.is-script .label {
+  color: var(--script);
+}
+
+/* --- evidence table ---------------------------------------------------- */
+
+.scroller {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.45rem 0.9rem 0.45rem 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  color: var(--ink-faint);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+td.num {
+  text-align: right;
+  padding-right: 1.4rem;
+}
+
+.stamp {
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+/* --- quiz -------------------------------------------------------------- */
+
+.quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.q {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem;
+}
+
+.q .prompt {
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.q .options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.q button {
+  background: var(--ground);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--body);
+  font-size: 0.95rem;
+  padding: 0.55rem 0.8rem;
+  text-align: left;
+  transition: border-color 120ms ease;
+}
+
+.q button:hover:not([disabled]) {
+  border-color: var(--ink-faint);
+}
+
+.q button[disabled] {
+  cursor: default;
+}
+
+.q button[data-state='right'] {
+  background: var(--render-wash);
+  border-color: var(--render);
+  font-weight: 600;
+}
+
+.q button[data-state='wrong'] {
+  background: var(--flag-wash);
+  border-color: var(--flag);
+  text-decoration: line-through;
+  text-decoration-color: var(--flag);
+}
+
+.q .why {
+  border-top: 1px solid var(--rule-soft);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  padding-top: 0.75rem;
+}
+
+.q .why[hidden] {
+  display: none;
+}
+
+/* --- footer ------------------------------------------------------------ */
+
+.source {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem;
+}
+
+.ask {
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  padding-top: 1.25rem;
+}
+
+.refs {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.92rem;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.refs li {
+  color: var(--ink-soft);
+  padding-left: 1.4rem;
+  text-indent: -1.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 10.5pt;
+    padding: 0;
+  }
+
+  .quiz,
+  .ask {
+    display: none;
+  }
+
+  .q,
+  .source,
+  .ladder li {
+    break-inside: avoid;
+  }
+}

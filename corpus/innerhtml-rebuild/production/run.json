@@ -1,0 +1,128 @@
+{
+  "runId": "2026-11-15T02-27-00-159Z__innerhtml-rebuild__production",
+  "fixture": "innerhtml-rebuild",
+  "mode": "production",
+  "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
+  "url": "http://localhost:5189/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:27:07.795Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709620982.4,
+    "driveStartedAt": 258.5999999977648,
+    "driveFinishedAt": 6784.099999997765
+  },
+  "summary": {
+    "runId": "2026-11-15T02-27-00-159Z__innerhtml-rebuild__production",
+    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T02-27-00-159Z__innerhtml-rebuild__production",
+    "fixture": "innerhtml-rebuild",
+    "mode": "production",
+    "longFrames": 8,
+    "samples": 561,
+    "commits": 0,
+    "measures": 0,
+    "sourceWindows": 5,
+    "unresolvedPositions": 0,
+    "actionsWithoutFrame": 0
+  },
+  "plan": [
+    {
+      "kind": "click",
+      "label": "unforced",
+      "selector": "[data-fixture=\"rebuild-unforced\"]",
+      "repeat": 4,
+      "settleMs": 600
+    },
+    {
+      "kind": "click",
+      "label": "forced",
+      "selector": "[data-fixture=\"rebuild-forced\"]",
+      "repeat": 4,
+      "settleMs": 600
+    }
+  ],
+  "steps": [
+    {
+      "label": "unforced",
+      "kind": "click",
+      "startedAtPageClock": 259.29999999701977,
+      "endedAtPageClock": 3549.099999997765,
+      "framesBefore": 0,
+      "framesAfter": 4,
+      "actions": [
+        {
+          "index": 0,
+          "what": "click",
+          "atPageClock": 262.0999999977648,
+          "sawNewFrame": true
+        },
+        {
+          "index": 1,
+          "what": "click",
+          "atPageClock": 1099,
+          "sawNewFrame": true
+        },
+        {
+          "index": 2,
+          "what": "click",
+          "atPageClock": 1898.699999999255,
+          "sawNewFrame": true
+        },
+        {
+          "index": 3,
+          "what": "click",
+          "atPageClock": 2735,
+          "sawNewFrame": true
+        }
+      ]
+    },
+    {
+      "label": "forced",
+      "kind": "click",
+      "startedAtPageClock": 3550.39999999851,
+      "endedAtPageClock": 6782.599999997765,
+      "framesBefore": 4,
+      "framesAfter": 8,
+      "actions": [
+        {
+          "index": 0,
+          "what": "click",
+          "atPageClock": 3552.2999999970198,
+          "sawNewFrame": true
+        },
+        {
+          "index": 1,
+          "what": "click",
+          "atPageClock": 4366.79999999702,
+          "sawNewFrame": true
+        },
+        {
+          "index": 2,
+          "what": "click",
+          "atPageClock": 5165.199999999255,
+          "sawNewFrame": true
+        },
+        {
+          "index": 3,
+          "what": "click",
+          "atPageClock": 5984.099999997765,
+          "sawNewFrame": true
+        }
+      ]
+    }
+  ],
+  "sampling": {
+    "requestedSampleIntervalMs": 5,
+    "effectiveSampleIntervalMs": 10,
+    "maxBufferSize": 400000,
+    "note": "Chrome clamps the sampling period upward to a compile-time floor of 10ms (16 on Windows) that no flag reads, so a request of 5 is answered with 10 and measures out at a ~12ms median cadence."
+  },
+  "profilerWindow": {
+    "startedAt": 257.5999999977648,
+    "stoppedAt": 6786.39999999851
+  }
+}

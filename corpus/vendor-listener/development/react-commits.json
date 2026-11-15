@@ -1,0 +1,21 @@
+{
+  "runId": "2026-11-15T02-27-07-855Z__vendor-listener__development",
+  "fixture": "vendor-listener",
+  "mode": "development",
+  "buildMode": "development (vite dev server)",
+  "url": "http://localhost:5190/",
+  "documentPolicy": "js-profiling",
+  "cpuThrottleRate": 4,
+  "browser": "chromium 159.0.8154.6",
+  "sourceLineColumnFeaturesEnabled": false,
+  "reactDevToolsHookInstalled": true,
+  "collectedAt": "2026-11-15T02:27:12.844Z",
+  "clock": {
+    "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
+    "timeOrigin": 1794709628461.9,
+    "driveStartedAt": 157.19999999925494,
+    "driveFinishedAt": 4353.300000000745
+  },
+  "commits": [],
+  "measures": []
+}

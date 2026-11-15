@@ -1,0 +1,31 @@
+# The project's prose, hand-wrapped. Prettier rewrites `*emphasis*` as
+# `_emphasis_` and has opinions about wrapping, none of which are worth a silent
+# edit to the documents that carry the project's reasoning.
+/CLAUDE.md
+/handoff.md
+/handoff-v0.1-spike.md
+/handoff-v0.2-corpus.md
+/later.md
+/findings.md
+/README.md
+# A one-off brief for a single unattended session, hand-wrapped like the rest.
+/overnight-run.md
+
+node_modules/
+dist/
+pnpm-lock.yaml
+spike/out/
+
+# Captured evidence, written by `pnpm spike:corpus` and read by the accuracy
+# suite. Machine-written and large; reformatting it would produce an enormous
+# diff that says nothing and would make the dumps differ from the run
+# directories they were copied from.
+corpus/
+
+# Preserved exactly as run — see spike/archive/README.md.
+spike/archive/
+
+# A teaching workspace that lives here, not part of the tool.
+learning/
+test-results/
+playwright-report/

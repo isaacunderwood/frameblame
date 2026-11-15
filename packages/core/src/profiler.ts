@@ -1,0 +1,302 @@
+/**
+ * The JS Self-Profiling API's trace, as Chrome 159 actually reports it.
+ *
+ * This is the expensive signal and the only one that can see inside a frame:
+ * real sampled stacks, with positions a source map can resolve. LoAF's answer
+ * to "what made this frame slow" is react-dom's event dispatcher; this is what
+ * answers it with the user's own component.
+ *
+ * The trace is four parallel arrays referring to each other by index, which is
+ * how the API serialises it and how the dumps store it. The index names are
+ * kept as the API spells them — `resourceId`, `frameId`, `stackId`, `parentId`
+ * — rather than renamed to `index`, so that a reader cross-referencing a dump
+ * or the specification sees the same words. They are array indices in every
+ * case.
+ *
+ * What this module does not do: walk a stack, resolve a source map, or weight a
+ * sample. It holds the records, the one position conversion the whole project
+ * must get right, and the facts about sampling that bound what any heuristic
+ * built on top may claim.
+ *
+ * **Clock.** Sample timestamps are `performance.now()` milliseconds on the
+ * document's timeline, shared with LoAF and React. The spec says they are
+ * relative to "the profiling session's time origin", which is not obviously the
+ * document's; measured, it is — the first sample lands 0.0-0.7ms after the
+ * reading taken immediately before the profiler was constructed, across all
+ * eight captures.
+ *
+ * https://wicg.github.io/js-self-profiling/
+ */
+
+import type { LineColumn } from './char-position.ts';
+
+/**
+ * The floor Chrome clamps the sampling period to, in milliseconds.
+ *
+ * `ProfilerGroup::kBaseSampleIntervalMs` is a compile-time constant of 10 in
+ * Blink (16 on Windows) that no flag, feature or Document-Policy parameter
+ * reads, and V8's `--cpu-profiler-sampling-interval` is overridden by Blink's
+ * own call. Chrome also snaps **up**, contrary to the spec's "next lowest
+ * supported" language: a requested interval of 1 silently becomes 10. All eight
+ * captures requested 5 and were given 10.
+ */
+export const SAMPLE_INTERVAL_FLOOR_MS = 10;
+
+/**
+ * What the cadence actually measures out at, which is not the floor.
+ *
+ * Measured over 17,250 samples across the corpus: a median inter-sample delta
+ * of 12.2ms, p25 10.5, p90 ~12.9, with a long tail to 29.9ms. Budget ~12ms per
+ * sample when reasoning about how many a frame can yield — a 64ms frame gives
+ * five to seven — and expect duplicates: 50 pairs of samples in the corpus
+ * share a timestamp exactly, every one of them the same stack sampled twice, so
+ * a zero-width sample is a real thing to tolerate rather than a parse error.
+ */
+export const OBSERVED_SAMPLE_CADENCE_MS = 12.2;
+
+/** A source map as it appears in JSON, narrowed to the fields this project reads. */
+export interface RawSourceMap {
+  readonly version: number;
+  readonly file?: string;
+  /** Original file paths, relative to `sourceRoot` when there is one. */
+  readonly sources: readonly (string | null)[];
+  /**
+   * Original identifier names.
+   *
+   * Load-bearing in production and absent in practice in development: the two
+   * production bundles in the corpus carry 1,852 and 1,856 names, while all
+   * eight development maps carry an empty array. This array is how a minified
+   * frame recovers its component name — `h` at generated `9:50998` resolves to
+   * `OrderTable.tsx:32:16` with `name: "OrderTable"` — which is why production
+   * attribution needs no React hook and no build-time plugin.
+   */
+  readonly names?: readonly string[];
+  readonly mappings: string;
+  readonly sourcesContent?: readonly (string | null)[];
+  readonly sourceRoot?: string;
+  /** Indices into `sources` the debugger should skip. Chrome's `x_google_ignoreList`. */
+  readonly ignoreList?: readonly number[];
+}
+
+/** Where a script's source map came from, which decides whether it survives the server. */
+export type SourceMapOrigin =
+  /** A `data:` URI in the script itself, as a Vite dev server serves each module. */
+  | { readonly kind: 'inline' }
+  /** A `.map` file alongside the bundle, as a production build ships. */
+  | { readonly kind: 'external'; readonly url: string };
+
+/**
+ * One script resource named by the trace, with whatever is known about it.
+ *
+ * In a Vite dev server the resources are *the component files themselves*,
+ * because dev-mode ESM serves each module separately, and the list varies with
+ * what actually ran — a module appears only when a sample happened to land in
+ * it. In production there is one bundle. Both are in the corpus, along with two
+ * fixtures whose scripts are hand-written files served byte-for-byte out of
+ * `public/` with no map at all, which is the degraded tier in its natural
+ * habitat.
+ */
+export interface ScriptResource {
+  readonly url: string;
+  /**
+   * Length of the served text in UTF-16 code units, or `null` if unknown.
+   *
+   * Not the text itself: the engine is pure and a 221KB bundle is not something
+   * to carry through it. The length is here because it is the one cheap check
+   * that a character offset belongs to the script it claims to.
+   */
+  readonly servedLength: number | null;
+  /** `null` when the script shipped no map — which is 7 of the corpus's 17 resources. */
+  readonly sourceMap: {
+    readonly origin: SourceMapOrigin;
+    readonly map: RawSourceMap;
+  } | null;
+  /**
+   * Why nothing could be read for this script, when something went wrong rather
+   * than nothing being there.
+   *
+   * "This bundle shipped no source map" and "this bundle's source map could not
+   * be fetched" both degrade to the same tier — a minified name with a warning
+   * — but they are different warnings, and only one of them is the user's to
+   * fix. `null` on all 17 resources in the corpus.
+   */
+  readonly fetchError: string | null;
+}
+
+/**
+ * One function in the trace: where it was *defined*, not where it was executing.
+ *
+ * This is the project's hardest structural limit and it is mandated by the
+ * spec: `line` is "the 1-based index of the line at which instance is
+ * defined". V8 does record the executing line, but Blink requests
+ * `kLeafNodeLineNumbers` and its trace builder never reads `GetLineTicks()`.
+ *
+ * So a frame naming line 32 of `OrderTable.tsx` — the `export function
+ * OrderTable(` line — means "inside the component body but not inside any
+ * nested callback", and the comparator passed to `.sort` on line 36 is a
+ * *separate frame* with its own definition line. That is what makes
+ * `OrderTable.tsx:36, in the callback passed to .sort` defensible and "line 36
+ * is slow" not. True statement-level attribution exists over CDP, where
+ * `positionTicks` gave 164 ticks on one generated line at a 185us cadence, and
+ * is unavailable from inside the page at any sample count.
+ */
+export interface ProfiledFrame {
+  /**
+   * The function's name, or `null` for an anonymous function or a module's top
+   * level. Chrome reports the empty string; 23 of the corpus's 156 frames are
+   * anonymous, every one of them with a valid `resourceId`.
+   */
+  readonly name: string | null;
+  /** Index into `ProfileTrace.resources`, or `null` for a native frame. */
+  readonly resourceId: number | null;
+  /**
+   * 1-based line of the function's definition, or `null`.
+   *
+   * Both of these are 1-based, which is *not* the convention a source map is
+   * queried with. Convert with `profiledFramePosition` rather than by hand: the
+   * minus one belongs in exactly one place.
+   */
+  readonly line: number | null;
+  /** 1-based column. See `line`, and see `profiledFramePosition`. */
+  readonly column: number | null;
+}
+
+/**
+ * One stack, as a frame plus a link to its caller.
+ *
+ * `parentId` is `null` at a root — the event dispatch or task entry point. The
+ * API omits the property there rather than nulling it, and in every capture a
+ * parent's index is strictly lower than its child's, so a walk outward
+ * terminates.
+ */
+export interface ProfiledStack {
+  readonly frameId: number;
+  readonly parentId: number | null;
+}
+
+/**
+ * One sample: a timestamp, and the stack that was running — or nothing.
+ *
+ * **The empty stack is the cross-check, not a shrug.** `stackId` is `null` when
+ * no JavaScript was on the stack at that instant, which is not the same as the
+ * thread being idle. It is the second, independent signal behind the
+ * unattributed tier: the corpus's unforced `innerHTML` frames show an 89-92%
+ * LoAF residual alongside 90-93% of in-frame samples carrying no stack, and
+ * adding one `offsetHeight` read moves both together — the residual to ~15%,
+ * the empty-stack share to 9-20%. Two signals agreeing that nothing was
+ * attributable is a far better unattributed tier than subtraction alone.
+ *
+ * Note that the whole-run share is not that number: most of a run is the idle
+ * gaps between interactions, so 68-99% of all samples in these captures have no
+ * stack. The quantity that means anything is the share of samples *inside a
+ * frame*.
+ */
+export interface ProfiledSample {
+  readonly atMs: number;
+  readonly stackId: number | null;
+}
+
+/** What the profiler was asked for, and what it was actually given. */
+export interface ProfilerSampling {
+  readonly requestedIntervalMs: number | null;
+  /**
+   * The interval the profiler reported after clamping, or `null` if not
+   * recorded. 10 in every capture, against a request of 5.
+   */
+  readonly effectiveIntervalMs: number | null;
+  /** Capacity in samples. A full buffer silently discards the end of a run. */
+  readonly maxBufferSize: number | null;
+}
+
+/**
+ * A complete sampled profile over one session.
+ *
+ * Note the two windows a consumer must not confuse: this trace's own
+ * `startedAtMs`/`stoppedAtMs`, and the interaction windows in `signals.ts`. In
+ * two of the eight captures the profiler was started in an init script at ~25ms
+ * to catch the page's first mount, long before the drive began at ~300ms, so
+ * dozens of samples precede the first interaction. Anything that assumes
+ * samples begin at the first interaction mis-bins them.
+ */
+export interface ProfileTrace {
+  /** Indexed by `ProfiledFrame.resourceId`. */
+  readonly resources: readonly ScriptResource[];
+  /** Indexed by `ProfiledStack.frameId`. */
+  readonly frames: readonly ProfiledFrame[];
+  /** Indexed by `ProfiledSample.stackId` and `ProfiledStack.parentId`. */
+  readonly stacks: readonly ProfiledStack[];
+  /** In timestamp order, non-decreasing; consecutive duplicates occur. */
+  readonly samples: readonly ProfiledSample[];
+  readonly sampling: ProfilerSampling;
+  readonly startedAtMs: number | null;
+  readonly stoppedAtMs: number | null;
+}
+
+/**
+ * The profiler's position for a frame, converted to the convention a source map
+ * is queried with: 1-based line, 0-based column.
+ *
+ * **This is the only place the minus one belongs.** `ProfilerFrame.line` and
+ * `.column` are both 1-based; a source map's column is 0-based, and `core`'s
+ * `LineColumn` is 1-based line with 0-based column precisely so that a value of
+ * that type can go straight into `originalPositionFor`. Doing the subtraction
+ * at each use site is how one of them silently keeps the off-by-one.
+ *
+ * Returns `null` when the frame carries no position — a native frame, or one
+ * the profiler reported without line and column. Every frame in the corpus has
+ * both, so the null branch is reasoned rather than measured.
+ *
+ * One consequence worth knowing before using the result: the column, resolved,
+ * lands on the opening paren of a callback argument rather than on the call
+ * token, because esbuild and rolldown emit no source-map segment for an arrow
+ * function's opening paren and the definition column falls one segment early.
+ * The token worth printing is at `column - 1`, which resolves to `.sort` for
+ * the corpus's declared culprit. That adjustment is a presentation decision and
+ * is deliberately not applied here.
+ */
+export function profiledFramePosition(frame: ProfiledFrame): LineColumn | null {
+  const { line, column } = frame;
+  if (line === null || column === null) return null;
+  return { line, column: column - 1 };
+}
+
+/**
+ * Walks a sample's stack from the leaf outwards, yielding each frame.
+ *
+ * Leaf first, because the leaf is where the time was actually spent: a sample
+ * whose stack runs `workLoopSync -> beginWork -> OrderTable -> sort callback`
+ * is evidence about the callback, and about `OrderTable` only in the weaker
+ * sense that it was on the stack.
+ *
+ * Returns an empty array for a sample with no stack, and stops at the first
+ * dangling index rather than throwing — a truncated trace is a thing a buffer
+ * limit can produce, and losing the deeper half of one stack should not lose
+ * the run.
+ */
+export function stackFrames(
+  trace: ProfileTrace,
+  stackId: number | null,
+): readonly ProfiledFrame[] {
+  const frames: ProfiledFrame[] = [];
+  let current = stackId;
+
+  /*
+   * Bounded by the number of stacks rather than trusted to terminate. In every
+   * capture a parent's index is strictly lower than its child's, so a walk
+   * outward reaches a root — but that is an observation about Chrome, not a
+   * guarantee the records carry, and the cost of being wrong about it is a hung
+   * engine rather than a wrong answer.
+   */
+  for (let step = 0; current !== null && step <= trace.stacks.length; step += 1) {
+    const stack: ProfiledStack | undefined = trace.stacks[current];
+    if (stack === undefined) break;
+
+    const frame = trace.frames[stack.frameId];
+    if (frame === undefined) break;
+
+    frames.push(frame);
+    current = stack.parentId;
+  }
+
+  return frames;
+}

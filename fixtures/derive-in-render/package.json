@@ -1,0 +1,25 @@
+{
+  "name": "@frameblame/fixture-derive-in-render",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Janks on purpose: a filter+sort over 10k rows in a component's render body",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.8"
+  }
+}
