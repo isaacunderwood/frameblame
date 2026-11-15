@@ -40,12 +40,7 @@ import type {
   InteractionWindow,
 } from '@frameblame/core';
 
-import {
-  type BuildMode,
-  type CorpusRun,
-  envelopeOf,
-  loadCorpusRun,
-} from './corpus.ts';
+import { type BuildMode, type CorpusRun, envelopeOf, loadCorpusRun } from './corpus.ts';
 import { arrayAt, asBoolean, asRecord, get, numberAt, stringAt } from './json.ts';
 import { framesOf } from './loaf-records.ts';
 import { profileOf } from './profiler-records.ts';

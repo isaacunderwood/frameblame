@@ -35,6 +35,7 @@ import {
   createScriptLineIndex,
   decomposeFrame,
   exceedsCoarsenedTolerance,
+  type FrameDecomposition,
   framesOfInteraction,
   lineColumnAt,
   shareOfFrame,
@@ -46,11 +47,11 @@ import {
   type BuildMode,
   listFixtures,
   loadCorpusRun,
-  loadGroundTruth,
   readRepoFile,
 } from './corpus.ts';
 import { arrayAt, asRecord, get, numberAt, stringAt } from './json.ts';
 import { loadSignals } from './records.ts';
+import { vendorListenerTruth } from './test-support.ts';
 
 const FIXTURES = listFixtures();
 
@@ -58,6 +59,11 @@ const FIXTURES = listFixtures();
 const RUNS: { fixture: string; mode: BuildMode }[] = FIXTURES.flatMap((fixture) =>
   BUILD_MODES.map((mode) => ({ fixture, mode })),
 );
+
+/** The summed duration of a decomposition's slices, in ms. */
+function slicedMs(decomposition: FrameDecomposition): number {
+  return decomposition.slices.reduce((sum, slice) => sum + slice.durationMs, 0);
+}
 
 describe('the records', () => {
   for (const { fixture, mode } of RUNS) {
@@ -161,7 +167,8 @@ describe('the records', () => {
           (script) => script.forcedStyleAndLayoutDurationMs > 50,
         );
         expect(others, `${mode} frame at ${String(frame.startTimeMs)}ms`).toEqual([]);
-        if (forcing === undefined) throw new Error(`${mode}: a forced frame with no forcing script`);
+        if (forcing === undefined)
+          throw new Error(`${mode}: a forced frame with no forcing script`);
         return forcing;
       });
     });
@@ -217,7 +224,11 @@ describe('the records', () => {
         // The reader maps entries one to one, in order.
         const frame = signals.frames[index];
         if (frame === undefined) throw new Error(`${where}: not parsed`);
-        const serialised = asRecord(get(entries[index], ['toJSON']), ['entries', index, 'toJSON']);
+        const serialised = asRecord(get(entries[index], ['toJSON']), [
+          'entries',
+          index,
+          'toJSON',
+        ]);
         const unpainted = frame.renderingUpdate.kind === 'none';
         expect(unpainted, where).toBe(numberAt(serialised, ['renderStart']) === 0);
         if (!unpainted) continue;
@@ -289,7 +300,8 @@ describe('the records', () => {
       dev.react.spans.filter((span) => span.kind === 'phase').map((span) => span.phase),
     );
     expect(phases).toContain('Mount');
-    for (const phase of phases) expect(['Update', 'Mount', 'Update Blocked']).toContain(phase);
+    for (const phase of phases)
+      expect(['Update', 'Mount', 'Update Blocked']).toContain(phase);
 
     /*
      * An `Update` span names the component that scheduled the update — which is
@@ -437,10 +449,7 @@ describe('the partition, against every frame in the corpus', () => {
       for (const [index, frame] of signals.frames.entries()) {
         const where = `${fixture}/${mode} frame ${String(index)}`;
         const decomposition = decomposeFrame(frame);
-        const sliced = decomposition.slices.reduce(
-          (sum, slice) => sum + slice.durationMs,
-          0,
-        );
+        const sliced = slicedMs(decomposition);
         const charged =
           decomposition.charges.javaScriptMs +
           decomposition.charges.browserRenderingMs +
@@ -543,7 +552,9 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
        * click whether or not LoAF reported a frame for it, so these are not
        * long frames.
        */
-      const probe = arrayAt(loadCorpusRun('innerhtml-rebuild', mode).files.loaf, ['fixtureProbe'])
+      const probe = arrayAt(loadCorpusRun('innerhtml-rebuild', mode).files.loaf, [
+        'fixtureProbe',
+      ])
         .map((record, index) => asRecord(record, ['fixtureProbe', index]))
         .filter((record) => stringAt(record, ['scenario']) === 'unforced');
       expect(probe.length).toBeGreaterThan(0);
@@ -584,12 +595,11 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
          * frame must still add up once it is charged.
          */
         for (const script of frame.scripts) {
-          expect(script.forcedStyleAndLayoutDurationMs).toBeLessThanOrEqual(script.durationMs);
+          expect(script.forcedStyleAndLayoutDurationMs).toBeLessThanOrEqual(
+            script.durationMs,
+          );
         }
-        const sliced = decomposition.slices.reduce(
-          (sum, slice) => sum + slice.durationMs,
-          0,
-        );
+        const sliced = slicedMs(decomposition);
         expect(sliced).toBeLessThanOrEqual(
           frame.durationMs + COARSENED_TIMING_TOLERANCE_MS,
         );
@@ -610,15 +620,7 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
 });
 
 describe('vendor-listener: three slices, not one', () => {
-  /** The three declared slices, in registration order. */
-  const declared = arrayAt(loadGroundTruth('vendor-listener'), ['expected', 'slices']).map(
-    (slice) => ({
-      slice: stringAt(slice, ['slice']),
-      line: numberAt(slice, ['loafAttributesTo', 'line']),
-      charPosition: numberAt(slice, ['loafAttributesTo', 'sourceCharPosition']),
-      isThirdParty: get(slice, ['isThirdParty']) === true,
-    }),
-  );
+  const declared = vendorListenerTruth().slices;
 
   /*
    * The fixture's scripts are served out of `public/`, which Vite copies
@@ -627,7 +629,9 @@ describe('vendor-listener: three slices, not one', () => {
    * with no capture of the text and no server: it is the only place in the
    * corpus where the served bytes are in version control.
    */
-  const appJs = createScriptLineIndex(readRepoFile('fixtures/vendor-listener/public/app.js'));
+  const appJs = createScriptLineIndex(
+    readRepoFile('fixtures/vendor-listener/public/app.js'),
+  );
 
   for (const mode of BUILD_MODES) {
     it(`${mode}: the frame comes apart into its three listeners`, () => {
@@ -675,14 +679,14 @@ describe('vendor-listener: three slices, not one', () => {
          * truth anchors those lines, and the line after each, since the three
          * are byte-identical.
          */
-        expect(
-          frame.scripts.map((script) => script.sourceCharPosition),
-        ).toEqual(declared.map((slice) => slice.charPosition));
+        expect(frame.scripts.map((script) => script.sourceCharPosition)).toEqual(
+          declared.map((slice) => slice.charPosition),
+        );
         for (const [index, script] of frame.scripts.entries()) {
           const at = script.sourceCharPosition;
           expect(at, `script ${String(index)}`).not.toBeNull();
           if (at === null) continue;
-          expect(lineColumnAt(appJs, at)?.line).toBe(declared[index]?.line);
+          expect(lineColumnAt(appJs, at)?.line).toBe(declared[index]?.loafLine);
 
           /*
            * Two further halves of the same finding. `sourceFunctionName` is

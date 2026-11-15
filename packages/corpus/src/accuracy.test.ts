@@ -41,7 +41,9 @@
  * The narrower views live beside this file: `components.test.ts` asserts the
  * React tier commit by commit, `lines.test.ts` the profiler tier's function
  * histogram and LoAF-against-profiler disagreements, and `records.test.ts` the
- * raw signal and the frame partition the engine starts from.
+ * raw signal and the frame partition the engine starts from. The ground-truth
+ * readings this file shares with them are in `test-support.ts`, so every file
+ * compares the engine against the same declarations.
  *
  * Nothing here walks a stack, partitions a frame or counts samples by hand,
  * and nothing asserts how many long frames a capture or an interaction holds,
@@ -64,22 +66,27 @@ import {
   isLowerConfidence,
   longFramePopulation,
   type RankedCauses,
-  resolveProfile,
 } from '@frameblame/core';
 import { describe, expect, it } from 'vitest';
 
-import { BUILD_MODES, loadGroundTruth } from './corpus.ts';
+import { BUILD_MODES, type BuildMode, loadGroundTruth } from './corpus.ts';
 import { declaredTierAt } from './ground-truth.ts';
-import { arrayAt, asArray, asString, get, numberAt, stringAt } from './json.ts';
+import { arrayAt, numberAt, stringAt } from './json.ts';
 import { loadSignals } from './records.ts';
-
-/** A file name's last path segment, which is how a ground truth and a source map agree. */
-function fileNameOf(path: string): string {
-  return path.split('/').pop() ?? path;
-}
+import {
+  componentNamesOf,
+  deriveInRenderTruth,
+  fileNameOf,
+  resolvedProfileOf,
+  spansTruth,
+  vendorListenerTruth,
+} from './test-support.ts';
 
 /** The interaction with a label, which must be in the answer. */
-function interactionOf(answer: CaptureAttribution, label: string): InteractionAttribution {
+function interactionOf(
+  answer: CaptureAttribution,
+  label: string,
+): InteractionAttribution {
   const found = answer.interactions.find((each) => each.interaction.label === label);
   if (found === undefined) throw new Error(`no interaction labelled ${label}`);
   return found;
@@ -105,12 +112,6 @@ function mergedOf(interaction: InteractionAttribution): {
   return components.merged;
 }
 
-function componentNames(causes: readonly CandidateCause[]): string[] {
-  return causes.flatMap((cause) =>
-    cause.subject.kind === 'component' ? [cause.subject.name] : [],
-  );
-}
-
 /** The script entry a candidate was cut from, read off its evidence. */
 function scriptIndexOf(cause: CandidateCause): number | null {
   for (const evidence of cause.evidence) {
@@ -122,8 +123,8 @@ function scriptIndexOf(cause: CandidateCause): number | null {
 }
 
 /** Fails a test that reached for a value it has no way to continue without. */
-function never(): never {
-  throw new Error('expected a candidate');
+function absent(what: string): never {
+  throw new Error(`expected ${what}`);
 }
 
 /** The line a function candidate is defined on, or `null` for any other subject. */
@@ -134,15 +135,8 @@ function definedOnLine(cause: CandidateCause | undefined): number | null {
 }
 
 describe('derive-in-render: the declared component, and the declared function', () => {
-  const truth = loadGroundTruth('derive-in-render');
-  const component = stringAt(truth, ['expected', 'component']);
-  const fileName = fileNameOf(stringAt(truth, ['expected', 'sourceFile']));
-  const range = ['expected', 'acceptableAttribution', 'lineRange'] as const;
-  const from = numberAt(truth, [...range, 'from']);
-  const to = numberAt(truth, [...range, 'to']);
-  const notAtFault = arrayAt(truth, ['notAtFault', 'components']).map((name, index) =>
-    asString(name, ['notAtFault', 'components', index]),
-  );
+  const { truth, component, fileName, lineRange, notAtFault } = deriveInRenderTruth();
+  const { from, to } = lineRange;
   /**
    * The call a declared culprit line begins with, read off its
    * `expectedSourceText`: `.sort` for line 36's `.sort((a, b) => ...)`, and
@@ -170,7 +164,8 @@ describe('derive-in-render: the declared component, and the declared function', 
      * development build the hook's fiber timings name the component (step 5,
      * "the component is known, at high confidence, in development").
      */
-    const merged = mergedOf(interactionOf(answer, 'replay'));
+    const replay = interactionOf(answer, 'replay');
+    const merged = mergedOf(replay);
     const [top] = merged.causes.causes;
     expect(merged.tier).toBe('react-fiber-timings');
     expect(top?.subject).toMatchObject({ kind: 'component', name: component });
@@ -185,8 +180,7 @@ describe('derive-in-render: the declared component, and the declared function', 
      * with the rest of React's dispatcher entry at 1.5-12.1% (development,
      * 4x). `App` is a candidate at 0.2-2.2%, never within a tenth of it.
      */
-    const { frames } = interactionOf(answer, 'replay');
-    for (const frame of frames) {
+    for (const frame of replay.frames) {
       const [first] = frame.causes.causes;
       expect(first?.subject).toMatchObject({ kind: 'component', name: component });
       expect(first?.tier).toBe('react-fiber-timings');
@@ -247,7 +241,7 @@ describe('derive-in-render: the declared component, and the declared function', 
        */
       const [top, second] = replay.causes.causes;
       expect(replay.population.window).toBe('interaction');
-      expect(top?.tier).toBe(declaredTierAt(truth, range, mode));
+      expect(top?.tier).toBe(declaredTierAt(truth, lineRange.path, mode));
       const line = definedOnLine(top);
       const token = callTokenOnLine(line);
       expect(token).not.toBeNull();
@@ -279,30 +273,14 @@ describe('derive-in-render: the declared component, and the declared function', 
 });
 
 describe('spans: the components that rendered, per interaction and per frame', () => {
-  const truth = loadGroundTruth('spans');
+  const { truth, sequence, burnMs } = spansTruth();
   const acceptable = ['expected', 'acceptableAttribution'] as const;
-  const burnMs = numberAt(truth, ['bug', 'declaredBurnMsPerComponent']);
-  const rows = arrayAt(truth, ['expected', 'sequence']).map((row, index) => {
-    const names = (key: string): string[] => {
-      const value = get(row, [key]);
-      return value === undefined
-        ? []
-        : asArray(value, ['expected', 'sequence', index, key]).map((name) =>
-            asString(name),
-          );
-    };
-    const bailedOut = new Set(names('listedButBailedOut'));
-    return {
-      id: stringAt(row, ['id']),
-      rendered: names('componentsThatRender').filter((name) => !bailedOut.has(name)),
-    };
-  });
 
   it('development: every rendered component, measured, with its share of the frame', () => {
     const answer = attributeCapture(loadSignals('spans', 'development'));
     expect(answer.workingFrom).toEqual([]);
 
-    for (const row of rows) {
+    for (const row of sequence) {
       const interaction = interactionOf(answer, row.id);
       const merged = mergedOf(interaction);
 
@@ -310,7 +288,9 @@ describe('spans: the components that rendered, per interaction and per frame', (
       const declared = declaredTierAt(truth, acceptable, 'development');
       expect(declared).not.toBeNull();
       expect(merged.tier).toBe(declared);
-      expect(new Set(componentNames(merged.causes.causes))).toEqual(new Set(row.rendered));
+      expect(new Set(componentNamesOf(merged.causes.causes))).toEqual(
+        new Set(row.rendered),
+      );
       for (const cause of merged.causes.causes) {
         expect(cause.tier).toBe(declared);
         expect(cause.weight.confidence.level).toBe('high');
@@ -327,7 +307,7 @@ describe('spans: the components that rendered, per interaction and per frame', (
         const components = frame.causes.causes.filter(
           (cause) => cause.subject.kind === 'component',
         );
-        expect(new Set(componentNames(components))).toEqual(new Set(row.rendered));
+        expect(new Set(componentNamesOf(components))).toEqual(new Set(row.rendered));
         for (const cause of components) {
           expect(cause.tier).toBe(declared);
           expect(cause.weight.confidence.level).toBe('high');
@@ -366,7 +346,7 @@ describe('spans: the components that rendered, per interaction and per frame', (
     // One component holding the whole commit is the degenerate case.
     const alone = mergedOf(interactionOf(answer, 'state-owner-self')).causes;
     expect(alone.lead).toBe('sole');
-    expect(componentNames(alone.causes)).toEqual(['StateOwner']);
+    expect(componentNamesOf(alone.causes)).toEqual(['StateOwner']);
   });
 
   it('production: the same names from samples, at the confidence a handful of samples earns', () => {
@@ -382,10 +362,12 @@ describe('spans: the components that rendered, per interaction and per frame', (
      * `components.test.ts`.
      */
     expect(declaredTierAt(truth, acceptable, 'production')).toBeNull();
-    for (const row of rows) {
+    for (const row of sequence) {
       const merged = mergedOf(interactionOf(answer, row.id));
       expect(merged.tier).toBe('profiler-mapped');
-      expect(new Set(componentNames(merged.causes.causes))).toEqual(new Set(row.rendered));
+      expect(new Set(componentNamesOf(merged.causes.causes))).toEqual(
+        new Set(row.rendered),
+      );
 
       /*
        * 2 to 14 independent samples per commit window (production, 4x). The
@@ -414,7 +396,7 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
     'correctAttribution',
     'unattributedShareFloor',
   ]);
-  const tierOf = (label: string, mode: (typeof BUILD_MODES)[number]) =>
+  const tierOf = (label: string, mode: BuildMode) =>
     declaredTierAt(scenario(label), ['correctAttribution'], mode);
   const agreement = numberAt(truth, [
     'expected',
@@ -428,8 +410,18 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
     'from',
   ]);
   const listener = {
-    name: stringAt(truth, ['expected', 'acceptableAttribution', 'sampledListener', 'function']),
-    line: numberAt(truth, ['expected', 'acceptableAttribution', 'sampledListener', 'line']),
+    name: stringAt(truth, [
+      'expected',
+      'acceptableAttribution',
+      'sampledListener',
+      'function',
+    ]),
+    line: numberAt(truth, [
+      'expected',
+      'acceptableAttribution',
+      'sampledListener',
+      'line',
+    ]),
   };
 
   /** How far apart the two signals' shares are, for a frame that was checked. */
@@ -537,7 +529,8 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
         });
         expect(top?.tier).toBe(tierOf('forced', mode));
         expect(top?.weight.confidence.level).toBe('high');
-        const forcingScript = frame.frame.scripts[scriptIndexOf(top ?? never()) ?? -1];
+        const forcingScript =
+          frame.frame.scripts[scriptIndexOf(top ?? absent('a top candidate')) ?? -1];
         expect(top?.subject).toMatchObject({
           forcedBy: { sourceCharPosition: forcingScript?.sourceCharPosition },
         });
@@ -563,19 +556,7 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
 });
 
 describe('vendor-listener: three slices, and the vendor at the confidence its samples support', () => {
-  const declared = arrayAt(loadGroundTruth('vendor-listener'), ['expected', 'slices']).map(
-    (slice, index) => ({
-      /** Where the slice sits in the ground truth, for reading its declarations. */
-      path: ['expected', 'slices', index] as const,
-      slice: stringAt(slice, ['slice']),
-      charPosition: numberAt(slice, ['loafAttributesTo', 'sourceCharPosition']),
-      ownerFileName: fileNameOf(stringAt(slice, ['trueOwner', 'sourceFile'])),
-      ownerFunction: stringAt(slice, ['trueOwner', 'function']),
-      ownerLine: numberAt(slice, ['trueOwner', 'definedAtLine']),
-      isThirdParty: get(slice, ['isThirdParty']) === true,
-      expectedRank: numberAt(slice, ['expectedRank']),
-    }),
-  );
+  const { truth, slices: declared } = vendorListenerTruth();
 
   for (const mode of BUILD_MODES) {
     it(`${mode}: ranks the three slices as declared, and names each one's true owner`, () => {
@@ -635,7 +616,8 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
     it(`${mode}: the vendor's share rests on independent samples, not on a burst`, () => {
       const answer = attributeCapture(loadSignals('vendor-listener', mode));
       const { frames } = interactionOf(answer, 'three-listeners');
-      const vendor = declared.find((slice) => slice.isThirdParty) ?? never();
+      const vendor =
+        declared.find((slice) => slice.isThirdParty) ?? absent('a third-party slice');
 
       for (const frame of frames) {
         const [candidate] = frame.causes.causes.filter(
@@ -649,7 +631,7 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
 
         // The declared tier, and the warning that goes with no source map.
         expect(candidate.tier).toBe(
-          declaredTierAt(loadGroundTruth('vendor-listener'), [...vendor.path, 'recoverableFrom'], mode),
+          declaredTierAt(truth, [...vendor.path, 'recoverableFrom'], mode),
         );
         expect(candidate.subject).toMatchObject({
           location: { throughSourceMap: false, whyNot: 'no-source-map' },
@@ -681,17 +663,13 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
 });
 
 describe('thin evidence: the answer may only be wrong where it says it is unsure', () => {
-  const truth = loadGroundTruth('derive-in-render');
-  const range = ['expected', 'acceptableAttribution', 'lineRange'] as const;
-  const from = numberAt(truth, [...range, 'from']);
-  const to = numberAt(truth, [...range, 'to']);
+  const { from, to } = deriveInRenderTruth().lineRange;
 
   for (const mode of BUILD_MODES) {
     it(`derive-in-render/${mode}: inside long frames, a top function outside the declared range is never claimed`, async (context) => {
-      const signals = loadSignals('derive-in-render', mode);
-      if (signals.profile === null) throw new Error('no profile');
+      const { signals, resolved } = resolvedProfileOf('derive-in-render', mode);
       const inFrame = attributeSampledFunctions(
-        resolveProfile(signals.profile),
+        resolved,
         signals.provenance,
         longFramePopulation(signals),
       );
@@ -732,7 +710,7 @@ describe('thin evidence: the answer may only be wrong where it says it is unsure
     });
   }
 
-  it('a frame with too few samples to compare is left unchecked, not called agreed', () => {
+  it('derive-in-render/development: a frame with too few samples to compare is left unchecked, not called agreed', () => {
     const answer = attributeCapture(loadSignals('derive-in-render', 'development'));
 
     /*
@@ -803,8 +781,11 @@ describe('degraded tiers: a real capture with one signal removed', () => {
       const after = unattributedIn(degraded);
       expect(after).toHaveLength(before.length);
       for (const [index, cause] of after.entries()) {
-        const prior = before[index]?.weight.confidence ?? never();
-        if (prior.support.kind !== 'subtraction') throw new Error('expected a subtraction');
+        const prior =
+          before[index]?.weight.confidence ??
+          absent('the same candidate with the profile');
+        if (prior.support.kind !== 'subtraction')
+          throw new Error('expected a subtraction');
         expect(prior.support.check.verdict).toBe('agrees');
         expect(cause.weight.confidence.support).toEqual({
           kind: 'subtraction',
@@ -832,7 +813,10 @@ describe('degraded tiers: a real capture with one signal removed', () => {
         ).toBe(true);
       }
       for (const interaction of degraded.interactions) {
-        expect(interaction.functions).toEqual({ kind: 'unavailable', reason: 'no-profiler' });
+        expect(interaction.functions).toEqual({
+          kind: 'unavailable',
+          reason: 'no-profiler',
+        });
       }
     });
   }
@@ -872,17 +856,19 @@ describe('degraded tiers: a real capture with one signal removed', () => {
     const degraded = attributeCapture(withoutProfile(signals));
 
     // Fiber timings never depended on the profiler.
-    const merged = mergedOf(interactionOf(degraded, 'replay'));
+    const replay = interactionOf(degraded, 'replay');
+    const merged = mergedOf(replay);
     expect(merged.tier).toBe('react-fiber-timings');
     expect(merged.causes.causes[0]?.subject).toMatchObject({ name: 'OrderTable' });
     expect(merged.causes.causes[0]?.weight.confidence.level).toBe('high');
-    expect(interactionOf(degraded, 'replay').functions.kind).toBe('unavailable');
+    expect(replay.functions.kind).toBe('unavailable');
 
     // What is left of each dispatcher entry is named as LoAF named it.
-    for (const frame of interactionOf(degraded, 'replay').frames) {
+    for (const frame of replay.frames) {
       expect(frame.causes.causes[0]?.subject).toMatchObject({ name: 'OrderTable' });
       expect(
-        frame.causes.causes.find((cause) => cause.subject.kind === 'script-entry')?.subject,
+        frame.causes.causes.find((cause) => cause.subject.kind === 'script-entry')
+          ?.subject,
       ).toMatchObject({
         scope: 'outside-component-renders',
         site: { sourceFunctionName: 'dispatchDiscreteEvent' },
@@ -931,7 +917,9 @@ describe('degraded tiers: a real capture with one signal removed', () => {
         (cause) => cause.subject.kind === 'script-entry',
       );
       expect(entry?.tier).toBe('loaf-script-registration');
-      expect(entry?.evidence.map((evidence) => evidence.kind)).toContain('fiber-rendered');
+      expect(entry?.evidence.map((evidence) => evidence.kind)).toContain(
+        'fiber-rendered',
+      );
       expect(
         frame.causes.causes.some((cause) => cause.subject.kind === 'component'),
       ).toBe(false);
@@ -1016,9 +1004,8 @@ describe('degraded tiers: a real capture with one signal removed', () => {
       definedAt: { throughSourceMap: false, whyNot: 'no-source-map' },
     });
 
-    const withMap = mergedOf(
-      interactionOf(attributeCapture(signals), 'replay'),
-    ).causes.causes[0];
+    const withMap = mergedOf(interactionOf(attributeCapture(signals), 'replay')).causes
+      .causes[0];
     expect(top?.weight.fraction).toBe(withMap?.weight.fraction);
 
     const [topFunction] = functionsOf(interactionOf(degraded, 'replay')).causes.causes;

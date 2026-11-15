@@ -36,56 +36,31 @@ import {
   describeCommitBasis,
   didRender,
   exceedsCoarsenedTolerance,
-  type RankedCauses,
 } from '@frameblame/core';
 import { describe, expect, it } from 'vitest';
 
-import { loadGroundTruth } from './corpus.ts';
-import { arrayAt, asArray, asString, get, numberAt, recordAt, stringAt } from './json.ts';
+import { arrayAt, numberAt, stringAt } from './json.ts';
 import { loadSignals } from './records.ts';
+import {
+  componentNamesOf,
+  deriveInRenderTruth,
+  fileNameOf,
+  spansTruth,
+  type SpansSequenceRow,
+} from './test-support.ts';
 
-/** One row of `spans`' `expected.sequence`, as the React tier reads it. */
-interface SequenceRow {
-  readonly id: string;
-  /** `componentsThatRender` minus `listedButBailedOut`. */
-  readonly rendered: readonly string[];
-  readonly givenASpan: readonly string[];
-}
-
-function sequenceOf(): SequenceRow[] {
-  const truth = loadGroundTruth('spans');
-  return arrayAt(truth, ['expected', 'sequence']).map((row, index) => {
-    const path = ['expected', 'sequence', index];
-    const names = (key: string): string[] => {
-      const value = get(row, [key]);
-      return value === undefined
-        ? []
-        : asArray(value, [...path, key]).map((name, at) => asString(name, [...path, key, at]));
-    };
-    const bailedOut = new Set(names('listedButBailedOut'));
-    return {
-      id: stringAt(row, ['id']),
-      rendered: names('componentsThatRender').filter((name) => !bailedOut.has(name)),
-      givenASpan: names('componentsGivenASpan'),
-    };
-  });
-}
-
-const SEQUENCE = sequenceOf();
-
-/**
- * What every `spans` component burns in its render body: `BURN_MS = 25` in
- * `fixtures/spans/src/burn.ts`, declared in the ground truth as
- * `bug.declaredBurnMsPerComponent`. Wall-clock time, so the same at any
- * throttle rate.
- */
-const BURN_MS = numberAt(loadGroundTruth('spans'), ['bug', 'declaredBurnMsPerComponent']);
+const SPANS = spansTruth();
+const SEQUENCE = SPANS.sequence;
+/** See `SpansTruth.burnMs`: every component's render burns this, in wall-clock ms. */
+const BURN_MS = SPANS.burnMs;
 
 /** The interaction's attribution, which must exist and have commits. */
 function attributed(signals: CapturedSignals, label: string): AttributedInteraction {
   const result = attributeInteractionComponents(signals, label);
   if (result?.kind !== 'attributed') {
-    throw new Error(`${label}: expected an attributed interaction, got ${String(result?.kind)}`);
+    throw new Error(
+      `${label}: expected an attributed interaction, got ${String(result?.kind)}`,
+    );
   }
   return result;
 }
@@ -94,12 +69,6 @@ function attributed(signals: CapturedSignals, label: string): AttributedInteract
 function onlyCommit(result: AttributedInteraction): CommitAttribution {
   expect(result.commits).toHaveLength(1);
   return result.commits[0];
-}
-
-function namesOf(causes: RankedCauses): string[] {
-  return causes.causes.flatMap((cause) =>
-    cause.subject.kind === 'component' ? [cause.subject.name] : [],
-  );
 }
 
 describe('spans/development: the React tier names what rendered', () => {
@@ -121,7 +90,9 @@ describe('spans/development: the React tier names what rendered', () => {
       if (basis.tier !== 'react-fiber-timings') return;
       expect(result.merged?.tier).toBe('react-fiber-timings');
 
-      expect(new Set(namesOf(commit.causes))).toEqual(new Set(row.rendered));
+      expect(new Set(componentNamesOf(commit.causes.causes))).toEqual(
+        new Set(row.rendered),
+      );
       for (const cause of commit.causes.causes) {
         expect(cause.tier).toBe('react-fiber-timings');
         expect(cause.weight.basis).toBe('fiber-self-time-share');
@@ -145,7 +116,10 @@ describe('spans/development: the React tier names what rendered', () => {
        * 227.4, 50.4, 277.2 and 280.3ms for these commits (development, 4x),
        * which is 1.7-2.0x the commit's real render time.
        */
-      const naiveMs = times.fibers.reduce((sum, entry) => sum + entry.actualDurationMs, 0);
+      const naiveMs = times.fibers.reduce(
+        (sum, entry) => sum + entry.actualDurationMs,
+        0,
+      );
       expect(naiveMs).toBeGreaterThan(times.totalMs * 1.5);
 
       /*
@@ -158,7 +132,9 @@ describe('spans/development: the React tier names what rendered', () => {
        */
       for (const entry of times.fibers) {
         if (!didRender(entry.participation)) continue;
-        expect(entry.selfMs).toBeGreaterThanOrEqual(BURN_MS - COARSENED_TIMING_TOLERANCE_MS);
+        expect(entry.selfMs).toBeGreaterThanOrEqual(
+          BURN_MS - COARSENED_TIMING_TOLERANCE_MS,
+        );
       }
 
       /*
@@ -174,7 +150,10 @@ describe('spans/development: the React tier names what rendered', () => {
       );
       expect(new Set(corroborated)).toEqual(new Set(row.givenASpan));
 
-      const spanless = attributed({ ...signals, react: { ...signals.react, spans: [] } }, row.id);
+      const spanless = attributed(
+        { ...signals, react: { ...signals.react, spans: [] } },
+        row.id,
+      );
       expect(spanless.commits[0].causes.causes.map((cause) => cause.weight)).toEqual(
         commit.causes.causes.map((cause) => cause.weight),
       );
@@ -223,12 +202,14 @@ describe('spans/production: the profiler tier, named as such', () => {
    * builds the same way would still fail here. That join is a test-side
    * check, not something the engine does.
    */
-  function productionNamesFor(row: SequenceRow): Set<string> {
+  function productionNamesFor(row: SpansSequenceRow): Set<string> {
     const dev = onlyCommit(attributed(development, row.id)).commit.components.fibers;
     const prod = onlyCommit(attributed(production, row.id)).commit.components.fibers;
     return new Set(
       row.rendered.flatMap((name) => {
-        const indices = dev.flatMap((fiber, index) => (fiber.name === name ? [index] : []));
+        const indices = dev.flatMap((fiber, index) =>
+          fiber.name === name ? [index] : [],
+        );
         if (indices.length === 0) {
           throw new Error(`${row.id}: no development fiber named ${name}`);
         }
@@ -245,10 +226,10 @@ describe('spans/production: the profiler tier, named as such', () => {
 
   /** Where the ground truth says each component is defined. */
   const DECLARED_SITES = new Map(
-    arrayAt(loadGroundTruth('spans'), ['expected', 'components']).map((component) => [
+    arrayAt(SPANS.truth, ['expected', 'components']).map((component) => [
       stringAt(component, ['name']),
       {
-        fileName: stringAt(component, ['sourceFile']).split('/').pop() ?? '',
+        fileName: fileNameOf(stringAt(component, ['sourceFile'])),
         line: numberAt(component, ['line']),
       },
     ]),
@@ -291,7 +272,9 @@ describe('spans/production: the profiler tier, named as such', () => {
        * must be the declared one, defined at the declared file and line.
        */
       expect(commit.causes.causes.length).toBeGreaterThan(0);
-      expect(new Set(namesOf(commit.causes))).toEqual(new Set(row.rendered));
+      expect(new Set(componentNamesOf(commit.causes.causes))).toEqual(
+        new Set(row.rendered),
+      );
       const minified = productionNamesFor(row);
 
       /*
@@ -348,15 +331,13 @@ describe('spans/production: the profiler tier, named as such', () => {
 
     // `g` in this bundle, named `StateOwner` by the map. Every stacked sample
     // in the window lands in it: 2 of 2 (production, 4x).
-    expect(namesOf(commit.causes)).toEqual(['StateOwner']);
+    expect(componentNamesOf(commit.causes.causes)).toEqual(['StateOwner']);
     expect(commit.causes.causes[0]?.weight.fraction).toBeGreaterThan(0.5);
   });
 });
 
 describe('derive-in-render: the React tier names the declared component', () => {
-  const declared = stringAt(recordAt(loadGroundTruth('derive-in-render'), ['expected']), [
-    'component',
-  ]);
+  const declared = deriveInRenderTruth().component;
 
   it('development: the declared component carries most of the replay’s render time', () => {
     const result = attributed(loadSignals('derive-in-render', 'development'), 'replay');
@@ -382,7 +363,11 @@ describe('derive-in-render: the React tier names the declared component', () => 
      */
     expect(prod.merged?.tier).toBe('profiler-mapped');
     const [top] = prod.merged?.causes.causes ?? [];
-    expect(top?.subject).toMatchObject({ kind: 'component', name: declared, nameIsMinified: false });
+    expect(top?.subject).toMatchObject({
+      kind: 'component',
+      name: declared,
+      nameIsMinified: false,
+    });
     expect(top?.weight.fraction).toBeGreaterThan(0.6);
     if (top?.subject.kind !== 'component') return;
     expect(top.subject.definedAt?.throughSourceMap).toBe(true);

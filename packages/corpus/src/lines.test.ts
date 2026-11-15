@@ -33,34 +33,32 @@ import {
   type FunctionSubject,
   interactionPopulation,
   longFramePopulation,
-  resolveProfile,
-  type ResolvedProfile,
   type ScriptEntryAttribution,
 } from '@frameblame/core';
 import { describe, expect, it } from 'vitest';
 
-import { BUILD_MODES, loadGroundTruth } from './corpus.ts';
-import { arrayAt, asString, get, numberAt, stringAt } from './json.ts';
-import { loadSignals } from './records.ts';
+import { BUILD_MODES, type BuildMode } from './corpus.ts';
+import { arrayAt, numberAt, stringAt } from './json.ts';
+import {
+  deriveInRenderTruth,
+  fileNameOf,
+  resolvedProfileOf,
+  type VendorSlice,
+  vendorListenerTruth,
+} from './test-support.ts';
 
 /** A candidate's subject, which in this tier is always a source location. */
 function subjectOf(cause: CandidateCause | undefined): FunctionSubject {
   if (cause?.subject.kind !== 'source-location') {
-    throw new Error(`expected a source-location candidate, got ${String(cause?.subject.kind)}`);
+    throw new Error(
+      `expected a source-location candidate, got ${String(cause?.subject.kind)}`,
+    );
   }
   return cause.subject;
 }
 
-/** A capture's signals, with its profile resolved through the maps it carried. */
-function resolvedProfileOf(fixture: string, mode: (typeof BUILD_MODES)[number]) {
-  const signals = loadSignals(fixture, mode);
-  if (signals.profile === null) throw new Error(`${fixture}/${mode}: no profile`);
-  const resolved: ResolvedProfile = resolveProfile(signals.profile);
-  return { signals, resolved };
-}
-
 /** As `resolvedProfileOf`, with the engine's attribution over the replay population. */
-function replayOf(fixture: string, mode: (typeof BUILD_MODES)[number]) {
+function replayOf(fixture: string, mode: BuildMode) {
   const { signals, resolved } = resolvedProfileOf(fixture, mode);
   const replay = attributeSampledFunctions(
     resolved,
@@ -68,11 +66,6 @@ function replayOf(fixture: string, mode: (typeof BUILD_MODES)[number]) {
     interactionPopulation(signals),
   );
   return { signals, resolved, replay };
-}
-
-/** A file name's last path segment, which is how ground truth and map agree. */
-function fileNameOf(path: string): string {
-  return path.split('/').pop() ?? path;
 }
 
 /**
@@ -100,12 +93,8 @@ function shareInRange(
 }
 
 describe('derive-in-render: the profiler names the function on the declared line', () => {
-  const truth = loadGroundTruth('derive-in-render');
-  const range = ['expected', 'acceptableAttribution', 'lineRange'] as const;
-  const from = numberAt(truth, [...range, 'from']);
-  const to = numberAt(truth, [...range, 'to']);
-  const component = stringAt(truth, ['expected', 'component']);
-  const fileName = fileNameOf(stringAt(truth, ['expected', 'sourceFile']));
+  const { truth, component, fileName, lineRange, notAtFault } = deriveInRenderTruth();
+  const { from, to } = lineRange;
   const dominant = arrayAt(truth, ['expected', 'culpritLines']).find((line) =>
     stringAt(line, ['role']).startsWith('the dominant cost'),
   );
@@ -129,9 +118,11 @@ describe('derive-in-render: the profiler names the function on the declared line
       expect(subject.location.position.line).toBe(dominantLine);
       expect(subject.granularity).toBe('function-definition');
       expect(subject.enclosingCallToken).toBe('.sort');
-      expect(describeSourceLocation(subject).endsWith(
-        `${fileName}:${String(dominantLine)}, in the callback passed to .sort`,
-      )).toBe(true);
+      expect(
+        describeSourceLocation(subject).endsWith(
+          `${fileName}:${String(dominantLine)}, in the callback passed to .sort`,
+        ),
+      ).toBe(true);
 
       /*
        * Every sample taken during the replay, not only those inside a long
@@ -160,7 +151,9 @@ describe('derive-in-render: the profiler names the function on the declared line
        * 60% because that is step 4's declared criterion in `handoff.md`.
        */
       const overReplay = shareInRange(replay, fileName, from, to);
-      expect(overReplay.ofFile, `no sample resolved into ${fileName}`).toBeGreaterThan(10);
+      expect(overReplay.ofFile, `no sample resolved into ${fileName}`).toBeGreaterThan(
+        10,
+      );
 
       /*
        * Reported beside the floor and deliberately not asserted: the in-frame
@@ -169,7 +162,11 @@ describe('derive-in-render: the profiler names the function on the declared line
        * distribution at all, which is the reason the floor is over the replay.
        */
       const inFrame = shareInRange(
-        attributeSampledFunctions(resolved, signals.provenance, longFramePopulation(signals)),
+        attributeSampledFunctions(
+          resolved,
+          signals.provenance,
+          longFramePopulation(signals),
+        ),
         fileName,
         from,
         to,
@@ -196,13 +193,12 @@ describe('derive-in-render: the profiler names the function on the declared line
        * named by the profiler in development and by the source map's `names`
        * in production.
        */
-      const notAtFault = arrayAt(truth, ['notAtFault', 'components']).map((name, index) =>
-        asString(name, ['notAtFault', 'components', index]),
-      );
       const subjects = replay.causes.causes.map(subjectOf);
       const body = subjects.find((subject) => subject.functionName?.text === component);
       expect(body === undefined ? '' : fileNameOf(body.location.file)).toBe(fileName);
-      expect(body?.functionName?.from).toBe(mode === 'production' ? 'source-map' : 'served-script');
+      expect(body?.functionName?.from).toBe(
+        mode === 'production' ? 'source-map' : 'served-script',
+      );
 
       const [top] = replay.causes.causes;
       for (const cause of replay.causes.causes) {
@@ -230,7 +226,11 @@ describe('derive-in-render: the profiler names the function on the declared line
      * In production both are one bundle, so the same disagreement is a
      * difference of function rather than of script, and is not flagged.
      */
-    const declared = stringAt(truth, ['observedJank', 'loafScriptAttribution', 'sourceFunctionName']);
+    const declared = stringAt(truth, [
+      'observedJank',
+      'loafScriptAttribution',
+      'sourceFunctionName',
+    ]);
     const entry = attributeScriptEntries(signals, resolved).find(
       (candidate) => candidate.site.sourceFunctionName === declared,
     );
@@ -242,39 +242,20 @@ describe('derive-in-render: the profiler names the function on the declared line
   });
 });
 
-/** One of `vendor-listener`'s three declared slices, as the tier reads it. */
-interface DeclaredSlice {
-  readonly slice: string;
-  readonly charPosition: number;
-  readonly loafFileName: string;
-  readonly ownerFileName: string;
-  readonly ownerFunction: string;
-  readonly ownerLine: number;
-  readonly isThirdParty: boolean;
-}
-
-function declaredSlices(): DeclaredSlice[] {
-  return arrayAt(loadGroundTruth('vendor-listener'), ['expected', 'slices']).map((slice) => ({
-    slice: stringAt(slice, ['slice']),
-    charPosition: numberAt(slice, ['loafAttributesTo', 'sourceCharPosition']),
-    loafFileName: fileNameOf(stringAt(slice, ['loafAttributesTo', 'sourceFile'])),
-    ownerFileName: fileNameOf(stringAt(slice, ['trueOwner', 'sourceFile'])),
-    ownerFunction: stringAt(slice, ['trueOwner', 'function']),
-    ownerLine: numberAt(slice, ['trueOwner', 'definedAtLine']),
-    isThirdParty: get(slice, ['isThirdParty']) === true,
-  }));
-}
-
 describe('vendor-listener: the profiler names the vendor LoAF cannot', () => {
-  const slices = declaredSlices();
+  const { slices } = vendorListenerTruth();
 
   function entryFor(
     entries: readonly ScriptEntryAttribution[],
-    slice: DeclaredSlice,
+    slice: VendorSlice,
   ): ScriptEntryAttribution {
-    const entry = entries.find((candidate) => candidate.site.sourceCharPosition === slice.charPosition);
+    const entry = entries.find(
+      (candidate) => candidate.site.sourceCharPosition === slice.charPosition,
+    );
     if (entry === undefined) {
-      throw new Error(`no LoAF entry at offset ${String(slice.charPosition)} (${slice.slice})`);
+      throw new Error(
+        `no LoAF entry at offset ${String(slice.charPosition)} (${slice.slice})`,
+      );
     }
     return entry;
   }
@@ -331,11 +312,17 @@ describe('vendor-listener: the profiler names the vendor LoAF cannot', () => {
 
       // The disagreement is in the answer, with both scripts named.
       expect(entry.disagreement).not.toBeNull();
-      expect(fileNameOf(entry.disagreement?.loafScriptUrl ?? '')).toBe(vendor.loafFileName);
-      expect(fileNameOf(entry.disagreement?.profilerScriptUrl ?? '')).toBe(vendor.ownerFileName);
+      expect(fileNameOf(entry.disagreement?.loafScriptUrl ?? '')).toBe(
+        vendor.loafFileName,
+      );
+      expect(fileNameOf(entry.disagreement?.profilerScriptUrl ?? '')).toBe(
+        vendor.ownerFileName,
+      );
       const said = describeScriptEntry(entry);
       expect(said).toContain(`LoAF named ${entry.site.sourceUrl ?? ''}`);
-      expect(said).toContain(`${vendor.ownerFileName}:${String(vendor.ownerLine)}, in ${vendor.ownerFunction}`);
+      expect(said).toContain(
+        `${vendor.ownerFileName}:${String(vendor.ownerLine)}, in ${vendor.ownerFunction}`,
+      );
       expect(said).toContain('a different script');
       expect(said).toContain(`(${mode}, 4x CPU throttle`);
 
@@ -345,7 +332,10 @@ describe('vendor-listener: the profiler names the vendor LoAF cannot', () => {
        * name is real only because the file is served as written.
        */
       expect(top?.tier).toBe('profiler-unmapped');
-      expect(subject.location).toMatchObject({ throughSourceMap: false, whyNot: 'no-source-map' });
+      expect(subject.location).toMatchObject({
+        throughSourceMap: false,
+        whyNot: 'no-source-map',
+      });
       expect(subject.functionName?.from).toBe('served-script');
     });
 
@@ -400,7 +390,9 @@ describe('innerhtml-rebuild: no source map, and the tier says so', () => {
             throughSourceMap: false,
             whyNot: 'no-source-map',
           });
-          expect(describeSourceLocation(subject)).toContain('the script shipped no source map');
+          expect(describeSourceLocation(subject)).toContain(
+            'the script shipped no source map',
+          );
         }
       }
     });
