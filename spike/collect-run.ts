@@ -351,7 +351,9 @@ export async function collectRun(options: RunOptions): Promise<RunSummary> {
             note:
               'Chrome clamps the sampling period upward to a compile-time floor ' +
               'of 10ms (16 on Windows) that no flag reads, so a request of 5 is ' +
-              'answered with 10 and measures out at a ~12ms median cadence.',
+              'answered with 10. The median cadence that gives is a property of the ' +
+              'session rather than a constant: 14.5ms in the v0.3 re-capture, ' +
+              '12.2ms in the capture before it, on the same machine and settings.',
           },
           profilerWindow: {
             startedAt: profile?.startedAt ?? null,

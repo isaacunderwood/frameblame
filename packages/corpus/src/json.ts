@@ -126,23 +126,27 @@ export function asBoolean(value: Json | undefined, path: JsonPath = []): boolean
  * gets forgotten. A value of the wrong type still throws.
  */
 export function nullableNumberAt(value: Json | undefined, path: JsonPath): number | null {
-  const found = get(value, path);
-  if (found === null || found === undefined) return null;
-  return asNumber(found, path);
+  return nullableAt(value, path, asNumber);
 }
 
 /** As `nullableNumberAt`, for a boolean. */
 export function nullableBooleanAt(value: Json | undefined, path: JsonPath): boolean | null {
-  const found = get(value, path);
-  if (found === null || found === undefined) return null;
-  return asBoolean(found, path);
+  return nullableAt(value, path, asBoolean);
 }
 
 /** As `nullableNumberAt`, for a string. */
 export function nullableStringAt(value: Json | undefined, path: JsonPath): string | null {
+  return nullableAt(value, path, asString);
+}
+
+/** The shared body of the `nullable*At` readers: either absence is `null`, anything else is `read`. */
+function nullableAt<T>(
+  value: Json | undefined,
+  path: JsonPath,
+  read: (found: Json, path: JsonPath) => T,
+): T | null {
   const found = get(value, path);
-  if (found === null || found === undefined) return null;
-  return asString(found, path);
+  return found === null || found === undefined ? null : read(found, path);
 }
 
 /**
@@ -175,4 +179,9 @@ export function numberAt(value: Json | undefined, path: JsonPath): number {
 /** `get` and `asString` in one step. */
 export function stringAt(value: Json | undefined, path: JsonPath): string {
   return asString(get(value, path), path);
+}
+
+/** `get` and `asBoolean` in one step. */
+export function booleanAt(value: Json | undefined, path: JsonPath): boolean {
+  return asBoolean(get(value, path), path);
 }

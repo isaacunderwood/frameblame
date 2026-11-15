@@ -20,8 +20,8 @@
  *
  * What this module does not do: decide which component caused a frame, pair a
  * commit with a frame, or compute self time. Self time is the React tier's
- * arithmetic, over the parent links described at `CommitComponents` — which
- * a capture made before the collector recorded them does not have.
+ * arithmetic, over the parent links described at `CommitComponents` — which a
+ * capture made before the collector recorded them does not have.
  *
  * **Clock.** Page-clock `performance.now()` milliseconds, shared with LoAF and
  * the profiler.
@@ -246,8 +246,8 @@ export interface ReactCommit {
    * `onPostCommitFiberRoot` at all — both production runs in the corpus have 24
    * and 5 commits and not one post-commit. In development the gap from
    * `committedAtMs` ran to 52.5ms (4x; 50.6ms in the capture before the v0.3
-   * re-capture), so a post-commit is not safely inside the
-   * same frame as its commit.
+   * re-capture), so a post-commit is not safely inside the same frame as its
+   * commit.
    */
   readonly postCommitAtMs: number | null;
   readonly rendererId: number;

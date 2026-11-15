@@ -100,18 +100,20 @@ function readResources(profile: Json, path: JsonPath): ScriptResource[] {
 
   return urls.map((entry, index) => {
     const url = asString(entry, [...path, 'trace', 'resources', index]);
+    // `undefined` for a resource the capture fetched nothing for, which every
+    // read below takes as absence: no length, no map, no error.
     const source = sources[url];
 
-    const map = source === undefined ? undefined : get(source, ['sourceMap']);
-    const from = source === undefined ? null : nullableStringAt(source, ['sourceMapFrom']);
-    const error = source === undefined ? undefined : get(source, ['error']);
+    const map = get(source, ['sourceMap']);
+    const from = nullableStringAt(source, ['sourceMapFrom']);
+    const error = get(source, ['error']);
 
     const origin: SourceMapOrigin | null =
       from === null ? null : from === 'inline' ? { kind: 'inline' } : { kind: 'external', url: from };
 
     return {
       url,
-      servedLength: source === undefined ? null : nullableNumberAt(source, ['length']),
+      servedLength: nullableNumberAt(source, ['length']),
       sourceMap:
         isJsonRecord(map) && origin !== null
           ? { origin, map: readSourceMap(map, ['resourceSources', url, 'sourceMap']) }

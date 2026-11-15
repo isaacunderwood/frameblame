@@ -335,9 +335,9 @@ export function frameEndMs(frame: LongAnimationFrame): number {
  * Inclusive at both ends and tolerant by one coarsening step, because a script
  * entry's own end can land a float-rounding hair past its frame's: one of the
  * corpus's script entries overshoots by 1.5e-9ms (two, by 1.5e-9 and 2.2e-9ms,
- * in the capture before), which a strict comparison
- * rejects. The tolerance is the grid, not the float error, since anything
- * finer than the grid is meaningless anyway.
+ * in the capture before), which a strict comparison rejects. The tolerance is
+ * the grid, not the float error, since anything finer than the grid is
+ * meaningless anyway.
  */
 export function isWithinFrame(frame: LongAnimationFrame, atMs: number): boolean {
   const tolerance = COARSENED_TIMING_TOLERANCE_MS;

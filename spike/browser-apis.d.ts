@@ -129,10 +129,18 @@ interface PerformanceScriptTiming extends PerformanceEntry {
    * collector has to say what absence becomes, rather than letting a missing
    * field pass through as if it were a measurement.
    *
-   * They do not sum to the combined figure exactly. Each is coarsened
-   * independently, deliberately, so that summing them cannot recover
-   * resolution the browser is withholding; measured, they differ by one 100µs
-   * grid step on 6 of the corpus's 20 forced entries.
+   * They do not sum to the combined figure exactly, although the spec defines
+   * the combined figure as exactly their sum: Chrome 159 reports the three as
+   * values that disagree on the 100µs grid. This comment used to say each half
+   * is coarsened independently, deliberately, so that summing them cannot
+   * recover resolution the browser is withholding, and that they differ by one
+   * grid step on 6 of the corpus's 20 forced entries. Both were wrong. The
+   * spec's coarsening stops a sum of many short periods exposing more
+   * precision than a timestamp, and does not license the disagreement; and
+   * the count, re-measured on the v0.3 re-capture (4x, both build modes), is
+   * 0 on 11, one step on 8 and two steps on 1 (11 at one step in the capture
+   * before, so the "6" was a miscount). `COARSENED_TIMING_TOLERANCE_MS` in
+   * `packages/core/src/loaf.ts` carries the measurement.
    */
   readonly forcedStyleDuration?: number;
   readonly forcedLayoutDuration?: number;

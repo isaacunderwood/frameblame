@@ -60,6 +60,10 @@ function readScript(serialised: JsonObject, projected: Json | undefined): FrameS
   // `lineColumnAt` as a position outside the script, which is a true statement
   // about the wrong thing: the offset is absent, not out of range.
   const charPosition = numberAt(serialised, ['sourceCharPosition']);
+  // Absent from both copies means the browser did not report the split, and
+  // stays `null`: a zero would claim it measured no forced style work.
+  const forcedSplitHalf = (key: string): number | null =>
+    nullableNumberAt(serialised, [key]) ?? nullableNumberAt(projected, [key]);
 
   return {
     startTimeMs: numberAt(serialised, ['startTime']),
@@ -74,14 +78,8 @@ function readScript(serialised: JsonObject, projected: Json | undefined): FrameS
     sourceColumn: nullableNumberAt(projected, ['sourceColumn']),
     pauseDurationMs: numberAt(serialised, ['pauseDuration']),
     forcedStyleAndLayoutDurationMs: numberAt(serialised, ['forcedStyleAndLayoutDuration']),
-    // Absent from both copies means the browser did not report the split, and
-    // stays `null`: a zero would claim it measured no forced style work.
-    forcedStyleDurationMs:
-      nullableNumberAt(serialised, ['forcedStyleDuration']) ??
-      nullableNumberAt(projected, ['forcedStyleDuration']),
-    forcedLayoutDurationMs:
-      nullableNumberAt(serialised, ['forcedLayoutDuration']) ??
-      nullableNumberAt(projected, ['forcedLayoutDuration']),
+    forcedStyleDurationMs: forcedSplitHalf('forcedStyleDuration'),
+    forcedLayoutDurationMs: forcedSplitHalf('forcedLayoutDuration'),
     windowAttribution: stringAt(serialised, ['windowAttribution']),
   };
 }

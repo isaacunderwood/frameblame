@@ -31,6 +31,7 @@ import {
   arrayAt,
   asBoolean,
   asRecord,
+  booleanAt,
   get,
   isJsonArray,
   type Json,
@@ -60,19 +61,14 @@ function readFiber(fiber: JsonObject): RenderedFiber {
  *
  * Captures made before the collector recorded `id`, `parentId` and the render
  * evidence — every run in `corpus/` until the v0.3 re-capture — have none of
- * those keys on any fiber, and
- * come back `unrecorded` rather than with a guessed tree. A guess would be easy
- * and plausible, since both React fixtures happen to be one root over flat
- * siblings, and it would be a claim about the capture that the capture does not
- * make.
+ * those keys on any fiber, and come back `unrecorded` rather than with a
+ * guessed tree. A guess would be easy and plausible, since both React fixtures
+ * happen to be one root over flat siblings, and it would be a claim about the
+ * capture that the capture does not make.
  *
- * Where the keys are present they are checked against the collector's scheme,
- * because the engine's self-time subtraction trusts them without looking: each
- * `id` is the fiber's index in the list, and each `parentId` is `null` or an
- * earlier `id`. A commit with the keys on some fibers and not others, or ids
- * that break the scheme, throws: no collector writes either, so a record like
- * that was damaged or written by something else, and the adapter is the place
- * to say so rather than an engine computing negative self times from it.
+ * A commit with the keys on some fibers and not others throws: no collector
+ * writes that, so a record like it was damaged or written by something else.
+ * Where the keys are on every fiber, `readLinkedFiber` checks each one.
  *
  * An empty list is `unrecorded`, since it cannot show which collector wrote it.
  */
@@ -88,33 +84,49 @@ function readComponents(entries: readonly Json[], path: JsonPath): CommitCompone
     );
   }
 
-  const linked: LinkedFiber[] = records.map((record, index) => {
-    const where = [...path, index].join('.');
-    const id = numberAt(record, ['id']);
-    const parentId = nullableNumberAt(record, ['parentId']);
-    if (id !== index) {
-      throw new Error(`${where}: id ${String(id)} is not the fiber's index ${String(index)}`);
-    }
-    if (parentId !== null && !(Number.isInteger(parentId) && parentId >= 0 && parentId < id)) {
-      throw new Error(
-        `${where}: parentId ${String(parentId)} does not name an earlier fiber in the commit`,
-      );
-    }
-    return {
-      ...readFiber(record),
-      id,
-      parentId,
-      // Required wherever the links are: the collector change that recorded
-      // one recorded the other, so a fiber with an id and no evidence is not
-      // something any collector wrote.
-      render: {
-        flags: numberAt(record, ['flags']),
-        hasAlternate: asBoolean(get(record, ['hasAlternate']), [...path, index, 'hasAlternate']),
-        carriedOver: asBoolean(get(record, ['carriedOver']), [...path, index, 'carriedOver']),
-      },
-    };
-  });
-  return { linkage: 'recorded', fibers: linked };
+  return {
+    linkage: 'recorded',
+    fibers: records.map((record, index) => readLinkedFiber(record, index, [...path, index])),
+  };
+}
+
+/**
+ * One fiber of a linked commit, its `id` and `parentId` checked against the
+ * collector's scheme.
+ *
+ * Checked because the engine's self-time subtraction trusts them without
+ * looking: each `id` is the fiber's index in the list, and each `parentId` is
+ * `null` or an earlier `id`. Ids that break the scheme throw: no collector
+ * writes them, so a record like that was damaged or written by something else,
+ * and the adapter is the place to say so rather than an engine computing
+ * negative self times from it.
+ */
+function readLinkedFiber(record: JsonObject, index: number, path: JsonPath): LinkedFiber {
+  const where = path.join('.');
+  const id = numberAt(record, ['id']);
+  const parentId = nullableNumberAt(record, ['parentId']);
+  if (id !== index) {
+    throw new Error(`${where}: id ${String(id)} is not the fiber's index ${String(index)}`);
+  }
+  if (parentId !== null && !(Number.isInteger(parentId) && parentId >= 0 && parentId < id)) {
+    throw new Error(
+      `${where}: parentId ${String(parentId)} does not name an earlier fiber in the commit`,
+    );
+  }
+
+  return {
+    ...readFiber(record),
+    id,
+    parentId,
+    // Required wherever the links are: the collector change that recorded
+    // one recorded the other, so a fiber with an id and no evidence is not
+    // something any collector wrote.
+    render: {
+      flags: numberAt(record, ['flags']),
+      hasAlternate: asBoolean(get(record, ['hasAlternate']), [...path, 'hasAlternate']),
+      carriedOver: asBoolean(get(record, ['carriedOver']), [...path, 'carriedOver']),
+    },
+  };
 }
 
 /** The `[label, value]` rows of a span's detail, parsed by label and never by index. */
@@ -164,10 +176,7 @@ function readOriginator(properties: readonly SpanProperty[]): UpdateOriginator |
  * track as the component spans, so keying on the track would misclassify it.
  */
 export function reactOf(run: CorpusRun): ReactSignals {
-  const hookInstalled = asBoolean(
-    get(run.files.react, ['reactDevToolsHookInstalled']),
-    ['reactDevToolsHookInstalled'],
-  );
+  const hookInstalled = booleanAt(run.files.react, ['reactDevToolsHookInstalled']);
 
   const records = arrayAt(run.files.react, ['commits']).map((entry, index) =>
     asRecord(entry, ['commits', index]),
