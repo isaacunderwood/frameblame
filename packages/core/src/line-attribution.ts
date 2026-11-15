@@ -66,13 +66,24 @@
  * question LoAF answers wrongly for third parties; it, and the comparison with
  * what LoAF named, are `script-entry-attribution.ts`.
  *
+ * ## Independent samples
+ *
+ * A weight is a candidate's share of the population's *independent* stacked
+ * samples: bursts collapsed by `independentSampleWeights`, so that one instant
+ * sampled nine times in a millisecond counts once. The raw counts stay on the
+ * evidence, where "13 of 13" is still what the trace holds; the weight and its
+ * confidence are computed from the independent ones, where it is 5 of 5
+ * (`vendor-listener`'s vendor slices, development, 4x). Outside
+ * `vendor-listener` the two differ by at most three samples in a capture.
+ *
  * ## What this module does not do
  *
- * It does not weigh a candidate against the frame's duration, merge it with
- * the React tier's answer, or decide a confidence beyond the sample share.
- * That is the confidence model's job. It does not group LoAF's script entries
- * either; `script-entry-attribution.ts` builds on this module for that. It
- * reads only the records it is handed.
+ * It does not weigh a candidate against the frame's duration or merge it with
+ * the React tier's answer; `frame-attribution.ts` does the first and nothing
+ * does the second. Each weight's confidence follows from its independent
+ * sample counts by `confidence.ts`'s rule and is not decided here. It does not
+ * group LoAF's script entries either; `script-entry-attribution.ts` builds on
+ * this module for that. It reads only the records it is handed.
  *
  * **Clock.** Every `…Ms` value is page-clock `performance.now()` milliseconds.
  */
@@ -91,6 +102,7 @@ import {
   type UnmappedReason,
 } from './attribution.ts';
 import { isWithinFrame, type LongAnimationFrame } from './loaf.ts';
+import { independentSampleWeights } from './profiler.ts';
 import type { CaptureProvenance } from './provenance.ts';
 import type { CapturedSignals } from './signals.ts';
 import {
@@ -185,13 +197,24 @@ export interface FunctionAttribution {
    * presses, so it says nothing about what the presses cost.
    */
   readonly samplesWithoutStack: number;
-  /** The denominator every weight is a share of. */
+  /** Samples in the population with a stack: the raw count behind the weights. */
   readonly stackedSamples: number;
   /**
-   * Stacked samples with no frame that has a position, charged to nobody, so
-   * the ranked weights fall short of 1 by their share. 0 in every capture.
+   * The denominator every weight is a share of: `stackedSamples` with bursts
+   * collapsed. See `independentSampleWeights`.
+   */
+  readonly independentStackedSamples: number;
+  /**
+   * Stacked samples with no frame that has a position. Charged to no
+   * function: they are the ranking's one `unattributed` candidate, with
+   * reason `no-located-frame`. 0 in every capture.
    */
   readonly unlocatedSamples: number;
+  /**
+   * The functions by share of the independent stacked samples, with the
+   * unlocated remainder, if any, as an explicit `unattributed` candidate, so
+   * the weights sum to 1 whenever the population holds a stacked sample.
+   */
   readonly causes: RankedCauses;
 }
 
@@ -242,30 +265,52 @@ function functionSubject(resolution: Located): FunctionSubject {
   };
 }
 
-interface FunctionTally {
-  readonly resolution: Located;
+/** Raw and independent sample counts, kept side by side. */
+interface SampleCounts {
+  /** Samples as the trace holds them. */
   samples: number;
+  /** The same samples with bursts collapsed. See `independentSampleWeights`. */
+  independent: number;
+}
+
+interface FunctionTally extends SampleCounts {
+  readonly resolution: Located;
   foldedCallees: number;
 }
 
 /**
- * One function's tally as a candidate: its share of `stackedSamples`, with the
- * samples it was charged and, where it absorbed any, the ignore-listed callees
- * it folded in. Assumes `stackedSamples` includes the tally's own samples.
+ * A share of the population's independent stacked samples as a weight, with
+ * the sampled support its confidence is derived from. Assumes `stacked`
+ * includes `counts`, and holds at least one sample.
+ */
+function sampleShare(counts: SampleCounts, stacked: SampleCounts) {
+  return confidenceWeight(counts.independent / stacked.independent, 'sample-share', {
+    kind: 'sampled',
+    independentSamples: counts.independent,
+    ofIndependentSamples: stacked.independent,
+    ofMeasuredShare: 1,
+  });
+}
+
+/**
+ * One function's tally as a candidate: its share of the independent stacked
+ * samples, with the raw samples it was charged and, where it absorbed any, the
+ * ignore-listed callees it folded in. Assumes `stacked` includes the tally's
+ * own samples.
  *
  * The tier is read off the subject's own location, so a candidate cannot claim
  * `profiler-mapped` for a position that did not come through a map.
  */
 function functionCandidate(
   tally: FunctionTally,
-  stackedSamples: number,
+  stacked: SampleCounts,
   window: SampleWindowKind,
 ): CandidateCause {
   const evidence: [CauseEvidence, ...CauseEvidence[]] = [
     {
       kind: 'profiler-samples',
       samples: tally.samples,
-      ofSamplesInWindow: stackedSamples,
+      ofSamplesInWindow: stacked.samples,
       window,
     },
   ];
@@ -275,10 +320,33 @@ function functionCandidate(
   const subject = functionSubject(tally.resolution);
   return {
     subject,
-    // `stackedSamples` is at least `tally.samples`, which is at least 1.
-    weight: confidenceWeight(tally.samples / stackedSamples, 'sample-share'),
+    weight: sampleShare(tally, stacked),
     tier: subject.location.throughSourceMap ? 'profiler-mapped' : 'profiler-unmapped',
     evidence,
+  };
+}
+
+/**
+ * The stacked samples no function could be charged for, as the ranking's
+ * explicit remainder, so that the weights account for every stacked sample.
+ */
+function unlocatedCandidate(
+  unlocated: SampleCounts,
+  stacked: SampleCounts,
+  window: SampleWindowKind,
+): CandidateCause {
+  return {
+    subject: { kind: 'unattributed', reason: 'no-located-frame' },
+    weight: sampleShare(unlocated, stacked),
+    tier: 'unattributed',
+    evidence: [
+      {
+        kind: 'profiler-samples',
+        samples: unlocated.samples,
+        ofSamplesInWindow: stacked.samples,
+        window,
+      },
+    ],
   };
 }
 
@@ -289,13 +357,16 @@ function functionCandidate(
  * Returns one candidate per function, at `profiler-mapped` where its
  * definition site resolved through a source map and `profiler-unmapped` where
  * it did not, with the reason on its location. Weights are shares of
- * `stackedSamples`, with basis `sample-share`; ties keep the order the
- * functions were first sampled in. Assumes `resolved` is the capture's own
+ * `independentStackedSamples`, with basis `sample-share`; ties keep the order
+ * the functions were first sampled in. Assumes `resolved` is the capture's own
  * profile and `population`'s ranges are page-clock milliseconds on the same
  * clock, which every capture's are.
  *
  * Per-candidate shares are coarse at small sample counts: plus or minus 20
- * points at five samples, which is why the replay population exists.
+ * points at five samples, which is why the replay population exists. Each
+ * weight says so itself: its confidence carries the independent counts and
+ * the range they leave, and the ranking's `lead` says whether the first
+ * candidate is distinguishable from the second.
  */
 export function attributeSampledFunctions(
   resolved: ResolvedProfile,
@@ -303,21 +374,28 @@ export function attributeSampledFunctions(
   population: SamplePopulation,
 ): FunctionAttribution {
   const tallies = new Map<string, FunctionTally>();
+  const independence = independentSampleWeights(resolved.trace);
+  const stacked: SampleCounts = { samples: 0, independent: 0 };
+  const unlocated: SampleCounts = { samples: 0, independent: 0 };
   let samples = 0;
   let samplesWithoutStack = 0;
-  let unlocatedSamples = 0;
 
-  for (const sample of resolved.trace.samples) {
+  for (const [index, sample] of resolved.trace.samples.entries()) {
     if (!population.ranges.some((range) => inRange(range, sample.atMs))) continue;
     samples += 1;
     if (sample.stackId === null) {
       samplesWithoutStack += 1;
       continue;
     }
+    // One weight per sample, by `independentSampleWeights`' contract.
+    const independent = independence[index] ?? 1;
+    stacked.samples += 1;
+    stacked.independent += independent;
 
     const charged = chargedFrame(resolvedStack(resolved, sample.stackId));
     if (charged === null) {
-      unlocatedSamples += 1;
+      unlocated.samples += 1;
+      unlocated.independent += independent;
       continue;
     }
 
@@ -327,28 +405,31 @@ export function attributeSampledFunctions(
     const tally = tallies.get(key) ?? {
       resolution: charged.frame,
       samples: 0,
+      independent: 0,
       foldedCallees: 0,
     };
     tally.samples += 1;
+    tally.independent += independent;
     if (charged.foldedCallees) tally.foldedCallees += 1;
     tallies.set(key, tally);
   }
 
-  const stackedSamples = samples - samplesWithoutStack;
-  const causes = rankCauses(
-    [...tallies.values()].map((tally) =>
-      functionCandidate(tally, stackedSamples, population.window),
-    ),
+  const candidates = [...tallies.values()].map((tally) =>
+    functionCandidate(tally, stacked, population.window),
   );
+  if (unlocated.samples > 0) {
+    candidates.push(unlocatedCandidate(unlocated, stacked, population.window));
+  }
 
   return {
     provenance,
     population,
     samples,
     samplesWithoutStack,
-    stackedSamples,
-    unlocatedSamples,
-    causes,
+    stackedSamples: stacked.samples,
+    independentStackedSamples: stacked.independent,
+    unlocatedSamples: unlocated.samples,
+    causes: rankCauses(candidates),
   };
 }
 

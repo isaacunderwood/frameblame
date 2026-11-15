@@ -351,10 +351,53 @@ describe('attributeCommit at the fiber tier', () => {
     const attribution = attributeCommit(input, only, 900);
     expect(attribution.basis.tier).toBe('react-fiber-timings');
     expect(names(attribution)).toEqual(['Busy']);
-    expect(attribution.causes.causes[0]?.weight).toEqual({
-      fraction: 1,
-      basis: 'fiber-self-time-share',
+    const [busy] = attribution.causes.causes;
+    expect(busy?.weight).toMatchObject({ fraction: 1, basis: 'fiber-self-time-share' });
+
+    // A fiber self time is a measurement: high confidence, exact to two
+    // 100us grid steps over the commit's 30ms.
+    expect(busy?.weight.confidence.level).toBe('high');
+    expect(busy?.weight.confidence.support).toEqual({
+      kind: 'measured',
+      gridShare: 0.2 / 30,
     });
+    expect(attribution.causes.lead).toBe('sole');
+  });
+
+  it('charges a bailed-out fiber’s own time to an explicit unattributed candidate', () => {
+    /*
+     * `App` bailed out and still spent 10ms of its own: React's reconciliation
+     * beneath a component that did not render. It belongs to no component, so
+     * it is the ranking's remainder, measured like the rest, and the weights
+     * sum to 1. No corpus commit has any (0ms on all of them, development,
+     * 4x), so this shape is synthetic.
+     */
+    const input = signals({
+      commits: [commit([fiber(0, 'App', null, 40, BAILED_OUT), fiber(1, 'Busy', 0, 30)])],
+    });
+    const [only] = input.react.commits;
+    if (only === undefined) throw new Error('no commit');
+
+    const { causes } = attributeCommit(input, only, 900);
+    expect(names({ causes })).toEqual(['Busy']);
+    const [busy, remainder] = causes.causes;
+    expect(busy?.weight.fraction).toBe(0.75);
+    expect(remainder?.subject).toEqual({
+      kind: 'unattributed',
+      reason: 'bailed-out-reconciliation',
+    });
+    expect(remainder?.tier).toBe('unattributed');
+    expect(remainder?.weight.fraction).toBe(0.25);
+    expect(remainder?.weight.confidence.level).toBe('high');
+    expect(remainder?.evidence).toEqual([
+      {
+        kind: 'fiber-render-time',
+        componentName: 'App',
+        actualDurationMs: 40,
+        selfDurationMs: 10,
+      },
+    ]);
+    expect(causes.totalWeight).toBe(1);
   });
 
   it('attributes a commit that no long frame surrounds', () => {
@@ -501,8 +544,21 @@ describe('attributeCommit without fiber timings', () => {
     // `m` bailed out, so it is no candidate even though the hook reported it.
     expect(names(attribution)).toEqual(['g', 'b']);
     const [g, b] = attribution.causes.causes;
-    expect(g?.weight).toEqual({ fraction: 0.5, basis: 'sample-share' });
+    expect(g?.weight).toMatchObject({ fraction: 0.5, basis: 'sample-share' });
     expect(b?.weight.fraction).toBe(0.25);
+
+    // A sample share is an estimate, and four samples make it a guess: the
+    // weight says how many there were and how wide that leaves it.
+    expect(g?.weight.confidence.level).toBe('low');
+    expect(g?.weight.confidence.support).toEqual({
+      kind: 'sampled',
+      independentSamples: 2,
+      ofIndependentSamples: 4,
+      ofMeasuredShare: 1,
+    });
+    expect(g?.weight.confidence.range.low).toBeLessThan(0.2);
+    expect(g?.weight.confidence.range.high).toBeGreaterThan(0.8);
+    expect(attribution.causes.lead).toBe('within-noise');
     expect(g?.tier).toBe('profiler-unmapped');
     expect(g?.subject).toMatchObject({
       kind: 'component',
@@ -512,8 +568,64 @@ describe('attributeCommit without fiber timings', () => {
     expect(g?.subject.kind === 'component' && g.subject.definedAt?.throughSourceMap).toBe(
       false,
     );
-    // The commit-phase sample is in the denominator and charged to nobody.
-    expect(attribution.causes.totalWeight).toBeCloseTo(0.75, 10);
+    // The commit-phase sample is in the denominator and charged to nobody: it
+    // is the ranking's explicit remainder, so the weights sum to 1.
+    const remainder = attribution.causes.causes.find(
+      (cause) => cause.subject.kind === 'unattributed',
+    );
+    expect(remainder?.subject).toEqual({
+      kind: 'unattributed',
+      reason: 'no-rendered-component-on-stack',
+    });
+    expect(remainder?.weight.fraction).toBe(0.25);
+    expect(remainder?.evidence).toEqual([
+      {
+        kind: 'profiler-samples',
+        samples: 1,
+        ofSamplesInWindow: 4,
+        window: 'since-previous-commit',
+      },
+    ]);
+    expect(attribution.causes.totalWeight).toBeCloseTo(1, 10);
+  });
+
+  it('counts a burst of samples in the window once', () => {
+    /*
+     * Three samples of `g` inside 2ms are one look at the stack, not three:
+     * `vendor-listener`'s first click holds nine in 1.1ms (development, 4x).
+     * Counted raw, `g` would hold 3 of 4. Counted as independent evidence it
+     * holds 1 of 2, and the raw counts stay on the evidence.
+     */
+    const input = signals({
+      commits: [production],
+      buildMode: 'production',
+      profile: trace([
+        { atMs: 950, stack: ['d', 'g', 'os', 'Fd'] },
+        { atMs: 951, stack: ['d', 'g', 'os', 'Fd'] },
+        { atMs: 952, stack: ['d', 'g', 'os', 'Fd'] },
+        { atMs: 970, stack: ['d', 'b', 'os', 'Fd'] },
+      ]),
+    });
+
+    const { causes } = attributeCommit(input, production, 900).causes;
+    const named = (name: string) =>
+      causes.find(
+        (cause) => cause.subject.kind === 'component' && cause.subject.name === name,
+      );
+    const g = named('g');
+    const b = named('b');
+    expect(g?.weight.fraction).toBeCloseTo(0.5, 10);
+    expect(b?.weight.fraction).toBeCloseTo(0.5, 10);
+    expect(g?.weight.confidence.support).toMatchObject({
+      kind: 'sampled',
+      ofIndependentSamples: 2,
+    });
+    expect(g?.evidence[0]).toEqual({
+      kind: 'profiler-samples',
+      samples: 3,
+      ofSamplesInWindow: 4,
+      window: 'since-previous-commit',
+    });
   });
 
   it('gives the names back through a shipped source map, and says the tier improved', () => {
@@ -622,7 +734,18 @@ describe('attributeCommit without fiber timings', () => {
       componentName: 'g',
       definitionSites: 2,
     });
-    expect(attribution.causes.totalWeight).toBe(0);
+    // The one sample in the window is charged to no component, so all of the
+    // weight is the unattributed remainder's.
+    expect(
+      attribution.causes.causes.map((cause) => [
+        cause.subject.kind,
+        cause.weight.fraction,
+      ]),
+    ).toEqual([
+      ['unattributed', 1],
+      ['component', 0],
+      ['component', 0],
+    ]);
     expect(attribution.basis).toMatchObject({ samplesInWindow: 1, unchargedSamples: 1 });
   });
 
@@ -649,12 +772,36 @@ describe('attributeCommit without fiber timings', () => {
       shortfall: 'fiber-timings-absent',
       reason: 'no-profiler',
     });
-    expect(attribution.causes.causes).toEqual([]);
     expect(
       attribution.components
         .filter((component) => component.participation === 'updated')
         .map((component) => component.name),
     ).toEqual(['b', 'g']);
+
+    /*
+     * Nothing measured the commit, so nothing is shared out. The whole commit
+     * is one unattributed candidate, the components the hook saw render are
+     * its evidence, and neither is given a share nobody measured. Its
+     * confidence says what it rests on: subtraction, with no profile to check
+     * it against.
+     */
+    const [whole, ...others] = attribution.causes.causes;
+    expect(others).toEqual([]);
+    expect(whole?.subject).toEqual({ kind: 'unattributed', reason: 'no-profiler' });
+    expect(whole?.tier).toBe('unattributed');
+    expect(whole?.weight.fraction).toBe(1);
+    expect(whole?.weight.confidence).toEqual({
+      level: 'moderate',
+      range: { low: 1, high: 1 },
+      support: {
+        kind: 'subtraction',
+        check: { verdict: 'unchecked', reason: 'no-profiler' },
+      },
+    });
+    expect(whole?.evidence).toEqual([
+      { kind: 'fiber-rendered', componentName: 'b', participation: 'updated' },
+      { kind: 'fiber-rendered', componentName: 'g', participation: 'updated' },
+    ]);
   });
 });
 

@@ -14,9 +14,10 @@
  * case.
  *
  * What this module does not do: resolve a source map (`source-map.ts`) or
- * weight a sample (`line-attribution.ts`). It holds the records, the stack
- * walk, the one position conversion the whole project must get right, and the
- * facts about sampling that bound what any heuristic built on top may claim.
+ * charge a sample to a function (`line-attribution.ts`). It holds the records,
+ * the stack walk, the one position conversion the whole project must get
+ * right, and the facts about sampling that bound what any heuristic built on
+ * top may claim, including which samples are independent of each other.
  *
  * **Clock.** Sample timestamps are `performance.now()` milliseconds on the
  * document's timeline, shared with LoAF and React. The spec says they are
@@ -61,6 +62,25 @@ export const SAMPLE_INTERVAL_FLOOR_MS = 10;
  * tolerate rather than a parse error.
  */
 export const OBSERVED_SAMPLE_CADENCE_MS = 14.5;
+
+/**
+ * The gap below which two consecutive samples are one look at the stack rather
+ * than two: half the sampling floor, in milliseconds.
+ *
+ * A sampler with a 10ms floor cannot honestly tick twice inside 5ms, and the
+ * corpus's gaps say the same thing from the other side. Of its 16,451
+ * inter-sample gaps, 16,376 are 9ms or longer, 11 fall between 5 and 9ms, and
+ * 64 are under 5ms (v0.3 re-capture, 4x, both build modes). Those 64 are not
+ * spread about. They sit in 14 runs holding 78 samples, and four of the runs
+ * are `vendor-listener`'s first click: 15 samples in 145.3-149.6ms and 9 in
+ * 165.8-166.9ms in development, 24 in 163.5-169.5ms and 9 in 181.0-182.5ms in
+ * production. The other ten are nine pairs and a triple.
+ *
+ * Why Chrome emits them is not established here. What is measured is that a
+ * burst repeats one instant: 9 of the 14 hold a single stack sampled over and
+ * over, or no stack at all, and the other 5 hold two.
+ */
+export const SAMPLE_BURST_GAP_MS = SAMPLE_INTERVAL_FLOOR_MS / 2;
 
 /** A source map as it appears in JSON, narrowed to the fields this project reads. */
 export interface RawSourceMap {
@@ -340,4 +360,47 @@ export function stackFrames(
     const frame = trace.frames[frameId];
     return frame === undefined ? [] : [frame];
   });
+}
+
+/**
+ * How much independent evidence each sample is: 1 for a sample on its own, and
+ * `1 / n` for each of the `n` samples in a burst.
+ *
+ * A burst is a maximal run of samples each less than `SAMPLE_BURST_GAP_MS`
+ * after the one before it. It is one look at the stack, taken `n` times, so it
+ * counts once and its samples share that one count equally. Shared rather than
+ * given to the first sample, because a burst can straddle a boundary a caller
+ * cares about or hold two different stacks, and an equal split is the only
+ * division that does not pick a winner.
+ *
+ * Returns one weight per entry of `trace.samples`, in the same order. The sum
+ * of the weights over any set of samples is the number of independent samples
+ * in it, which is what a share's confidence must be computed from. Counting
+ * raw samples would let `vendor-listener`'s first-click burst pass for nine
+ * separate observations of the vendor's function, when it is one (4x, both
+ * build modes).
+ *
+ * Assumes the samples are in timestamp order, as the API reports them and as
+ * every capture has them. Timestamps are page-clock milliseconds.
+ */
+export function independentSampleWeights(trace: ProfileTrace): readonly number[] {
+  const { samples } = trace;
+  const weights = new Array<number>(samples.length).fill(1);
+
+  let burstStart = 0;
+  for (let index = 1; index <= samples.length; index += 1) {
+    const previous = samples[index - 1];
+    const current = samples[index];
+    const continuesBurst =
+      previous !== undefined &&
+      current !== undefined &&
+      current.atMs - previous.atMs < SAMPLE_BURST_GAP_MS;
+    if (continuesBurst) continue;
+
+    const size = index - burstStart;
+    if (size > 1) weights.fill(1 / size, burstStart, index);
+    burstStart = index;
+  }
+
+  return weights;
 }

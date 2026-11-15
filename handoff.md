@@ -311,7 +311,7 @@ Progress (updated before each next step starts):
 - [x] Step 0 cycle (refactor, review, fix) and commit
 - [x] Step 3 — components, the React tier
 - [x] Step 4 — lines, the profiler tier
-- [ ] Step 5 — the confidence model
+- [x] Step 5 — the confidence model
 - [ ] Step 6 — the accuracy suite
 
 ### Step 0.1 — cleanup refactor
@@ -730,8 +730,152 @@ On the out-of-window samples, the script measured 6 before the first window, not
 6 + 3 + 2 is the 11 total, so the reviewer's count was the one that was off. Step 5 starts next, on
 Fable, as `overnight-run.md` asks.
 
+### Step 5 — outcome
+
+Built in `packages/core/src/confidence.ts`, `frame-attribution.ts` and `capture-attribution.ts`,
+with `attribution.ts`, `profiler.ts`, `line-attribution.ts` and `component-attribution.ts` extended.
+`pnpm check` is green at 282 tests (154 core, 128 corpus), and `pnpm build` passes. Not committed.
+
+**The design.** Confidence is three quantities on every weight, and no score.
+
+- *Support*: how the number was arrived at. `measured` (fiber self times, frame slices), `sampled`
+  (a share of profiler samples, with its independent counts), or `subtraction` (what was left, with
+  the verdict of its cross-check). A union, so a weight cannot exist without it:
+  `confidenceWeight(fraction, basis, support)` derives the rest and throws if a sampled fraction is
+  not the share its own counts give.
+- *Range*: the interval the true share plausibly lies in. The timing grid either side of a
+  measurement, a 95% Wilson interval for a sampled share. Thin evidence widens the answer.
+- *Level*: `high`, `moderate` or `low`, by one rule in `confidenceLevelOf`. A measurement is high. A
+  sampled share is moderate from 21 independent samples up and low below, and never high. A
+  subtraction is high when the second signal agrees, moderate when nothing could check it, low when
+  it disagrees. The 21 comes from the findings' own line: plus or minus 20 points is unusable, and
+  a Wilson interval at an even split is first inside that at 21 samples.
+
+The tier stays on the candidate, as before. A ranking also carries `lead`: whether the first
+candidate's range clears the second's (`clear`, `within-noise`, `sole`, `none`).
+
+**What was built.**
+
+- `independentSampleWeights` in `profiler.ts`. A burst is a run of samples each under 5ms after
+  the last, half the sampling floor; it counts once, shared equally among its samples. Measured
+  first: of the corpus's 16,451 gaps, 16,376 are 9ms or longer, 11 fall between 5 and 9ms, and 64
+  are under 5ms, in 14 bursts holding 78 samples (4x, both build modes). Four of the bursts are
+  `vendor-listener`'s first click. This is F2. Every sample share in the engine is now a share of
+  independent samples, and the raw counts stay on the evidence.
+- `crossCheckEmptyStacks` in `confidence.ts`. It compares the share of a frame outside every
+  reported script with the share of in-frame samples that had no stack. They agree within the
+  larger of one sample and two binomial standard deviations, and are left unchecked under five
+  samples. On the corpus's 53 frames 45 agree, 8 are unchecked (all `derive-in-render`), none
+  disagree (4x, both build modes). The comparison is against time outside *scripts*, not against
+  the unattributed charge, because the rendering update's own layout also runs with no stack:
+  `spans`' first frame is 0.1% unattributed and 15.8% outside scripts (development, 4x).
+- `attributeFrames` in `frame-attribution.ts`. Every slice of a frame becomes a candidate whose
+  weight is a share of the frame's duration, and the weights sum to 1 on all 53 frames. A script
+  slice's JavaScript is divided by the strongest signal available: fiber self times where a timed
+  commit landed in it, else functions sampled in that site's slices across the interaction, else
+  the script entry as LoAF named it. Forced style and layout is one candidate charged to its
+  script entry. Time nothing can name is an explicit `unattributed` candidate per place in the
+  frame, with the cross-check on its confidence.
+- `attributeCapture` in `capture-attribution.ts`: the entry point. Per frame, per interaction
+  (`components`, `functions`, `frames`), every commit, `workingFrom` naming each missing signal,
+  and `statementLevel: 'unavailable-in-page'`.
+- The step 3 deferral (#9). A commit's remainder is now an explicit `unattributed` candidate:
+  `bailed-out-reconciliation` at the fiber tier, `no-rendered-component-on-stack` at the profiler
+  tier, `no-profiler` for a commit nothing measured. Rankings sum to 1.
+- Vocabulary. `ScriptEntrySite` moved into `attribution.ts`. A `script-entry` subject for the
+  `loaf-script-registration` tier. `browser-work.forcedBy` is now a `ScriptEntrySite`: the engine
+  has no script text, so it cannot turn LoAF's offset into a line, and the comment that predicted
+  a "not attempted" `UnmappedReason` is resolved that way. A `frame-slice` evidence kind, a
+  `frame-slice-sample-share` basis, and five `UnattributedReason`s.
+
+**How the done-when is demonstrated**, in `packages/corpus/src/capture.test.ts`, all through
+`attributeCapture`:
+
+- *Declared culprit at declared tier.*
+  - `derive-in-render … > development: the component is known, at high confidence, from fiber
+    timings`; `production: the component is sampled, under the name the source map gives back`;
+    `{mode}: the function is a distribution over the replay, with the declared line first`.
+  - `spans … > development: every rendered component, measured, with its share of the frame`;
+    `production: the same names from samples, at the confidence a handful of samples earns`.
+  - `innerhtml-rebuild … > {mode}/unforced` and `{mode}/forced`.
+  - `vendor-listener … > {mode}: ranks the three slices as declared, and names each one's true
+    owner`.
+- *Degrades rather than guesses.*
+  - `thin evidence … > derive-in-render/{mode}: inside long frames, a top function outside the
+    declared range is never claimed`. Production's long frames hold 4 stacked samples with line 32
+    in front; the answer there is `within-noise` and `low`, with a range of 15-85% (4x). Asserted
+    as a rule, not as those counts.
+  - `vendor-listener … > {mode}: the vendor's share rests on independent samples, not on a burst`.
+    5 of 5 independent samples in development and 5.9 of 6 in production, against 13 of 13 and 13
+    of 14 raw, so `low` (4x).
+  - `spans … > development: says when equal components cannot be ranked`.
+- *A large unattributed share.* `innerhtml-rebuild … > {mode}/unforced`: 88.9-90.3% unattributed,
+  top-ranked, `high` because the empty-stack share is within 2.8 points of the share outside
+  scripts; the largest named candidate is 9.7-11.1% (4x, both build modes).
+- *The degraded tiers*, each by removing a signal from a real capture: `degraded tiers … > no
+  profiler, …` (five tests), `no React hook, …`, `no source map, …`.
+
+No test asserts a long-frame count. Assertions about frames are made of each frame the engine
+returns.
+
+**What moved in steps 3 and 4.** Raw counts are unchanged, so every figure those steps quote
+still holds. Burst collapse moved sample-share weights in two fixtures only: `vendor-listener`, by
+up to 26.9 points, and `spans`, by up to 5.8 (4x). `derive-in-render`'s weights did not move at
+all, so the replay shares of 70.7% and 83.6% stand. The production `spans` corpus test, and the
+unit tests that compared a whole weight or a total below 1, were updated for the new shape.
+
+**The carried items.**
+
+- *Replay population.* It is the function level's population by construction:
+  `InteractionAttribution.functions` is taken over the interaction's window.
+- *The 60% floor.* The model's range says what the standard-error note said. The 95% range of
+  65 of 92 is 60.7-79.0%, and of the previous capture's 62 of 102 it is 51.1-69.7% (development,
+  4x). The floor sits at the edge of one and inside the other. The floor itself is untouched.
+- *Cross-check bounds.* Reproduced through the engine under `isWithinFrame`: 88.9-90.3% outside
+  scripts with 88.9-91.7% empty stacks unforced, 14.3-16.9% with 10-30% forced (4x, both build
+  modes).
+
+Choices made without a human, each the conservative option:
+
+1. **Overlap names components and gives them no share.** With no profile and no fiber timings,
+   the hook still says which components rendered in a commit that landed in a script. They go on
+   the script entry's evidence, and the commit's ranking is one `unattributed` candidate. An equal
+   split would have been a number nobody measured. So `window-overlap` is still an unproduced
+   `WeightBasis`, as is `sole-candidate`; both now say so in their comments.
+2. **A timed commit is placed in a frame by a fit check, not by samples.** Its render must fit
+   between the slice's start and the commit. All 17 timed commits in corpus frames fit
+   (development, 4x). Where one does not, its components are not charged and a note says so. The
+   profiler does not raise a component's confidence, because fiber timings never depended on it.
+3. **A sampled share is never `high`.** The word is kept for a measurement or a confirmed
+   subtraction. `derive-in-render` production's `OrderTable`, 67 of 69 samples, is `moderate`.
+4. **A frame's function split is pooled per interaction and site**, not across the capture,
+   because React registers one listener for every event. In production `derive-in-render` that
+   pool is one frame's 4 samples. The stable answer is the interaction's `functions`.
+5. **The cross-check is per frame.** Pooling it over a replay's frames would check the 8 frames
+   that are now unchecked. Not built.
+6. **Production React frames list functions**, and the components are in the interaction's
+   ranking. Multiplying a slice by a commit window's component shares would stack two estimates
+   over two different windows.
+
+Not done, and known:
+
+- Why Chrome emits bursts is not established. The model only declines to count them twice.
+- The boundary sample from step 4's C9 is still charged to the forced-layout slice, so one
+  development `vendor-listener` pool shows `vendorTrack` at 1 of 51 samples there.
+- `third-party-script` is still an unused subject. Naming a vendor is `later.md`'s.
+- `findings.md` is unchanged. The two new measurements, the burst gaps and the cross-check's
+  denominator, are recorded in `profiler.ts` and `frame-attribution.ts`.
+
 ## Questions for the morning
 
+- **Should "profiler header absent → infer from overlap" produce weighted candidates?** Step 5
+  built it conservatively. With no profile and no fiber timings, the components the hook saw render
+  are attached as `fiber-rendered` evidence on the script entry they overlapped. The commit's
+  ranking is then a single `unattributed` (`no-profiler`) candidate, and no share is invented for
+  those components. The `window-overlap` and `sole-candidate` weight bases exist, but nothing
+  produces them yet. Kept this way overnight, because it never states a number the evidence does
+  not hold. If you want overlap candidates with weights, that is a design decision about how much
+  confidence overlap alone earns.
 - **Should the derive-in-render histogram narrative live only in `findings.md`, with the README,
   the ground truth and the tests citing it?** It is currently told in six places. Not consolidated
   tonight, because doing so means cutting measurement prose in an unattended run.

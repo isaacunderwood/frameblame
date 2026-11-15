@@ -91,7 +91,16 @@ describe('attributeSampledFunctions', () => {
       describeTier('profiler-unmapped'),
     );
     const [app, library] = result.causes.causes;
-    expect(app?.weight).toEqual({ fraction: 2 / 3, basis: 'sample-share' });
+    expect(app?.weight).toMatchObject({ fraction: 2 / 3, basis: 'sample-share' });
+    // Three samples: an estimate with a stated count, and a guess at that count.
+    expect(app?.weight.confidence.level).toBe('low');
+    expect(app?.weight.confidence.support).toEqual({
+      kind: 'sampled',
+      independentSamples: 2,
+      ofIndependentSamples: 3,
+      ofMeasuredShare: 1,
+    });
+    expect(result.independentStackedSamples).toBe(3);
     expect(app?.tier).toBe('profiler-mapped');
     expect(app?.subject).toMatchObject({
       kind: 'source-location',
@@ -144,6 +153,40 @@ describe('attributeSampledFunctions', () => {
       functionName: { text: 'vendorTrack', from: 'served-script' },
       location: { throughSourceMap: false, whyNot: 'no-source-map' },
     });
+  });
+
+  it('weighs a burst of samples as one, and keeps the raw counts on the evidence', () => {
+    /*
+     * `vendor-listener`'s vendor slices in production: 14 stacked samples, 9
+     * of them one burst in 181.0-182.5ms holding 8 in `vendorTrack` and 1 in
+     * the listener, then 5 more in `vendorTrack` (4x). Raw, the vendor holds
+     * 13 of 14. As independent evidence it holds 5.9 of 6, and six samples
+     * are a guess where fourteen would have passed for an estimate.
+     */
+    const vendorTrack = [[1, 'vendorTrack', 43]] as const;
+    const profile = resolveProfile(
+      trace(
+        [served('http://localhost/app.js'), served('http://localhost/vendor.js')],
+        [
+          ...Array.from({ length: 8 }, (_, index) => ({
+            atMs: 181 + index * 0.1,
+            stack: vendorTrack,
+          })),
+          { atMs: 181.9, stack: [[0, null, 35]] },
+          ...[300, 400, 500, 600, 700].map((atMs) => ({ atMs, stack: vendorTrack })),
+        ],
+      ),
+    );
+    const result = attributeSampledFunctions(profile, PROVENANCE, EVERYTHING);
+    const [vendor, listener] = result.causes.causes;
+
+    expect(result.stackedSamples).toBe(14);
+    expect(result.independentStackedSamples).toBeCloseTo(6, 10);
+    expect(vendor?.weight.fraction).toBeCloseTo((5 + 8 / 9) / 6, 10);
+    expect(listener?.weight.fraction).toBeCloseTo(1 / 9 / 6, 10);
+    expect(vendor?.weight.confidence.level).toBe('low');
+    expect(vendor === undefined ? 0 : chargedSamples(vendor)).toBe(13);
+    expect(result.causes.totalWeight).toBeCloseTo(1, 10);
   });
 
   it('counts a sample on a half-open boundary once, in the later range', () => {

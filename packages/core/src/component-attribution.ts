@@ -26,8 +26,28 @@
  * Which fibers took part in the commit, and each one's self time, come from
  * `fiber-self-time.ts`. Its header records why the subtraction runs over
  * in-commit fibers only, and why the self time of fibers React bailed out of
- * is charged to no component, which is what makes a commit's ranked weights
- * sum to less than 1.
+ * is charged to no component.
+ *
+ * ## The remainder is a candidate
+ *
+ * Whatever a commit's components do not account for is in the ranking as an
+ * explicit `unattributed` candidate with its own reason, so the weights sum to
+ * 1 and the shortfall is never something a reader has to compute. At the fiber
+ * tier it is the bailed-out fibers' self time, measured like the rest. At the
+ * profiler tier it is the stacked samples that reached no rendered component.
+ * With neither timings nor a profile it is the whole commit: the hook named
+ * the components that rendered, they are listed as that candidate's evidence,
+ * and no share is invented for any of them. This is the same decision the
+ * frame partition makes about time outside every script, made for a commit.
+ *
+ * ## Confidence
+ *
+ * A fiber self time is a measurement, so its weight is `high` and exact to
+ * the timing grid. A sample share is an estimate over the independent samples
+ * in the commit's window, bursts collapsed (`independentSampleWeights`), and
+ * its weight says how many there were. 2 to 15 stacked samples fall in a
+ * `spans` production commit's window (4x), so those weights are `low` and say
+ * so; merged over a replay's commits they are not.
  *
  * ## When the React tier is unavailable
  *
@@ -58,11 +78,12 @@
  *
  * ## What this module does not do
  *
- * It does not split a frame among causes, weigh a commit against the frame it
- * landed in, or decide whether an interaction was
- * slow, and it does not do the self-time subtraction itself. It answers one
- * question, which components rendered and their share of
- * the render, and states which tier the answer came from.
+ * It does not split a frame among causes or weigh a commit against the frame
+ * it landed in (`frame-attribution.ts` does), or decide whether an interaction
+ * was slow, and it does not do the self-time subtraction itself. It answers
+ * one question, which components rendered and their share of the render, and
+ * states which tier the answer came from and how far each share can be
+ * trusted.
  *
  * **Clock.** Every `…Ms` timestamp is page-clock `performance.now()`
  * milliseconds; every `…Ms` duration is milliseconds of the same clock.
@@ -78,8 +99,10 @@ import {
   describeTier,
   type RankedCauses,
   rankCauses,
+  type UnattributedReason,
   type WeightBasis,
 } from './attribution.ts';
+import type { WeightSupport } from './confidence.ts';
 import {
   type CommitRenderTimes,
   type CommitTimingNote,
@@ -92,11 +115,12 @@ import {
   type RenderedParticipation,
 } from './fiber-self-time.ts';
 import {
+  COARSENED_TIMING_TOLERANCE_MS,
   exceedsByMoreThanCoarsening,
   isWithinFrame,
   type LongAnimationFrame,
 } from './loaf.ts';
-import { type ProfileTrace, stackFrames } from './profiler.ts';
+import { independentSampleWeights, type ProfileTrace, stackFrames } from './profiler.ts';
 import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
 import type { FiberId, ReactCommit, ReactSpan } from './react.ts';
 import {
@@ -150,9 +174,9 @@ export type CommitAttributionBasis =
       readonly tier: 'react-fiber-timings';
       /**
        * Carries `bailedOutSelfMs`, the self time of fibers React bailed out
-       * of, which is charged to no component. It is why a commit's ranked
-       * weights can sum to less than 1: the shortfall is its positive part
-       * over the denominator, and equals `bailedOutSelfMs` over it unless a
+       * of, which is charged to no component. Its positive part is the
+       * ranking's `unattributed` candidate, with reason
+       * `bailed-out-reconciliation`, and equals `bailedOutSelfMs` unless a
        * bailed-out fiber's self time went negative, which a
        * `negative-self-time` note reports.
        */
@@ -168,20 +192,29 @@ export type CommitAttributionBasis =
        */
       readonly tier: 'profiler-mapped' | 'profiler-unmapped';
       readonly shortfall: ReactTierShortfall;
-      /** Samples with a stack inside the window, which is the denominator. */
+      /**
+       * Samples with a stack inside the window, as the trace holds them. The
+       * weights' denominator is this count with bursts collapsed, which each
+       * weight's confidence carries.
+       */
       readonly samplesInWindow: number;
       /**
-       * Of those, the samples charged to no candidate, which is why the ranked
-       * weights sum to `1 - unchargedSamples / samplesInWindow`. Mostly
-       * stacks that reach no rendered component's frame: React's own
-       * reconciliation and commit work, or whatever ran in the window before
-       * the render began. Also any whose innermost match was a name the
-       * `ambiguous-minified-name` note reports.
+       * Of those, the samples charged to no component: the ranking's
+       * `unattributed` candidate, with reason
+       * `no-rendered-component-on-stack`. Mostly stacks that reach no
+       * rendered component's frame: React's own reconciliation and commit
+       * work, or whatever ran in the window before the render began. Also any
+       * whose innermost match was a name the `ambiguous-minified-name` note
+       * reports.
        */
       readonly unchargedSamples: number;
     }
   | {
-      /** The hook named the components, and nothing measured their cost. */
+      /**
+       * The hook named the components, and nothing measured their cost. The
+       * ranking is one `unattributed` candidate holding the whole commit,
+       * with the components that rendered as its evidence.
+       */
       readonly tier: 'unattributed';
       readonly shortfall: ReactTierShortfall;
       readonly reason: 'no-profiler';
@@ -229,8 +262,9 @@ export interface CommitAttribution {
   readonly basis: CommitAttributionBasis;
   /**
    * The rendered components, one candidate per name, weighted by their share
-   * of the commit. Several fibers sharing a name, such as a list's rows, are
-   * one candidate with one evidence entry per fiber.
+   * of the commit, then whatever they do not account for as one
+   * `unattributed` candidate. Several fibers sharing a name, such as a list's
+   * rows, are one candidate with one evidence entry per fiber.
    */
   readonly causes: RankedCauses;
   readonly notes: readonly ComponentAttributionNote[];
@@ -238,6 +272,14 @@ export interface CommitAttribution {
 
 /** A non-empty list of evidence, as `CandidateCause` requires. */
 type Evidence = [CauseEvidence, ...CauseEvidence[]];
+
+/** Raw and independent sample counts, kept side by side. */
+interface SampleCounts {
+  /** Samples as the trace holds them. */
+  samples: number;
+  /** The same samples with bursts collapsed. See `independentSampleWeights`. */
+  independent: number;
+}
 
 /** One candidate's raw share before it becomes a weight, so commits can be merged. */
 interface Tally {
@@ -251,18 +293,79 @@ interface Tally {
   readonly evidence: Evidence;
 }
 
+/**
+ * The part of a commit no component is charged with, in the same unit as the
+ * commit's tallies, so that it merges across commits the way they do.
+ */
+interface Remainder {
+  readonly reason: UnattributedReason;
+  numerator: number;
+  readonly evidence: Evidence;
+}
+
+/**
+ * What a commit's numerators and denominator are counted in, which decides
+ * both what can be added together and what a weight's confidence rests on.
+ *
+ * - `fiber-self-time` — milliseconds of fiber self time. Measured.
+ * - `independent-samples` — samples in the commit's window, bursts collapsed.
+ *   An estimate.
+ * - `whole-commit` — one, for a commit nothing measured: the remainder is the
+ *   commit, and it is what is left by subtraction with no second signal.
+ */
+type ShareUnit = 'fiber-self-time' | 'independent-samples' | 'whole-commit';
+
 /** A commit's tallies, with the denominator they are shares of. */
 interface CommitTally {
   readonly basis: CommitAttributionBasis;
+  readonly unit: ShareUnit;
   readonly components: readonly CommitComponent[];
   readonly tallies: readonly Tally[];
+  /** `null` when the components account for everything. */
+  readonly remainder: Remainder | null;
   readonly denominator: number;
   readonly notes: readonly ComponentAttributionNote[];
 }
 
-/** The weight basis each tier's tallies are shares under. */
-function weightBasisOf(tier: AttributionTier): WeightBasis {
-  return tier === 'react-fiber-timings' ? 'fiber-self-time-share' : 'sample-share';
+/** The weight basis each unit's shares are quoted under. */
+function weightBasisOf(unit: ShareUnit): WeightBasis {
+  return unit === 'independent-samples' ? 'sample-share' : 'fiber-self-time-share';
+}
+
+/**
+ * The support behind a share of `numerator` in `denominator`, both in `unit`.
+ *
+ * Fiber self time is exact to the timing grid, which as a share is two
+ * coarsening steps over the denominator's milliseconds; with no denominator
+ * nothing is distinguishable, and the grid is the whole. A sample share
+ * carries its independent counts. A commit nothing measured is a subtraction
+ * that no profile was there to check.
+ */
+function supportOf(
+  unit: ShareUnit,
+  numerator: number,
+  denominator: number,
+): WeightSupport {
+  switch (unit) {
+    case 'fiber-self-time':
+      return {
+        kind: 'measured',
+        gridShare:
+          denominator > 0 ? Math.min(COARSENED_TIMING_TOLERANCE_MS / denominator, 1) : 1,
+      };
+    case 'independent-samples':
+      return {
+        kind: 'sampled',
+        independentSamples: numerator,
+        ofIndependentSamples: denominator,
+        ofMeasuredShare: 1,
+      };
+    case 'whole-commit':
+      return {
+        kind: 'subtraction',
+        check: { verdict: 'unchecked', reason: 'no-profiler' },
+      };
+  }
 }
 
 /**
@@ -326,12 +429,40 @@ function tallyFiberTimings(
   times: CommitRenderTimes,
   spans: readonly ReactSpan[],
   window: CommitSampleWindow,
-): { tallies: Tally[]; denominator: number } {
+): { tallies: Tally[]; remainder: Remainder | null; denominator: number } {
   const tallies = new Map<string, Tally>();
   const denominator = times.fibers.reduce(
     (sum, entry) => sum + Math.max(entry.selfMs, 0),
     0,
   );
+
+  /*
+   * The remainder: the positive self time of fibers React bailed out of,
+   * which is its reconciliation beneath components that did not render. Each
+   * such fiber is a piece of evidence, with the same timings a rendered one
+   * carries. 0ms on every timed corpus commit (development, 4x), so the
+   * candidate is absent there.
+   */
+  let remainder: Remainder | null = null;
+  for (const entry of times.fibers) {
+    if (didRender(entry.participation) || entry.selfMs <= 0) continue;
+    const evidence: CauseEvidence = {
+      kind: 'fiber-render-time',
+      componentName: entry.fiber.name,
+      actualDurationMs: entry.actualDurationMs,
+      selfDurationMs: entry.selfMs,
+    };
+    if (remainder === null) {
+      remainder = {
+        reason: 'bailed-out-reconciliation',
+        numerator: entry.selfMs,
+        evidence: [evidence],
+      };
+    } else {
+      remainder.numerator += entry.selfMs;
+      remainder.evidence.push(evidence);
+    }
+  }
 
   for (const entry of times.fibers) {
     if (!didRender(entry.participation)) continue;
@@ -379,7 +510,7 @@ function tallyFiberTimings(
     });
   }
 
-  return { tallies: [...tallies.values()], denominator };
+  return { tallies: [...tallies.values()], remainder, denominator };
 }
 
 /**
@@ -446,16 +577,30 @@ interface IndexedProfile {
    * served script) decoded.
    */
   readonly resolved: () => ResolvedProfile;
+  /**
+   * How much independent evidence each sample is, one weight per sample,
+   * computed on first use. See `independentSampleWeights`.
+   */
+  readonly independence: () => readonly number[];
 }
 
-/** The capture's profile with its name index, or `null` when there was no profiler. */
-function indexProfile(profile: ProfileTrace | null): IndexedProfile | null {
+/**
+ * The capture's profile with its name index, or `null` when there was no
+ * profiler. `alreadyResolved` is the same profile's resolution where a caller
+ * holds one, so that the maps are decoded once per capture.
+ */
+function indexProfile(
+  profile: ProfileTrace | null,
+  alreadyResolved?: ResolvedProfile,
+): IndexedProfile | null {
   if (profile === null) return null;
-  let resolved: ResolvedProfile | undefined;
+  let resolved = alreadyResolved;
+  let independence: readonly number[] | undefined;
   return {
     profile,
     sites: definitionSitesOf(profile),
     resolved: () => (resolved ??= resolveProfile(profile)),
+    independence: () => (independence ??= independentSampleWeights(profile)),
   };
 }
 
@@ -540,15 +685,23 @@ function sampledComponentSubject(
  *
  * The commit's tier is `commitProfilerTier`'s, and each candidate's is
  * `sampledComponentSubject`'s.
+ *
+ * Numerators and the denominator are independent samples, bursts collapsed,
+ * so that a burst in the window is one observation of whatever it caught. The
+ * raw counts are kept beside them, for the evidence and the basis. The
+ * remainder is the stacked samples charged to no component.
  */
 function tallySamples(
   components: readonly CommitComponent[],
-  { profile, sites, resolved }: IndexedProfile,
+  { profile, sites, resolved, independence }: IndexedProfile,
   window: CommitSampleWindow,
   provenance: CaptureProvenance,
 ): {
   tier: 'profiler-mapped' | 'profiler-unmapped';
   tallies: Tally[];
+  remainder: Remainder | null;
+  /** Independent stacked samples in the window: the weights' denominator. */
+  denominator: number;
   samplesInWindow: number;
   unchargedSamples: number;
   notes: ComponentAttributionNote[];
@@ -562,19 +715,27 @@ function tallySamples(
     fibersByName.set(component.name, fibers);
   }
 
-  const counts = new Map<string, number>();
-  let samplesInWindow = 0;
-  for (const sample of profile.samples) {
+  const counts = new Map<string, SampleCounts>();
+  const inWindow: SampleCounts = { samples: 0, independent: 0 };
+  const weights = independence();
+  for (const [index, sample] of profile.samples.entries()) {
     if (sample.stackId === null) continue;
     if (sample.atMs <= window.fromMs || sample.atMs > window.toMs) continue;
-    samplesInWindow += 1;
+    // One weight per sample, by `independentSampleWeights`' contract.
+    const independent = weights[index] ?? 1;
+    inWindow.samples += 1;
+    inWindow.independent += independent;
 
     const match = stackFrames(profile, sample.stackId).find(
       (frame) => frame.name !== null && fibersByName.has(frame.name),
     );
     if (match?.name == null) continue;
-    counts.set(match.name, (counts.get(match.name) ?? 0) + 1);
+    const count = counts.get(match.name) ?? { samples: 0, independent: 0 };
+    count.samples += 1;
+    count.independent += independent;
+    counts.set(match.name, count);
   }
+  const samplesInWindow = inWindow.samples;
 
   const tier = commitProfilerTier(fibersByName.keys(), sites, resolved);
 
@@ -584,6 +745,8 @@ function tallySamples(
     return {
       tier,
       tallies: [],
+      remainder: null,
+      denominator: 0,
       samplesInWindow,
       unchargedSamples: 0,
       notes: [{ kind: 'no-samples-in-window' }],
@@ -593,7 +756,7 @@ function tallySamples(
   const notes: ComponentAttributionNote[] = [];
   const tallies: Tally[] = [];
   const nameIsMinified = provenance.buildMode === 'production';
-  let chargedSamples = 0;
+  const charged: SampleCounts = { samples: 0, independent: 0 };
 
   for (const [name, fibers] of fibersByName) {
     const nameSites = sites.get(name) ?? [];
@@ -607,15 +770,17 @@ function tallySamples(
       });
     }
 
-    const samples = ambiguous ? 0 : (counts.get(name) ?? 0);
-    chargedSamples += samples;
+    const count = ambiguous ? undefined : counts.get(name);
+    const samples = count?.samples ?? 0;
+    charged.samples += samples;
+    charged.independent += count?.independent ?? 0;
 
     const resolution =
       !ambiguous && site !== undefined ? resolved().frames[site] : undefined;
     tallies.push({
       name,
       ...sampledComponentSubject(name, resolution, nameIsMinified),
-      numerator: samples,
+      numerator: count?.independent ?? 0,
       evidence: [
         {
           kind: 'profiler-samples',
@@ -638,13 +803,55 @@ function tallySamples(
     });
   }
 
+  const unchargedSamples = samplesInWindow - charged.samples;
   return {
     tier,
     tallies,
+    remainder:
+      unchargedSamples === 0
+        ? null
+        : {
+            reason: 'no-rendered-component-on-stack',
+            // Floored at 0: the two sums add the same weights in different
+            // orders, so they can differ by a float hair.
+            numerator: Math.max(inWindow.independent - charged.independent, 0),
+            evidence: [
+              {
+                kind: 'profiler-samples',
+                samples: unchargedSamples,
+                ofSamplesInWindow: samplesInWindow,
+                window: 'since-previous-commit',
+              },
+            ],
+          },
+    denominator: inWindow.independent,
     samplesInWindow,
-    unchargedSamples: samplesInWindow - chargedSamples,
+    unchargedSamples,
     notes,
   };
+}
+
+/**
+ * The remainder of a commit nothing measured: all of it. The components the
+ * hook saw render are its evidence, so they are named without any of them
+ * being given a share. `null` when the record does not say which fibers
+ * rendered, since a candidate needs evidence.
+ */
+function unmeasuredRemainder(components: readonly CommitComponent[]): Remainder | null {
+  const rendered = components.flatMap((component): CauseEvidence[] =>
+    component.participation !== 'not-recorded' && didRender(component.participation)
+      ? [
+          {
+            kind: 'fiber-rendered',
+            componentName: component.name,
+            participation: component.participation,
+          },
+        ]
+      : [],
+  );
+  const [first, ...rest] = rendered;
+  if (first === undefined) return null;
+  return { reason: 'no-profiler', numerator: 1, evidence: [first, ...rest] };
 }
 
 /** Picks the strongest tier a commit supports and tallies it there. */
@@ -665,26 +872,33 @@ function tallyCommit(
 
   if (timing.kind === 'timed') {
     const { times } = timing;
-    const { tallies, denominator } = tallyFiberTimings(
+    const { tallies, remainder, denominator } = tallyFiberTimings(
       times,
       signals.react.spans,
       window,
     );
     return {
       basis: { tier: 'react-fiber-timings', times },
+      unit: 'fiber-self-time',
       components,
       tallies,
+      remainder,
       denominator,
       notes: times.notes,
     };
   }
 
   if (profile === null) {
+    const remainder = unmeasuredRemainder(components);
     return {
       basis: { tier: 'unattributed', shortfall: timing.shortfall, reason: 'no-profiler' },
+      unit: 'whole-commit',
       components,
       tallies: [],
-      denominator: 0,
+      remainder,
+      // One commit, all of it the remainder; nothing to divide when the
+      // record names no rendered fiber to stand as its evidence.
+      denominator: remainder === null ? 0 : 1,
       notes: [],
     };
   }
@@ -697,32 +911,53 @@ function tallyCommit(
       samplesInWindow: sampled.samplesInWindow,
       unchargedSamples: sampled.unchargedSamples,
     },
+    unit: 'independent-samples',
     components,
     tallies: sampled.tallies,
-    denominator: sampled.samplesInWindow,
+    remainder: sampled.remainder,
+    denominator: sampled.denominator,
     notes: sampled.notes,
   };
 }
 
 /**
- * Turns tallies into ranked causes, each at its own tally's tier.
+ * Turns tallies into ranked causes, each at its own tally's tier, followed by
+ * the remainder as an `unattributed` candidate where there is one.
  *
- * A zero denominator gives every candidate a zero weight rather than a
- * division: a commit whose components all rendered in 0ms on the 100us grid
- * still names them, at no weight.
+ * `unit` is what the numerators and `denominator` are counted in, and decides
+ * each weight's basis and support. A zero denominator gives every candidate a
+ * zero weight rather than a division: a commit whose components all rendered
+ * in 0ms on the 100us grid still names them, at no weight. A remainder of
+ * nothing is omitted, like any zero-width slice.
  */
-function rankTallies(tallies: readonly Tally[], denominator: number): RankedCauses {
-  return rankCauses(
-    tallies.map((tally): CandidateCause => ({
-      subject: tally.subject,
-      weight: confidenceWeight(
-        denominator > 0 ? tally.numerator / denominator : 0,
-        weightBasisOf(tally.tier),
-      ),
-      tier: tally.tier,
-      evidence: tally.evidence,
-    })),
-  );
+function rankTallies(
+  tallies: readonly Tally[],
+  remainder: Remainder | null,
+  denominator: number,
+  unit: ShareUnit,
+): RankedCauses {
+  const weightOf = (numerator: number) =>
+    confidenceWeight(
+      denominator > 0 ? numerator / denominator : 0,
+      weightBasisOf(unit),
+      supportOf(unit, denominator > 0 ? numerator : 0, denominator),
+    );
+
+  const candidates = tallies.map((tally): CandidateCause => ({
+    subject: tally.subject,
+    weight: weightOf(tally.numerator),
+    tier: tally.tier,
+    evidence: tally.evidence,
+  }));
+  if (remainder !== null && remainder.numerator > 0) {
+    candidates.push({
+      subject: { kind: 'unattributed', reason: remainder.reason },
+      weight: weightOf(remainder.numerator),
+      tier: 'unattributed',
+      evidence: remainder.evidence,
+    });
+  }
+  return rankCauses(candidates);
 }
 
 /** The long frame a page-clock instant fell inside, or `null`. */
@@ -748,17 +983,24 @@ function frameAt(
  * `profiler-unmapped` when a profile exists, by whether the rendered
  * components' definition sites resolved through a source map, else
  * `unattributed`, with the shortfall named in every
- * degraded case. Weights are shares of this commit, not of any frame. Assumes
- * `commit` is one of `signals.react.commits`, though only its own fields are
- * read.
+ * degraded case. Weights are shares of this commit, not of any frame, and
+ * sum to 1: what the components do not account for is an explicit
+ * `unattributed` candidate. Assumes `commit` is one of
+ * `signals.react.commits`, though only its own fields are read. `resolved`
+ * is `resolveProfile(signals.profile)` where the caller already holds it.
  */
 export function attributeCommit(
   signals: CapturedSignals,
   commit: ReactCommit,
   sinceMs: number,
+  resolved?: ResolvedProfile,
 ): CommitAttribution {
-  return attributeInWindow(signals, indexProfile(signals.profile), commit, sinceMs)
-    .attribution;
+  return attributeInWindow(
+    signals,
+    indexProfile(signals.profile, resolved),
+    commit,
+    sinceMs,
+  ).attribution;
 }
 
 /**
@@ -782,7 +1024,7 @@ function attributeInWindow(
       sampleWindow,
       components: tally.components,
       basis: tally.basis,
-      causes: rankTallies(tally.tallies, tally.denominator),
+      causes: rankTallies(tally.tallies, tally.remainder, tally.denominator, tally.unit),
       notes: tally.notes,
     },
     tally,
@@ -888,18 +1130,20 @@ export type InteractionComponents =
  * reported beside the answer, and an interaction with none is still
  * attributed from its commits.
  *
- * Returns `null` when no interaction has that label.
+ * Returns `null` when no interaction has that label. `resolved` is
+ * `resolveProfile(signals.profile)` where the caller already holds it.
  */
 export function attributeInteractionComponents(
   signals: CapturedSignals,
   label: string,
+  resolved?: ResolvedProfile,
 ): InteractionComponents | null {
   const interaction = signals.interactions.find((candidate) => candidate.label === label);
   if (interaction === undefined) return null;
 
   const frames = framesOfInteraction(signals, label);
   const { commits } = signals.react;
-  const profile = indexProfile(signals.profile);
+  const profile = indexProfile(signals.profile, resolved);
 
   const attributed: CommitAttribution[] = [];
   const tallies: CommitTally[] = [];
@@ -938,15 +1182,6 @@ export function attributeInteractionComponents(
 }
 
 /**
- * What a commit's tallies are shares of, which decides what can be added
- * together: fiber self time at the fiber tier, samples at either profiler
- * tier, and nothing at all for an unattributed commit, which has no tallies.
- */
-function commitShareBasis(tier: CommitAttributionBasis['tier']): WeightBasis | null {
-  return tier === 'unattributed' ? null : weightBasisOf(tier);
-}
-
-/**
  * The least-mapped of a non-empty list of tiers, by `ATTRIBUTION_TIERS`'s
  * strongest-first order, so that a merge never claims more than its weakest
  * commit stood on.
@@ -972,18 +1207,25 @@ function weakestTier<Tier extends AttributionTier>(
  * merge takes the least-mapped tier among them, and each candidate keeps its
  * own. A fiber-time share and a sample share are different quantities and do
  * not merge. A name's subject is taken from the first commit that carried it.
+ *
+ * The commits' remainders merge the same way, into one `unattributed`
+ * candidate: summed numerators over the same summed denominator. Commits
+ * that share a unit share a remainder's reason, so there is one to carry.
+ * Merged commits nothing measured are a count of commits, every one of them
+ * unattributed.
  */
 function mergeTallies(commits: readonly CommitTally[]): MergedComponents | null {
   const [first, ...rest] = commits;
   if (first === undefined) return null;
-  const basis = commitShareBasis(first.basis.tier);
-  if (rest.some((commit) => commitShareBasis(commit.basis.tier) !== basis)) return null;
+  const { unit } = first;
+  if (rest.some((commit) => commit.unit !== unit)) return null;
   const tier = weakestTier([
     first.basis.tier,
     ...rest.map((commit) => commit.basis.tier),
   ]);
 
   const merged = new Map<string, Tally>();
+  let remainder: Remainder | null = null;
   let denominator = 0;
   for (const commit of commits) {
     denominator += commit.denominator;
@@ -996,9 +1238,19 @@ function mergeTallies(commits: readonly CommitTally[]): MergedComponents | null 
         tally.evidence,
       );
     }
+    if (commit.remainder === null) continue;
+    if (remainder === null) {
+      remainder = { ...commit.remainder, evidence: [...commit.remainder.evidence] };
+    } else {
+      remainder.numerator += commit.remainder.numerator;
+      remainder.evidence.push(...commit.remainder.evidence);
+    }
   }
 
-  return { tier, causes: rankTallies([...merged.values()], denominator) };
+  return {
+    tier,
+    causes: rankTallies([...merged.values()], remainder, denominator, unit),
+  };
 }
 
 /** One line of prose for a React-tier shortfall. */

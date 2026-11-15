@@ -8,7 +8,7 @@
  * what makes the captured corpus a test input rather than a fixture-shaped
  * special case.
  *
- * Five layers, in dependency order:
+ * Six layers, in dependency order:
  *
  * 1. **The records** — `loaf.ts`, `profiler.ts`, `react.ts`, bundled by
  *    `signals.ts` with the `provenance.ts` that says which build and throttle
@@ -20,7 +20,9 @@
  *    character offset and the line and column a source map is queried with.
  *    Both are exact and neither needs a sampled signal.
  * 3. **The answer's shape** — `attribution.ts`: ranked candidate causes, each
- *    with a weight, a tier and its evidence.
+ *    with a weight, a tier and its evidence. `confidence.ts` is how far a
+ *    weight can be trusted: whether it was measured, sampled or left by
+ *    subtraction, the range that leaves, and the level derived from both.
  * 4. **The React tier** — `component-attribution.ts`: which components
  *    rendered in a commit and their share of it, from fiber self times in
  *    development, and from hook names joined to sampled stacks where the
@@ -37,17 +39,25 @@
  *    attributed to one registration site: the profiler names the script
  *    their time was spent in, which LoAF cannot, and which third-party
  *    attribution would be built on.
+ * 6. **The whole answer** — `frame-attribution.ts` charges every millisecond
+ *    of a long frame to a candidate, naming each slice by the strongest
+ *    signal that can divide it and cross-checking the unattributed share
+ *    against the profiler's empty stacks. `capture-attribution.ts` is the
+ *    entry point: `attributeCapture` takes one capture's signals and returns
+ *    every frame and every interaction attributed, with what was missing and
+ *    what that cost.
  *
- * What is deliberately not here yet is the confidence model: nothing in this
- * package weighs one tier's answer against another's, or a commit against the
- * frame it landed in. That is built on the layers above, which are meant to be
- * checkable without it.
+ * What is deliberately not here is anything that merges two tiers' answers
+ * into one number. A component's share and a function's share of the same
+ * milliseconds sit side by side, each at its own tier and confidence, because
+ * adding them would count the time twice.
  */
 
 export {
   ATTRIBUTION_TIERS,
   confidenceWeight,
   describeTier,
+  describeUnattributedReason,
   rankCauses,
 } from './attribution.ts';
 export type {
@@ -58,12 +68,22 @@ export type {
   ConfidenceWeight,
   FunctionName,
   RankedCauses,
+  RankingLead,
   SampleWindowKind,
+  ScriptEntrySite,
   SourceLocation,
   UnattributedReason,
   UnmappedReason,
   WeightBasis,
 } from './attribution.ts';
+
+export { attributeCapture, describeDegradation } from './capture-attribution.ts';
+export type {
+  CaptureAttribution,
+  Degradation,
+  FunctionLevel,
+  InteractionAttribution,
+} from './capture-attribution.ts';
 
 export { charPositionAt, createScriptLineIndex, lineColumnAt } from './char-position.ts';
 export type { LineColumn, ScriptLineIndex } from './char-position.ts';
@@ -86,6 +106,26 @@ export type {
   MergedComponents,
 } from './component-attribution.ts';
 
+export {
+  CONFIDENCE_LEVELS,
+  confidenceLevelOf,
+  crossCheckEmptyStacks,
+  describeConfidence,
+  describeCrossCheck,
+  isLowerConfidence,
+  MIN_SAMPLES_TO_COMPARE_SHARES,
+  USABLE_SHARE_HALF_WIDTH,
+  weightRangeOf,
+  wilsonRange,
+} from './confidence.ts';
+export type {
+  ConfidenceLevel,
+  CrossCheck,
+  WeightConfidence,
+  WeightRange,
+  WeightSupport,
+} from './confidence.ts';
+
 export { commitRenderTimes, didRender, fiberParticipation } from './fiber-self-time.ts';
 export type {
   CommitRenderTimes,
@@ -96,6 +136,13 @@ export type {
   ReactTierShortfall,
   RenderedParticipation,
 } from './fiber-self-time.ts';
+
+export { attributeFrames, describeFrameNote } from './frame-attribution.ts';
+export type {
+  FrameAttribution,
+  FrameAttributionNote,
+  UnattributedShare,
+} from './frame-attribution.ts';
 
 export {
   chargesOfSlice,
@@ -144,18 +191,21 @@ export type {
 export {
   attributeScriptEntries,
   describeScriptEntry,
+  scriptEntrySiteKey,
+  scriptEntrySiteOf,
   scriptSlicePopulation,
 } from './script-entry-attribution.ts';
 export type {
   ScriptDisagreement,
   ScriptEntryAttribution,
-  ScriptEntrySite,
   ScriptSlice,
 } from './script-entry-attribution.ts';
 
 export {
+  independentSampleWeights,
   OBSERVED_SAMPLE_CADENCE_MS,
   profiledFramePosition,
+  SAMPLE_BURST_GAP_MS,
   SAMPLE_INTERVAL_FLOOR_MS,
   stackFrameIds,
   stackFrames,

@@ -38,7 +38,7 @@
  * **Clock.** Every `…Ms` value is page-clock `performance.now()` milliseconds.
  */
 
-import { describeTier } from './attribution.ts';
+import { describeTier, type ScriptEntrySite } from './attribution.ts';
 import { decomposeFrame, type FrameSlice } from './frame-decomposition.ts';
 import {
   attributeSampledFunctions,
@@ -85,19 +85,6 @@ export function scriptSlicePopulation(slices: readonly ScriptSlice[]): SamplePop
 }
 
 /**
- * What LoAF named for a script entry: the registration site of the entry
- * point, which is where a listener was added rather than whose code it ran.
- */
-export interface ScriptEntrySite {
-  /** `null` when Chrome reported no URL. */
-  readonly sourceUrl: string | null;
-  readonly sourceFunctionName: string | null;
-  readonly sourceCharPosition: number | null;
-  readonly invoker: string;
-  readonly invokerType: string;
-}
-
-/**
  * The profiler and LoAF disagreeing about whose script a LoAF entry's time was.
  *
  * LoAF names the script that *registered* the entry point, so wherever
@@ -140,8 +127,9 @@ export interface ScriptDisagreement {
  * production, all `vendorTrack`; the sixth development click's slice holds
  * none, its one sample sitting on the boundary that `scriptSlicePopulation`
  * gives to the next slice. Samples in a burst are not independent evidence,
- * and a confidence built on this answer must not count them as though they
- * were.
+ * so `profiler`'s weights are shares of independent samples, bursts collapsed:
+ * 5 of 5 in development and 5.9 of 6 in production, which is what each
+ * candidate's confidence is derived from. The raw counts stay on the evidence.
  */
 export interface ScriptEntryAttribution {
   /** Carried so that `durationMs` can be quoted with its build mode and throttle. */
@@ -160,7 +148,8 @@ export interface ScriptEntryAttribution {
   readonly disagreement: ScriptDisagreement | null;
 }
 
-function siteOf(slice: ScriptSlice): ScriptEntrySite {
+/** What LoAF named for the script entry a slice was cut from. */
+export function scriptEntrySiteOf(slice: ScriptSlice): ScriptEntrySite {
   const { script } = slice;
   return {
     sourceUrl: script.sourceUrl,
@@ -171,7 +160,11 @@ function siteOf(slice: ScriptSlice): ScriptEntrySite {
   };
 }
 
-function siteKey(site: ScriptEntrySite): string {
+/**
+ * A stable key for a site: everything LoAF reports about it. Two entries with
+ * the same key are the same registration site, as far as LoAF can tell.
+ */
+export function scriptEntrySiteKey(site: ScriptEntrySite): string {
   return JSON.stringify([
     site.sourceUrl,
     site.sourceFunctionName,
@@ -227,8 +220,8 @@ export function attributeScriptEntries(
   for (const frame of signals.frames) {
     for (const slice of decomposeFrame(frame).slices) {
       if (slice.kind !== 'script') continue;
-      const site = siteOf(slice);
-      const key = siteKey(site);
+      const site = scriptEntrySiteOf(slice);
+      const key = scriptEntrySiteKey(site);
       const group = groups.get(key) ?? { site, slices: [] };
       group.slices.push(slice);
       groups.set(key, group);

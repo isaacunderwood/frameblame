@@ -290,7 +290,30 @@ describe('spans/production: the profiler tier, named as such', () => {
       expect(commit.causes.causes.length).toBeGreaterThan(0);
       expect(new Set(namesOf(commit.causes))).toEqual(new Set(row.rendered));
       const minified = productionNamesFor(row);
+
+      /*
+       * Since step 5 the samples that reached no rendered component are in
+       * the ranking as an explicit `unattributed` candidate, so the weights
+       * sum to 1. `initial-mount` and `mount-toggle` have one, at 2 of 12 and
+       * 1 of 14 independent samples (production, 4x); the other three
+       * commits have none.
+       */
+      const remainders = commit.causes.causes.filter(
+        (cause) => cause.subject.kind === 'unattributed',
+      );
+      expect(remainders.length).toBeLessThanOrEqual(1);
+      for (const remainder of remainders) {
+        expect(remainder.tier).toBe('unattributed');
+        expect(remainder.subject).toEqual({
+          kind: 'unattributed',
+          reason: 'no-rendered-component-on-stack',
+        });
+      }
+      expect(remainders.length).toBe(basis.unchargedSamples > 0 ? 1 : 0);
+      expect(commit.causes.totalWeight).toBeCloseTo(1, 6);
+
       for (const cause of commit.causes.causes) {
+        if (cause.subject.kind === 'unattributed') continue;
         expect(cause.tier).toBe('profiler-mapped');
         expect(cause.weight.basis).toBe('sample-share');
         expect(cause.weight.fraction).toBeGreaterThan(0);
