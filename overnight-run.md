@@ -41,6 +41,20 @@ So write everything down as you go, and trust files over memory:
   ran against `corpus/` or from a test that passes, and the next section's review exists to catch
   the ones that came from neither. If you cannot verify a number, do not write it.
 
+## Models
+
+Run the orchestrator and every subagent on **Opus 5.5** (`claude-opus-5-5`) at **effort high**. Its
+default effort is `medium`, one level below what agentic work wants, so set it rather than inherit
+it. The reason for Opus over Fable 5.2 is the usage ceiling, not capability: Fable costs twice as
+much per token and takes longer turns, so it reaches the limit in roughly half the wall-clock time,
+and a loop that stalls at 3am loses the whole night. Steps 3 to 6 are execution against explicit
+criteria with a review pass behind each, which is not where the extra headroom pays.
+
+The exception is **step 5, the confidence model** — the only open design problem left. Spawn that
+one step's subagent with the `fable` model override, then go back to Opus for its refactor, review
+and fix cycle. If Fable is unavailable, do step 5 on Opus at effort `xhigh` and say so in
+`handoff.md`.
+
 ## Where things stand
 
 Steps 1 and 2 of `handoff.md` are built: the record types, the frame partition, the vocabulary for
