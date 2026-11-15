@@ -20,7 +20,7 @@
  *
  * What this module does not do: decide which component caused a frame, pair a
  * commit with a frame, or compute self time. Self time is the React tier's
- * arithmetic, in `component-attribution.ts`, over the parent links described
+ * arithmetic, in `fiber-self-time.ts`, over the parent links described
  * at `CommitComponents` — which a capture made before the collector recorded
  * them does not have.
  *

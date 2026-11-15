@@ -8,7 +8,7 @@
  * what makes the captured corpus a test input rather than a fixture-shaped
  * special case.
  *
- * Three layers, in dependency order:
+ * Four layers, in dependency order:
  *
  * 1. **The records** — `loaf.ts`, `profiler.ts`, `react.ts`, bundled by
  *    `signals.ts` with the `provenance.ts` that says which build and throttle
@@ -25,7 +25,8 @@
  *    rendered in a commit and their share of it, from fiber self times in
  *    development, and from hook names joined to sampled stacks where the
  *    timings are absent. A commit is attributed whether or not a long frame
- *    surrounds it.
+ *    surrounds it. The self times themselves are `fiber-self-time.ts`, which
+ *    reads nothing but the commit record.
  *
  * What is deliberately not here yet is the rest of the join: nothing in this
  * package resolves a source map, splits a frame's script slice among causes,
@@ -53,33 +54,34 @@ export type {
 } from './attribution.ts';
 
 export { charPositionAt, createScriptLineIndex, lineColumnAt } from './char-position.ts';
+export type { LineColumn, ScriptLineIndex } from './char-position.ts';
 
 export {
   attributeCommit,
   attributeInteractionComponents,
-  commitRenderTimes,
   describeCommitBasis,
   describeComponentNote,
   describeShortfall,
-  didRender,
-  fiberParticipation,
 } from './component-attribution.ts';
 export type {
   CommitAttribution,
   CommitAttributionBasis,
   CommitComponent,
+  CommitSampleWindow,
+  ComponentAttributionNote,
+  InteractionComponents,
+} from './component-attribution.ts';
+
+export { commitRenderTimes, didRender, fiberParticipation } from './fiber-self-time.ts';
+export type {
   CommitRenderTimes,
   CommitRenderTiming,
-  CommitSampleWindow,
   CommitTimingNote,
-  ComponentAttributionNote,
   FiberParticipation,
   FiberSelfTime,
-  InteractionComponents,
   ReactTierShortfall,
   RenderedParticipation,
-} from './component-attribution.ts';
-export type { LineColumn, ScriptLineIndex } from './char-position.ts';
+} from './fiber-self-time.ts';
 
 export {
   chargesOfSlice,

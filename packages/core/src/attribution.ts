@@ -272,7 +272,7 @@ export type CauseEvidence =
       readonly actualDurationMs: number;
       /**
        * `actualDurationMs` minus the in-commit children's, signed — see
-       * `component-attribution.ts` — or `null` where the capture could not
+       * `fiber-self-time.ts` — or `null` where the capture could not
        * support the subtraction. See `react.ts`.
        */
       readonly selfDurationMs: number | null;

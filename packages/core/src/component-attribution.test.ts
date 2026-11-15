@@ -8,6 +8,10 @@
  * fits React 19.3.1. This file says it survives the inputs React has not
  * happened to produce in the corpus yet.
  *
+ * Both halves of the tier are tested here, because they share these
+ * builders: `fiber-self-time.ts`'s participation and self-time arithmetic, and
+ * `component-attribution.ts`'s ranking on top of it.
+ *
  * Figures quoted in comments are from the corpus, with the build mode and
  * throttle rate they were measured under. The synthetic durations in the
  * builders are not measurements.
@@ -18,10 +22,9 @@ import { describe, expect, it } from 'vitest';
 import {
   attributeCommit,
   attributeInteractionComponents,
-  commitRenderTimes,
   describeCommitBasis,
-  fiberParticipation,
 } from './component-attribution.ts';
+import { commitRenderTimes, fiberParticipation } from './fiber-self-time.ts';
 import type { LongAnimationFrame } from './loaf.ts';
 import type { ProfileTrace } from './profiler.ts';
 import type { BuildMode } from './provenance.ts';
