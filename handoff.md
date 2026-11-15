@@ -162,11 +162,13 @@ attribution is unavailable at any sample count.
 
 **Done when** `derive-in-render` resolves to `OrderTable.tsx` line 36 as the top-ranked line in
 both build modes, with 60%+ of in-frame `OrderTable` samples inside the declared range 34–36
-(measured 76% development, 83% production).
+(measured 76% development, 83% production; those are v0.2-era figures, from `findings.md`, and match
+neither the previous corpus nor the current one).
 *Orchestrator's note, 2026-11-15 overnight run:* the v0.3 re-capture left production with long
 frames on only 2 of 24 presses, so in-frame production `OrderTable` samples number 3, and this
 criterion cannot be met as written. The step 4 suite therefore asserts the 60% floor over the
-replay, meaning every sample inside the drive's steps: 70.7% of 92 samples in development and 83.6%
+replay, meaning every sample inside the drive's steps: 70.7% of the 92 replay samples charged to `OrderTable.tsx` in development (of 96 stacked
+replay samples) and 83.6%
 of 67 in production, 4×. It reports the in-frame share beside that without asserting it. The
 reason is the settled rule that the aggregate line histogram is the stable quantity and long-frame
 counts are not. See Questions for the morning; and `vendor-listener` attributes its vendor slice to
@@ -419,7 +421,7 @@ React 19.3.1 line citations and the LoAF spec reading. Its ten findings, and wha
    does: the test count, the frame count, the corpus size, the spans `App` arithmetic, the
    presentation gap, and step 5's cross-check bounds. Step 5's agent reads those bounds as its
    targets, so they had to be current.
-4. **Partly accepted.** The derive-in-render replay floor of 0.6 sits only 0.17 standard errors
+4. **Partly accepted.** The derive-in-render replay floor of 0.6 sits only 0.16 standard errors
    below the previous capture's 60.8% of 102. The current capture's 70.7% is 2.25 standard errors
    above it. (An earlier version of this note said "about two standard errors" for the first gap;
    the fix pass corrected the arithmetic.) The review proposed swapping it for a plurality test or
@@ -655,13 +657,70 @@ Choices made without a human, each the conservative option:
 7. **Dropped from the vocabulary:** a `not-resolved` unmapped reason that nothing produced.
    `CauseSubject`'s `third-party-script` variant is still unused and was left alone.
 
+### Step 4 cycle — review findings and the orchestrator's decisions
+
+The refactor is committed as `4810fc0`. The review ran as two parallel cold reviewers, by the user's
+orchestration change. The figures reviewer checked every new number with its own scripts (raw JSON
+plus `@jridgewell/trace-mapping`, no engine). Everything reproduced except three items, listed
+below. **No figure was fabricated**, but one measured claim was wrong. Both reviewers found it
+independently.
+
+**From both reviewers.** The `source-map.ts` bias comment, and `findings.md` point 4 behind it,
+said `GREATEST_LOWER_BOUND` and `LEAST_UPPER_BOUND` resolve to the same original position. At the
+converted 0-based column they disagree on every frame: 0 of 27 in development and 0 of 19 in
+production for `derive-in-render`, and 117 of 117 across `derive-in-render` and `spans`. For the
+culprit, GLB gives `36:5` (`sort`) and LUB gives `36:11` (`a`). The claim holds only at the
+unconverted column, so point 4 was measured with the off-by-one. **Accepted:** the comment now
+says GLB is *required*, and `findings.md` gets an appended correction that keeps the original
+text as history. This is the same class of error the night exists to catch: a conclusion that
+lost its reason.
+
+**Code reviewer (C), figures reviewer (F):**
+- **C2, accepted.** The comment claiming a malformed `mappings` string throws is false, because
+  `TraceMap` decodes leniently and resolves garbage silently. The comment is reworded. Also
+  accepted is the cheap sanity check: an original line past the source's line count resolves to
+  `no-mapping-at-position`. Condition: no corpus figure moves.
+- **C3, accepted.** An anonymous frame takes the map's `name` only when the profiler names the
+  function, so an anonymous callback can no longer inherit a neighbour's identifier. Latent: the
+  corpus has no such frame.
+- **C4, accepted.** `mergeTallies` refused to merge `profiler-mapped` with `profiler-unmapped`.
+  Both are sample shares, so they now merge, and the merge takes the least-mapped tier.
+- **C5, C6, C7, C8, accepted** as wording. "Names come from the source map" becomes conditional.
+  "Third-party attribution" becomes "names the script the time was spent in". The
+  `ScriptDisagreement` doc records that it is blind inside one bundle and noisy on a dev server.
+  "Line 49's cost" becomes "the `.map` callback defined on line 49", and the test titles change to
+  match. `describeFunctionAttribution` names only the tiers actually reached, and the local
+  `window` is renamed.
+- **C9, accepted as a comment only.** The half-open slice end is a tie-break, and its one measured
+  case, the `vendorTrack` sample at 3757.2ms, points the other way. The comment says so. Behaviour
+  is kept, because any tie-break is arbitrary and this one is at least consistent.
+- **C10, C11, C12, C13, accepted.**
+  - `FrameResolution` gets `generated: LineColumn` in both variants, plus `definedAt`.
+  - `script-entry-attribution.ts` splits out of `line-attribution.ts`.
+  - The tier is derived from `throughSourceMap`.
+  - There is one `generatedSiteKey`.
+- **C14, accepted** as a recorded note: `UnmappedReason` will need a "not attempted" member when
+  `forcedBy` is first built.
+- **F2, accepted.** In development, 9 of the vendor's 13 samples fall in a 1.1ms burst on the first
+  click; in production it is 9 of 14. After the first click the evidence is 4/4 in development and
+  5/5 in production. The comments now say so. **Carried to step 5:** burst samples are not
+  independent, and the confidence model must not count them as such.
+- **F3, accepted.** "React's 3MB development map" becomes "1.7MB map, for a 3.1MB served script".
+- **F4, accepted.** `expect(entry.slices).toHaveLength(6)` is a long-frame count, which is banned.
+  It becomes a non-empty check plus a per-slice check that each URL ends in `app.js`.
+- **F5, F7, accepted.** The out-of-window explanation now covers all three cases, and the build
+  mode is added to the "12ms slice" figure.
+- **F6, F8, done by the orchestrator in this file.** 0.17 becomes 0.16 standard errors, and the
+  replay note says "92 of the replay's 96 stacked samples charged to `OrderTable.tsx`". The
+  done-when's "(measured 76%/83%)" is marked as a v0.2-era figure.
+
 ## Questions for the morning
 
 - **Should the derive-in-render histogram narrative live only in `findings.md`, with the README,
   the ground truth and the tests citing it?** It is currently told in six places. Not consolidated
   tonight, because doing so means cutting measurement prose in an unattended run.
 - **Should the replay floor of 0.6 stay at step 4's declared 60%?** One capture measured 60.8% of 102, only
-  0.17 standard errors above it, so a future re-capture may flap. Kept at 0.6, with the
+  0.16 standard errors above it, so a future re-capture may flap. Kept at 0.6, with the
   standard error noted beside it.
 - **Step 4's "60%+ of in-frame `OrderTable` samples" is now measured over the replay, every sample
   inside the drive's steps, instead of inside long frames.** In-frame production holds 3 samples
