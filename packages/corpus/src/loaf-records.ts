@@ -14,7 +14,11 @@
  * fields that partition is computed from mean what their names say.
  */
 
-import type { FrameRenderingUpdate, FrameScript, LongAnimationFrame } from '@frameblame/core';
+import type {
+  FrameRenderingUpdate,
+  FrameScript,
+  LongAnimationFrame,
+} from '@frameblame/core';
 
 import type { CorpusRun } from './corpus.ts';
 import {
@@ -77,7 +81,9 @@ function readScript(serialised: JsonObject, projected: Json | undefined): FrameS
     sourceLine: nullableNumberAt(projected, ['sourceLine']),
     sourceColumn: nullableNumberAt(projected, ['sourceColumn']),
     pauseDurationMs: numberAt(serialised, ['pauseDuration']),
-    forcedStyleAndLayoutDurationMs: numberAt(serialised, ['forcedStyleAndLayoutDuration']),
+    forcedStyleAndLayoutDurationMs: numberAt(serialised, [
+      'forcedStyleAndLayoutDuration',
+    ]),
     forcedStyleDurationMs: forcedSplitHalf('forcedStyleDuration'),
     forcedLayoutDurationMs: forcedSplitHalf('forcedLayoutDuration'),
     windowAttribution: stringAt(serialised, ['windowAttribution']),

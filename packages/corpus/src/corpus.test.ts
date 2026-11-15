@@ -81,9 +81,9 @@ describe('the corpus', () => {
          * that one of them read alone still carries it, and they must agree —
          * a mismatch would mean two captures had been mixed in one directory.
          */
-        const envelopes = (['run', 'loaf', 'profile', 'react', 'sourceWindows'] as const).map(
-          (key) => envelopeOf(run, key),
-        );
+        const envelopes = (
+          ['run', 'loaf', 'profile', 'react', 'sourceWindows'] as const
+        ).map((key) => envelopeOf(run, key));
 
         for (const envelope of envelopes) {
           expect(envelope.fixture).toBe(fixture);
@@ -123,9 +123,13 @@ describe('ground truth', () => {
        * to be attributed "at its declared tier" against.
        */
       const declarations = collectTierDeclarations(loadGroundTruth(fixture));
-      expect(declarations.length, 'a ground truth that declares no tier').toBeGreaterThan(0);
+      expect(declarations.length, 'a ground truth that declares no tier').toBeGreaterThan(
+        0,
+      );
 
-      const malformed = declarations.map(checkTierDeclaration).filter((issue) => issue !== null);
+      const malformed = declarations
+        .map(checkTierDeclaration)
+        .filter((issue) => issue !== null);
       expect(malformed.join('\n')).toBe('');
     });
   }

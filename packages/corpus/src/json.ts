@@ -130,7 +130,10 @@ export function nullableNumberAt(value: Json | undefined, path: JsonPath): numbe
 }
 
 /** As `nullableNumberAt`, for a boolean. */
-export function nullableBooleanAt(value: Json | undefined, path: JsonPath): boolean | null {
+export function nullableBooleanAt(
+  value: Json | undefined,
+  path: JsonPath,
+): boolean | null {
   return nullableAt(value, path, asBoolean);
 }
 

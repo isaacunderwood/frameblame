@@ -20,7 +20,10 @@ spike/out/
 # suite. Machine-written and large; reformatting it would produce an enormous
 # diff that says nothing and would make the dumps differ from the run
 # directories they were copied from.
-corpus/
+# Anchored to the root: a bare `corpus/` matches a directory of that name at
+# any depth, and so also silently exempted `packages/corpus`, the source that
+# reads it.
+/corpus/
 
 # Preserved exactly as run — see spike/archive/README.md.
 spike/archive/

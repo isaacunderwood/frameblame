@@ -34,7 +34,14 @@ function runWith(files: Partial<CorpusRun['files']>): CorpusRun {
     fixture: 'synthetic',
     mode: 'development',
     dir: '/nonexistent',
-    files: { run: null, loaf: null, profile: null, react: null, sourceWindows: null, ...files },
+    files: {
+      run: null,
+      loaf: null,
+      profile: null,
+      react: null,
+      sourceWindows: null,
+      ...files,
+    },
   };
 }
 
@@ -101,7 +108,11 @@ describe('fiber parent links', () => {
     const carried = { flags: 1, hasAlternate: true, carriedOver: true };
     const [commit] = commitsOf(
       [
-        fiber('App', { id: 0, parentId: null }, { flags: 0, hasAlternate: true, carriedOver: false }),
+        fiber(
+          'App',
+          { id: 0, parentId: null },
+          { flags: 0, hasAlternate: true, carriedOver: false },
+        ),
         fiber('Stale', { id: 1, parentId: 0 }, carried),
       ],
       { truncated: true },
@@ -122,13 +133,17 @@ describe('fiber parent links', () => {
   it('reads linkage off the commit, so an empty recorded commit is still recorded', () => {
     const [commit] = commitsOf([], LINKED);
 
-    expect(commit?.components).toEqual({ linkage: 'recorded', truncated: false, fibers: [] });
+    expect(commit?.components).toEqual({
+      linkage: 'recorded',
+      truncated: false,
+      fibers: [],
+    });
   });
 
   it('refuses links with no render evidence beside them, naming the full path', () => {
-    expect(() => commitsOf([fiber('App', { id: 0, parentId: null }, {})], LINKED)).toThrow(
-      'commits.0.components.0.flags is undefined, expected a number',
-    );
+    expect(() =>
+      commitsOf([fiber('App', { id: 0, parentId: null }, {})], LINKED),
+    ).toThrow('commits.0.components.0.flags is undefined, expected a number');
   });
 
   it('refuses a linked fiber with no parentId key, which is a missing link rather than a root', () => {
@@ -171,7 +186,9 @@ describe('fiber parent links', () => {
   it('refuses an unrecorded commit with a fiber that carries links', () => {
     expect(() =>
       commitsOf([fiber('App', null), fiber('Child', { id: 1, parentId: 0 })]),
-    ).toThrow(/commits\.0\.components\.1\.id is present, but the commit carries no `truncated`/);
+    ).toThrow(
+      /commits\.0\.components\.1\.id is present, but the commit carries no `truncated`/,
+    );
   });
 
   it('refuses ids that break the scheme the self-time subtraction trusts', () => {
@@ -185,7 +202,9 @@ describe('fiber parent links', () => {
         [fiber('App', { id: 0, parentId: 1 }), fiber('Child', { id: 1, parentId: 0 })],
         LINKED,
       ),
-    ).toThrow(/commits\.0\.components\.0\.parentId: parentId 1 does not name an earlier fiber/);
+    ).toThrow(
+      /commits\.0\.components\.0\.parentId: parentId 1 does not name an earlier fiber/,
+    );
   });
 });
 
@@ -224,7 +243,9 @@ describe('the forced style and layout split', () => {
                 paintTime: 60,
                 scripts: [{ ...script, ...serialisedSplit }],
               },
-              scripts: [{ ...script, sourceLine: null, sourceColumn: null, ...projectedSplit }],
+              scripts: [
+                { ...script, sourceLine: null, sourceColumn: null, ...projectedSplit },
+              ],
             },
           ],
         },
@@ -234,7 +255,10 @@ describe('the forced style and layout split', () => {
   }
 
   it('is absent, not zero, when neither copy of the entry carries it', () => {
-    const script = scriptOf({}, { forcedStyleDuration: null, forcedLayoutDuration: null });
+    const script = scriptOf(
+      {},
+      { forcedStyleDuration: null, forcedLayoutDuration: null },
+    );
 
     expect(script?.forcedStyleDurationMs).toBeNull();
     expect(script?.forcedLayoutDurationMs).toBeNull();

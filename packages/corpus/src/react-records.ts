@@ -96,7 +96,9 @@ function readComponents(root: Json, commitPath: JsonPath): CommitComponents {
   const truncated = get(root, [...commitPath, 'truncated']);
   if (truncated === undefined) {
     for (const fiberPath of fiberPaths) {
-      const found = LINKAGE_KEYS.find((key) => get(root, [...fiberPath, key]) !== undefined);
+      const found = LINKAGE_KEYS.find(
+        (key) => get(root, [...fiberPath, key]) !== undefined,
+      );
       if (found !== undefined) {
         throw new Error(
           `${[...fiberPath, found].join('.')} is present, but the commit carries no ` +
@@ -104,7 +106,10 @@ function readComponents(root: Json, commitPath: JsonPath): CommitComponents {
         );
       }
     }
-    return { linkage: 'unrecorded', fibers: fiberPaths.map((fiberPath) => readFiber(root, fiberPath)) };
+    return {
+      linkage: 'unrecorded',
+      fibers: fiberPaths.map((fiberPath) => readFiber(root, fiberPath)),
+    };
   }
 
   return {
@@ -141,7 +146,10 @@ function readLinkedFiber(root: Json, path: JsonPath, index: number): LinkedFiber
     throw new Error(`${parentPath.join('.')} is undefined, expected a number or null`);
   }
   const parentId = nullableNumberAt(root, parentPath);
-  if (parentId !== null && !(Number.isInteger(parentId) && parentId >= 0 && parentId < id)) {
+  if (
+    parentId !== null &&
+    !(Number.isInteger(parentId) && parentId >= 0 && parentId < id)
+  ) {
     throw new Error(
       `${parentPath.join('.')}: parentId ${String(parentId)} does not name an earlier fiber ` +
         'in the commit',
@@ -252,23 +260,31 @@ export function reactOf(run: CorpusRun): ReactSignals {
     });
   }
 
-  const spans: ReactSpan[] = arrayAt(run.files.react, ['measures']).map((entry, index) => {
-    const measure = asRecord(entry, ['measures', index]);
-    const name = stringAt(measure, ['name']);
-    const startTimeMs = numberAt(measure, ['startTime']);
-    const durationMs = numberAt(measure, ['duration']);
-    const properties = readSpanProperties(get(measure, ['detail']));
+  const spans: ReactSpan[] = arrayAt(run.files.react, ['measures']).map(
+    (entry, index) => {
+      const measure = asRecord(entry, ['measures', index]);
+      const name = stringAt(measure, ['name']);
+      const startTimeMs = numberAt(measure, ['startTime']);
+      const durationMs = numberAt(measure, ['duration']);
+      const properties = readSpanProperties(get(measure, ['detail']));
 
-    return name.startsWith(COMPONENT_SPAN_PREFIX)
-      ? {
-          kind: 'component',
-          componentName: name.slice(COMPONENT_SPAN_PREFIX.length),
-          startTimeMs,
-          durationMs,
-          changedProps: properties,
-        }
-      : { kind: 'phase', phase: name, startTimeMs, durationMs, originator: readOriginator(properties) };
-  });
+      return name.startsWith(COMPONENT_SPAN_PREFIX)
+        ? {
+            kind: 'component',
+            componentName: name.slice(COMPONENT_SPAN_PREFIX.length),
+            startTimeMs,
+            durationMs,
+            changedProps: properties,
+          }
+        : {
+            kind: 'phase',
+            phase: name,
+            startTimeMs,
+            durationMs,
+            originator: readOriginator(properties),
+          };
+    },
+  );
 
   return { hookInstalled, commits, spans };
 }

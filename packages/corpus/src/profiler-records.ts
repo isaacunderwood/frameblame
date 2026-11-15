@@ -109,7 +109,11 @@ function readResources(profile: Json, path: JsonPath): ScriptResource[] {
     const error = get(source, ['error']);
 
     const origin: SourceMapOrigin | null =
-      from === null ? null : from === 'inline' ? { kind: 'inline' } : { kind: 'external', url: from };
+      from === null
+        ? null
+        : from === 'inline'
+          ? { kind: 'inline' }
+          : { kind: 'external', url: from };
 
     return {
       url,
