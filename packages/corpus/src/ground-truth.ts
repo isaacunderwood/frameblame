@@ -18,12 +18,26 @@
  * how similar they are. What they do share is a convention: a line number and
  * its `expectedSourceText`, inside the scope of a `sourceFile`.
  *
- * The module reads source files and compares strings. It knows nothing about
- * frames, attribution or what any particular fixture claims.
+ * The second convention is the tier a claim is made at. A ground truth states
+ * it in prose — "React DevTools hook plus fiber actualDuration", "the
+ * profiler" — and, beside the prose, as a `declaredTier`: an object keyed by
+ * build mode whose values are the engine's own `AttributionTier` names. The
+ * accuracy suite asserts the engine's answer against that, so the names are
+ * checked here against the engine's list before anything is asserted with
+ * them. A misspelt tier would otherwise fail as a wrong attribution, which is
+ * the same misdirection a drifted line number causes. A build mode a
+ * declaration leaves out is one the fixture makes no claim about, and reads as
+ * `null` rather than as a default.
+ *
+ * The module reads source files, compares strings and checks tier names
+ * against the engine's vocabulary. It knows nothing about frames or about what
+ * the engine answers.
  */
 
-import { readRepoFile } from './corpus.ts';
-import { isJsonArray, isJsonRecord, type Json } from './json.ts';
+import { ATTRIBUTION_TIERS, type AttributionTier } from '@frameblame/core';
+
+import { BUILD_MODES, type BuildMode, readRepoFile } from './corpus.ts';
+import { get, isJsonArray, isJsonRecord, type Json, type JsonPath } from './json.ts';
 
 /** One `line` plus `expectedSourceText` pair, with the file it applies to. */
 export interface SourceAnchor {
@@ -131,4 +145,114 @@ export function checkSourceAnchor(anchor: SourceAnchor): string | null {
   }
 
   return null;
+}
+
+/** One `declaredTier` a ground truth makes, as written. */
+export interface TierDeclaration {
+  /** Where in the ground truth it was declared, for a legible failure. */
+  readonly declaredAt: string;
+  /** Unchecked: `checkTierDeclaration` says whether it is well formed. */
+  readonly value: Json;
+}
+
+/**
+ * Collects every `declaredTier` a ground truth makes, wherever it sits.
+ *
+ * Structural, like `collectSourceAnchors`: a declaration sits beside the claim
+ * it qualifies — a line range, a scenario's correct attribution, one slice's
+ * recoverable owner — so there is no one place to look for them.
+ */
+export function collectTierDeclarations(groundTruth: Json): TierDeclaration[] {
+  const declarations: TierDeclaration[] = [];
+
+  function walk(node: Json, path: string): void {
+    if (isJsonArray(node)) {
+      node.forEach((child, index) => {
+        walk(child, `${path}[${String(index)}]`);
+      });
+      return;
+    }
+    if (!isJsonRecord(node)) return;
+
+    const declared = node.declaredTier;
+    if (declared !== undefined) {
+      declarations.push({ declaredAt: `${path}.declaredTier`, value: declared });
+    }
+    for (const [key, child] of Object.entries(node)) {
+      if (key !== 'declaredTier') walk(child, `${path}.${key}`);
+    }
+  }
+
+  walk(groundTruth, '');
+  return declarations;
+}
+
+/** A declaration read into the engine's vocabulary, or what is wrong with it. */
+type ParsedTierDeclaration =
+  | { readonly ok: true; readonly byMode: ReadonlyMap<BuildMode, AttributionTier> }
+  | { readonly ok: false; readonly problem: string };
+
+/**
+ * Reads a `declaredTier` value: an object with at least one build mode as a
+ * key, each naming a tier in `ATTRIBUTION_TIERS`. Anything else is a defect
+ * in the ground truth, reported rather than guessed around.
+ */
+function parseTierDeclaration(value: Json): ParsedTierDeclaration {
+  if (!isJsonRecord(value)) {
+    return { ok: false, problem: 'is not an object keyed by build mode' };
+  }
+
+  const byMode = new Map<BuildMode, AttributionTier>();
+  for (const [key, tier] of Object.entries(value)) {
+    const mode = BUILD_MODES.find((candidate) => candidate === key);
+    if (mode === undefined) {
+      return {
+        ok: false,
+        problem: `names ${JSON.stringify(key)}, which is not a build mode (${BUILD_MODES.join(', ')})`,
+      };
+    }
+    const known = ATTRIBUTION_TIERS.find((candidate) => candidate === tier);
+    if (known === undefined) {
+      return {
+        ok: false,
+        problem:
+          `${key}: ${JSON.stringify(tier)} is not one of the engine's tiers ` +
+          `(${ATTRIBUTION_TIERS.join(', ')})`,
+      };
+    }
+    byMode.set(mode, known);
+  }
+
+  if (byMode.size === 0) return { ok: false, problem: 'declares no build mode' };
+  return { ok: true, byMode };
+}
+
+/** Returns `null` if the declaration is well formed, or a message saying what is wrong. */
+export function checkTierDeclaration(declaration: TierDeclaration): string | null {
+  const parsed = parseTierDeclaration(declaration.value);
+  return parsed.ok ? null : `${declaration.declaredAt} ${parsed.problem}`;
+}
+
+/**
+ * The tier a ground truth declares, at `path`, for one build mode.
+ *
+ * `path` names the object that carries the `declaredTier`, not the
+ * declaration itself. Returns `null` when the declaration leaves `mode` out,
+ * which means the fixture makes no claim about that build. Throws when there
+ * is no declaration at `path` or it is malformed, because a test that asked
+ * for a tier the ground truth does not hold has the wrong path, not a weaker
+ * claim.
+ */
+export function declaredTierAt(
+  groundTruth: Json,
+  path: JsonPath,
+  mode: BuildMode,
+): AttributionTier | null {
+  const where = [...path, 'declaredTier'].join('.');
+  const value = get(groundTruth, [...path, 'declaredTier']);
+  if (value === undefined) throw new Error(`no declaredTier at ${where}`);
+
+  const parsed = parseTierDeclaration(value);
+  if (!parsed.ok) throw new Error(`${where} ${parsed.problem}`);
+  return parsed.byMode.get(mode) ?? null;
 }

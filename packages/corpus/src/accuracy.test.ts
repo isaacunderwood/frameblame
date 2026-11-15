@@ -1,33 +1,54 @@
 /**
- * The engine's entry point and its confidence model, against the captured
- * corpus.
+ * The accuracy suite: every fixture, in both build modes, attributed by the
+ * engine to its declared culprit at its declared tier, with the confidence the
+ * evidence earns.
  *
- * Step 5's three claims, each asserted on what `attributeCapture` returns for
- * a capture's signals and nothing else:
+ * Every assertion is made on what `attributeCapture` returns for a capture's
+ * signals, and every expectation is read from the fixture's ground truth:
+ * the culprit from its `expected` block, the tier from its `declaredTier`
+ * (checked against the engine's vocabulary in `corpus.test.ts`). The
+ * confidence levels are the engine's own rules under the step 5 decisions,
+ * asserted as they stand; see `handoff.md`'s Questions for the morning.
  *
- * 1. Every fixture is attributed to its declared culprit at its declared
- *    tier: `derive-in-render` to `OrderTable` and the `.sort` callback,
- *    `spans` to the components that rendered, `innerhtml-rebuild` to an
- *    unattributed share and to forced style and layout, `vendor-listener` to
- *    three slices with `vendor.js` owning the second.
- * 2. Confidence degrades rather than guesses where the evidence is thin: a
- *    handful of samples yields a wide range and an unresolved lead, a burst
- *    of samples counts once, and an answer may only be wrong where it says it
- *    is unsure.
- * 3. `innerhtml-rebuild` reports a large unattributed share, cross-checked
- *    against the profiler's empty stacks, rather than a confident wrong
- *    answer.
+ * Per fixture and build mode:
  *
- * And the degradation tiers the corpus cannot show, because every capture has
- * all three signals: each is produced by removing a signal from a real
- * capture and asserting what the answer falls back to.
+ * | fixture, mode              | culprit (ground truth)                           | tier                             | confidence |
+ * | -------------------------- | ------------------------------------------------ | -------------------------------- | ---------- |
+ * | derive-in-render, dev      | component `OrderTable` (`expected.component`)    | react-fiber-timings (undeclared) | high       |
+ * | derive-in-render, prod     | component `OrderTable`                           | profiler-mapped (undeclared)     | moderate   |
+ * | derive-in-render, both     | function on line 36, `.sort`, in 34-36           | profiler-mapped (`lineRange`)    | moderate   |
+ * | spans, dev                 | per interaction, the components that rendered    | react-fiber-timings (declared)   | high       |
+ * | spans, prod                | the same names, at their declared sites          | profiler-mapped (undeclared)     | low        |
+ * | innerhtml-rebuild, both    | unforced: an unattributed share above the floor  | unattributed (declared)          | moderate   |
+ * | innerhtml-rebuild, both    | forced: forced style and layout, to its script   | loaf-script-registration (decl.) | high       |
+ * | vendor-listener, both      | three slices in declared rank, forced layout top | (no tier declared for the rank)  | high       |
+ * | vendor-listener, both      | the vendor slice's owner, `vendorTrack`          | profiler-unmapped (declared)     | low        |
+ *
+ * "Undeclared" means the ground truth names the culprit but no tier for it;
+ * the suite asserts the tier the engine's documented rule gives, and says so
+ * beside the assertion. `handoff.md`'s "Step 6 — outcome" lists those gaps.
+ *
+ * Beyond the culprits, the suite asserts the step 5 claims that keep the
+ * answer honest: confidence degrades rather than guesses where the evidence is
+ * thin (a handful of samples yields a wide range and an unresolved lead, a
+ * burst of samples counts once, and an answer may only be wrong where it says
+ * it is unsure); `innerhtml-rebuild` reports a large unattributed share,
+ * cross-checked against the profiler's empty stacks, rather than a confident
+ * wrong answer; and each degradation tier the corpus cannot show, because
+ * every capture has all three signals, is produced by removing a signal from
+ * a real capture.
+ *
+ * The narrower views live beside this file: `components.test.ts` asserts the
+ * React tier commit by commit, `lines.test.ts` the profiler tier's function
+ * histogram and LoAF-against-profiler disagreements, and `records.test.ts` the
+ * raw signal and the frame partition the engine starts from.
  *
  * Nothing here walks a stack, partitions a frame or counts samples by hand,
  * and nothing asserts how many long frames a capture or an interaction holds,
  * zero included: every assertion about frames is made of each frame the
  * engine returns, however many there are. Every figure quoted is from the
- * v0.3 re-capture, Chromium
- * 159.0.8154.6, 4x CPU throttle, with the build mode given.
+ * v0.3 re-capture, Chromium 159.0.8154.6, 4x CPU throttle, with the build mode
+ * given.
  */
 
 import {
@@ -48,6 +69,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { BUILD_MODES, loadGroundTruth } from './corpus.ts';
+import { declaredTierAt } from './ground-truth.ts';
 import { arrayAt, asArray, asString, get, numberAt, stringAt } from './json.ts';
 import { loadSignals } from './records.ts';
 
@@ -142,6 +164,11 @@ describe('derive-in-render: the declared component, and the declared function', 
      * Over the replay's commits `OrderTable` holds 98.9% of the measured self
      * time and `App`, the declared wrong answer, 1.1% (development, 4x). A
      * measurement, so the level is high and the lead is clear.
+     *
+     * The ground truth declares the component and no tier for it, so the
+     * tier asserted here is the engine's rule, not the fixture's claim: in a
+     * development build the hook's fiber timings name the component (step 5,
+     * "the component is known, at high confidence, in development").
      */
     const merged = mergedOf(interactionOf(answer, 'replay'));
     const [top] = merged.causes.causes;
@@ -186,6 +213,10 @@ describe('derive-in-render: the declared component, and the declared function', 
      * 67 of the 69 stacked samples in the replay's commit windows are in
      * `OrderTable`: 97.1%, with a 95% range of 90.0-99.2% (production, 4x).
      * An estimate over enough samples to be one, so moderate, never high.
+     *
+     * No tier is declared for the component, as in development: a production
+     * build withholds fiber timings, and the engine's rule is to sample the
+     * component under the name the shipped map gives back.
      */
     const merged = mergedOf(interactionOf(answer, 'replay'));
     const [top] = merged.causes.causes;
@@ -216,7 +247,7 @@ describe('derive-in-render: the declared component, and the declared function', 
        */
       const [top, second] = replay.causes.causes;
       expect(replay.population.window).toBe('interaction');
-      expect(top?.tier).toBe('profiler-mapped');
+      expect(top?.tier).toBe(declaredTierAt(truth, range, mode));
       const line = definedOnLine(top);
       const token = callTokenOnLine(line);
       expect(token).not.toBeNull();
@@ -249,6 +280,7 @@ describe('derive-in-render: the declared component, and the declared function', 
 
 describe('spans: the components that rendered, per interaction and per frame', () => {
   const truth = loadGroundTruth('spans');
+  const acceptable = ['expected', 'acceptableAttribution'] as const;
   const burnMs = numberAt(truth, ['bug', 'declaredBurnMsPerComponent']);
   const rows = arrayAt(truth, ['expected', 'sequence']).map((row, index) => {
     const names = (key: string): string[] => {
@@ -275,10 +307,12 @@ describe('spans: the components that rendered, per interaction and per frame', (
       const merged = mergedOf(interaction);
 
       // The declared tier, at the confidence a measurement earns.
-      expect(merged.tier).toBe('react-fiber-timings');
+      const declared = declaredTierAt(truth, acceptable, 'development');
+      expect(declared).not.toBeNull();
+      expect(merged.tier).toBe(declared);
       expect(new Set(componentNames(merged.causes.causes))).toEqual(new Set(row.rendered));
       for (const cause of merged.causes.causes) {
-        expect(cause.tier).toBe('react-fiber-timings');
+        expect(cause.tier).toBe(declared);
         expect(cause.weight.confidence.level).toBe('high');
       }
 
@@ -295,7 +329,7 @@ describe('spans: the components that rendered, per interaction and per frame', (
         );
         expect(new Set(componentNames(components))).toEqual(new Set(row.rendered));
         for (const cause of components) {
-          expect(cause.tier).toBe('react-fiber-timings');
+          expect(cause.tier).toBe(declared);
           expect(cause.weight.confidence.level).toBe('high');
           expect(cause.weight.fraction * frame.frame.durationMs).toBeGreaterThanOrEqual(
             burnMs - COARSENED_TIMING_TOLERANCE_MS,
@@ -339,6 +373,15 @@ describe('spans: the components that rendered, per interaction and per frame', (
     const answer = attributeCapture(loadSignals('spans', 'production'));
     expect(answer.workingFrom).toEqual([{ kind: 'fiber-timings-absent' }]);
 
+    /*
+     * The ground truth declares its tier for development only, and makes no
+     * claim about what a production build degrades to. `profiler-mapped` is
+     * the engine's rule (step 3's done-when): the hook's minified names are
+     * joined to the profiler's samples, and the shipped map names them. That
+     * each is the declared component at its declared site is asserted in
+     * `components.test.ts`.
+     */
+    expect(declaredTierAt(truth, acceptable, 'production')).toBeNull();
     for (const row of rows) {
       const merged = mergedOf(interactionOf(answer, row.id));
       expect(merged.tier).toBe('profiler-mapped');
@@ -371,6 +414,8 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
     'correctAttribution',
     'unattributedShareFloor',
   ]);
+  const tierOf = (label: string, mode: (typeof BUILD_MODES)[number]) =>
+    declaredTierAt(scenario(label), ['correctAttribution'], mode);
   const agreement = numberAt(truth, [
     'expected',
     'unattributedCrossCheck',
@@ -411,7 +456,7 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
          */
         expect(frame.unattributed.fraction).toBeGreaterThanOrEqual(floor);
         const [top] = frame.causes.causes;
-        expect(top?.tier).toBe('unattributed');
+        expect(top?.tier).toBe(tierOf('unforced', mode));
         expect(top?.subject).toEqual({
           kind: 'unattributed',
           reason: 'outside-script-and-rendering-update',
@@ -490,6 +535,7 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
           kind: 'browser-work',
           what: 'forced-style-and-layout',
         });
+        expect(top?.tier).toBe(tierOf('forced', mode));
         expect(top?.weight.confidence.level).toBe('high');
         const forcingScript = frame.frame.scripts[scriptIndexOf(top ?? never()) ?? -1];
         expect(top?.subject).toMatchObject({
@@ -518,7 +564,9 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
 
 describe('vendor-listener: three slices, and the vendor at the confidence its samples support', () => {
   const declared = arrayAt(loadGroundTruth('vendor-listener'), ['expected', 'slices']).map(
-    (slice) => ({
+    (slice, index) => ({
+      /** Where the slice sits in the ground truth, for reading its declarations. */
+      path: ['expected', 'slices', index] as const,
       slice: stringAt(slice, ['slice']),
       charPosition: numberAt(slice, ['loafAttributesTo', 'sourceCharPosition']),
       ownerFileName: fileNameOf(stringAt(slice, ['trueOwner', 'sourceFile'])),
@@ -561,6 +609,8 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
           kind: 'browser-work',
           what: 'forced-style-and-layout',
         });
+        // LoAF's own figure, a measurement: high, and not the whole frame.
+        expect(frame.causes.causes[0]?.weight.confidence.level).toBe('high');
         expect(frame.causes.causes[0]?.weight.fraction).toBeLessThan(1);
         expect(frame.causes.totalWeight).toBeCloseTo(1, 6);
 
@@ -597,8 +647,10 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
         );
         if (candidate === undefined) throw new Error('no vendor candidate');
 
-        // The profiler tier, and the warning that goes with no source map.
-        expect(candidate.tier).toBe('profiler-unmapped');
+        // The declared tier, and the warning that goes with no source map.
+        expect(candidate.tier).toBe(
+          declaredTierAt(loadGroundTruth('vendor-listener'), [...vendor.path, 'recoverableFrom'], mode),
+        );
         expect(candidate.subject).toMatchObject({
           location: { throughSourceMap: false, whyNot: 'no-source-map' },
         });

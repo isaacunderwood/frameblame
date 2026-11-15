@@ -13,11 +13,18 @@
  *    composition must reproduce those claims from the engine rather than from a
  *    reader written beside the assertion.
  *
- * This file does not walk a stack or partition a frame by hand. Where it needs
- * an in-frame sample it asks `isWithinFrame`; where it needs a partition it
- * asks `decomposeFrame`. `corpus.test.ts`'s local readers are the throwaway
- * predecessors of exactly that and are deleted once the engine's own accuracy
- * suite replaces them.
+ * It is also where a claim about the raw signal lives: what LoAF reports in
+ * which field, what a production build withholds, what the fixture's own probe
+ * recorded. Those are facts about the input, asserted against the reader that
+ * parses them; what the engine concludes from them is `accuracy.test.ts`'s.
+ *
+ * This file does not walk a stack, filter samples by a window or partition a
+ * frame by hand. Where it needs a partition it asks `decomposeFrame`, and
+ * where it needs an interaction's frames it asks `framesOfInteraction`. The
+ * throwaway readers `corpus.test.ts` used to hold were the predecessors of
+ * exactly that, and step 6 deleted them. Nothing here counts long frames
+ * either, zero included: every assertion about frames is made of each frame a
+ * capture holds.
  *
  * Every millisecond figure quoted below carries its build mode and CPU throttle
  * rate, which for all eight captures is Chromium 159.0.8154.6 at 4x.
@@ -25,15 +32,24 @@
 
 import {
   COARSENED_TIMING_TOLERANCE_MS,
+  createScriptLineIndex,
   decomposeFrame,
   exceedsCoarsenedTolerance,
-  isWithinFrame,
+  framesOfInteraction,
+  lineColumnAt,
   shareOfFrame,
 } from '@frameblame/core';
 import { describe, expect, it } from 'vitest';
 
-import { BUILD_MODES, type BuildMode, listFixtures, loadCorpusRun } from './corpus.ts';
-import { arrayAt, get } from './json.ts';
+import {
+  BUILD_MODES,
+  type BuildMode,
+  listFixtures,
+  loadCorpusRun,
+  loadGroundTruth,
+  readRepoFile,
+} from './corpus.ts';
+import { arrayAt, asRecord, get, numberAt, stringAt } from './json.ts';
 import { loadSignals } from './records.ts';
 
 const FIXTURES = listFixtures();
@@ -101,15 +117,17 @@ describe('the records', () => {
       expect(script.sourceFunctionName).toBeNull();
     }
 
+    // Every one of `vendor-listener`'s script entries is an anonymous arrow,
+    // and still located: this is the case that makes the character offset
+    // worth resolving at all. The offsets themselves are checked against the
+    // registration lines in the `vendor-listener` block below.
     const vendor = loadSignals('vendor-listener', 'development');
-    const anonymous = vendor.frames
-      .flatMap((frame) => frame.scripts)
-      .filter((script) => script.sourceFunctionName === null);
-    expect(anonymous.length).toBe(18);
-    // Anonymous, but still located: this is the case that makes the character
-    // offset worth resolving at all.
-    for (const script of anonymous) {
-      expect(script.sourceCharPosition).not.toBeNull();
+    expect(vendor.frames.length).toBeGreaterThan(0);
+    for (const frame of vendor.frames) {
+      for (const script of frame.scripts) {
+        expect(script.sourceFunctionName).toBeNull();
+        expect(script.sourceCharPosition).not.toBeNull();
+      }
     }
 
     expect(
@@ -132,12 +150,21 @@ describe('the records', () => {
      * against the 24.3-25.3 and 71.8-90.6 the document quotes from an
      * instrument it could not name.
      */
-    const forced = (['development', 'production'] as const).flatMap((mode) =>
-      loadSignals('innerhtml-rebuild', mode)
-        .frames.flatMap((frame) => frame.scripts)
-        .filter((script) => script.forcedStyleAndLayoutDurationMs > 50),
-    );
-    expect(forced).toHaveLength(8);
+    const forced = BUILD_MODES.flatMap((mode) => {
+      const signals = loadSignals('innerhtml-rebuild', mode);
+      const frames = framesOfInteraction(signals, 'forced');
+      expect(frames.length, mode).toBeGreaterThan(0);
+      return frames.map((frame) => {
+        // Each frame of the forced scenario carries the split on the one
+        // script entry that forced it.
+        const [forcing, ...others] = frame.scripts.filter(
+          (script) => script.forcedStyleAndLayoutDurationMs > 50,
+        );
+        expect(others, `${mode} frame at ${String(frame.startTimeMs)}ms`).toEqual([]);
+        if (forcing === undefined) throw new Error(`${mode}: a forced frame with no forcing script`);
+        return forcing;
+      });
+    });
 
     for (const script of forced) {
       const { forcedStyleDurationMs: style, forcedLayoutDurationMs: layout } = script;
@@ -165,30 +192,66 @@ describe('the records', () => {
     }
   });
 
-  it('models a frame that never painted as having no rendering update', () => {
-    /*
-     * Two of the corpus's 53 frames, both the last of their run: a single
-     * `Promise.resolve` task with `renderStart` and `styleAndLayoutStart`
-     * reporting the spec's 0 sentinel, and no `paintTime` or `presentationTime`
-     * at all. A frame starting at 60943.7ms whose `renderStart` is 0 is not a
-     * frame that rendered at time zero.
-     */
-    const unpainted = RUNS.flatMap(({ fixture, mode }) =>
-      loadSignals(fixture, mode).frames.filter(
-        (frame) => frame.renderingUpdate.kind === 'none',
-      ),
-    );
+  for (const { fixture, mode } of RUNS) {
+    it(`${fixture}/${mode}: models a frame that never painted as having no rendering update`, () => {
+      /*
+       * In the v0.3 re-capture two of the corpus's 53 frames, both the last of
+       * a `derive-in-render` run (4x, one per build mode), are a single
+       * `Promise.resolve` task with `renderStart` and `styleAndLayoutStart`
+       * reporting the spec's 0 sentinel, and no `paintTime` or
+       * `presentationTime` at all. A frame starting at 60943.7ms whose
+       * `renderStart` is 0 is not a frame that rendered at time zero.
+       *
+       * Which frames those are is the capture's business, and how many there
+       * are is a long-frame count, so neither is asserted. What is asserted is
+       * the reader's rule, frame by frame against the entry Chrome serialised:
+       * a frame has no rendering update exactly when its `renderStart` is the
+       * sentinel, and such a frame has no paint and still decomposes to its
+       * own end.
+       */
+      const signals = loadSignals(fixture, mode);
+      const entries = arrayAt(loadCorpusRun(fixture, mode).files.loaf, ['entries']);
 
-    expect(unpainted).toHaveLength(2);
-    for (const frame of unpainted) {
-      expect(frame.startTimeMs).toBeGreaterThan(1000);
-      expect(frame.firstUIEventTimestampMs).toBeNull();
-      expect(decomposeFrame(frame).frameEndMs).toBeCloseTo(
-        frame.startTimeMs + frame.durationMs,
-        10,
-      );
-    }
-  });
+      for (const index of entries.keys()) {
+        const where = `${fixture}/${mode} frame ${String(index)}`;
+        // The reader maps entries one to one, in order.
+        const frame = signals.frames[index];
+        if (frame === undefined) throw new Error(`${where}: not parsed`);
+        const serialised = asRecord(get(entries[index], ['toJSON']), ['entries', index, 'toJSON']);
+        const unpainted = frame.renderingUpdate.kind === 'none';
+        expect(unpainted, where).toBe(numberAt(serialised, ['renderStart']) === 0);
+        if (!unpainted) continue;
+
+        expect(serialised.paintTime, where).toBeUndefined();
+        expect(frame.startTimeMs, where).toBeGreaterThan(1000);
+        expect(frame.firstUIEventTimestampMs, where).toBeNull();
+        expect(decomposeFrame(frame).frameEndMs, where).toBeCloseTo(
+          frame.startTimeMs + frame.durationMs,
+          10,
+        );
+      }
+    });
+  }
+
+  for (const mode of BUILD_MODES) {
+    it(`spans/${mode}: the mount's window opens at the page clock's origin`, () => {
+      /*
+       * The first interaction of a fixture that captures its own first mount
+       * covers the page from its very beginning, because React's mount commit
+       * lands while the navigation is still in progress (`spike/drive.ts`).
+       * In the v0.3 re-capture it lands at 239.4ms in development and 175.8ms
+       * in production (4x). A window that opened when the driver got control
+       * would miss the commit and report that the mount rendered nothing,
+       * which is the opposite of `spans`' claim.
+       */
+      const signals = loadSignals('spans', mode);
+      const [mount] = signals.interactions;
+      const [first] = signals.react.commits;
+      expect(mount?.label).toBe('initial-mount');
+      expect(mount?.fromMs).toBe(0);
+      expect(first?.committedAtMs).toBeLessThanOrEqual(mount?.toMs ?? -1);
+    });
+  }
 
   it('keeps React’s two kinds of span apart, and the fiber timings that production drops', () => {
     const dev = loadSignals('spans', 'development');
@@ -409,17 +472,10 @@ describe('the partition, against every frame in the corpus', () => {
 
 describe('innerhtml-rebuild: the frame the arithmetic can account for but not attribute', () => {
   for (const mode of BUILD_MODES) {
-    it(`${mode}: the unforced rebuild is mostly unattributed, and a second signal agrees`, () => {
+    it(`${mode}: the unforced rebuild is mostly unattributed`, () => {
       const signals = loadSignals('innerhtml-rebuild', mode);
-      const unforced = signals.interactions.find((window) => window.label === 'unforced');
-      expect(unforced).toBeDefined();
-      if (unforced === undefined) return;
-
-      const frames = signals.frames.filter(
-        (frame) =>
-          frame.startTimeMs >= unforced.fromMs && frame.startTimeMs <= unforced.toMs,
-      );
-      expect(frames).toHaveLength(4);
+      const frames = framesOfInteraction(signals, 'unforced');
+      expect(frames.length).toBeGreaterThan(0);
 
       for (const frame of frames) {
         const decomposition = decomposeFrame(frame);
@@ -449,6 +505,7 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
         // update, while no script is running, is not counted in them. That is
         // specified behaviour, and it is why the time lands in a slice that
         // names when rather than what.
+        expect(frame.renderingUpdate.kind).toBe('rendered');
         if (frame.renderingUpdate.kind === 'rendered') {
           expect(frame.renderingUpdate.styleDurationMs).toBe(0);
           expect(frame.renderingUpdate.layoutDurationMs).toBe(0);
@@ -456,37 +513,55 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
       }
 
       /*
-       * The cross-check, and the reason the unattributed slice is a tier rather
-       * than a shrug: a second, independent signal agrees that nothing was
-       * attributable. If the residual were work LoAF merely failed to name, the
-       * profiler would have found JavaScript on the stack. Measured at 90.9% (40
-       * of 44, development) and 91.3% (42 of 46, production) of in-frame
-       * samples carrying no stack at all (4x); asserted at 40%, since
-       * the quantity being tested is that the two signals move together rather
-       * than its exact value.
+       * The second signal, that the profiler found no JavaScript on the stack
+       * for most of each of these frames, is the engine's cross-check and is
+       * asserted per frame through `attributeCapture` in `accuracy.test.ts`.
+       * It used to be asserted here by filtering samples into frame windows by
+       * hand, which is the engine's job.
        */
-      const profile = signals.profile;
-      expect(profile).not.toBeNull();
-      if (profile === null) return;
+    });
 
-      const inFrame = profile.samples.filter((sample) =>
-        frames.some((frame) => isWithinFrame(frame, sample.atMs)),
-      );
-      expect(inFrame.length).toBeGreaterThan(20);
-      const empty = inFrame.filter((sample) => sample.stackId === null).length;
-      expect(empty / inFrame.length).toBeGreaterThan(0.4);
+    it(`${mode}: the fixture's own probe says the thread was busy, not idle`, () => {
+      /*
+       * The third signal, and the one that makes the unattributed residual
+       * *work* rather than idle time. An empty stack only says no JavaScript
+       * was running; it does not say the thread was busy. The fixture
+       * publishes what nothing outside the page can see: how long a
+       * `MessageChannel` message posted at the end of the listener took to be
+       * delivered. A 14ms listener followed by a 120ms wait for a task it
+       * posted itself means the thread was occupied throughout.
+       *
+       * Measured on the unforced clicks (4x): listeners of 13.3-14.3ms and
+       * deliveries of 116.7-148.8ms in development, 13.4-14.2ms and
+       * 117.6-147.2ms in production, so every delivery is more than eight
+       * times its listener. Asserted at three times, a 40ms listener ceiling
+       * and a 60ms delivery floor: loose, because the claim is the shape, a
+       * cheap listener and a long wait, not one capture's figures.
+       *
+       * Read from the capture's `fixtureProbe`, which the collector stores
+       * verbatim and the engine never sees. The probe records one entry per
+       * click whether or not LoAF reported a frame for it, so these are not
+       * long frames.
+       */
+      const probe = arrayAt(loadCorpusRun('innerhtml-rebuild', mode).files.loaf, ['fixtureProbe'])
+        .map((record, index) => asRecord(record, ['fixtureProbe', index]))
+        .filter((record) => stringAt(record, ['scenario']) === 'unforced');
+      expect(probe.length).toBeGreaterThan(0);
+
+      for (const record of probe) {
+        const listener = numberAt(record, ['listenerTotalMs']);
+        const delivered = numberAt(record, ['delays', 'messageChannelMs']);
+        expect(listener).toBeLessThan(40);
+        expect(delivered).toBeGreaterThan(60);
+        // The delay is the frame's unnameable part, not the listener's own work.
+        expect(delivered).toBeGreaterThan(listener * 3);
+      }
     });
 
     it(`${mode}: forcing the same work inline charges it to the script that forced it`, () => {
       const signals = loadSignals('innerhtml-rebuild', mode);
-      const forced = signals.interactions.find((window) => window.label === 'forced');
-      expect(forced).toBeDefined();
-      if (forced === undefined) return;
-
-      const frames = signals.frames.filter(
-        (frame) => frame.startTimeMs >= forced.fromMs && frame.startTimeMs <= forced.toMs,
-      );
-      expect(frames).toHaveLength(4);
+      const frames = framesOfInteraction(signals, 'forced');
+      expect(frames.length).toBeGreaterThan(0);
 
       for (const frame of frames) {
         const decomposition = decomposeFrame(frame);
@@ -502,9 +577,15 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
         expect(decomposition.charges.browserRenderingMs).toBeGreaterThan(90);
         expect(decomposition.charges.browserRenderingMs).toBeLessThan(110);
 
-        // The double-count check, which is the first thing `findings.md` says
-        // an engine must get right: the forced figure is nested inside its
-        // script's duration, so the frame must still add up.
+        /*
+         * The double-count check, which is the first thing `findings.md` says
+         * an engine must get right. In the raw signal, each entry's forced
+         * figure is nested inside its own `duration`, never beside it; so the
+         * frame must still add up once it is charged.
+         */
+        for (const script of frame.scripts) {
+          expect(script.forcedStyleAndLayoutDurationMs).toBeLessThanOrEqual(script.durationMs);
+        }
         const sliced = decomposition.slices.reduce(
           (sum, slice) => sum + slice.durationMs,
           0,
@@ -515,15 +596,43 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
         expect(decomposition.charges.javaScriptMs).toBeLessThan(
           decomposition.charges.browserRenderingMs,
         );
+
+        // Still zero, though this frame is dominated by style and layout:
+        // only the rendering update's own work lands in these fields.
+        expect(frame.renderingUpdate.kind).toBe('rendered');
+        if (frame.renderingUpdate.kind === 'rendered') {
+          expect(frame.renderingUpdate.styleDurationMs).toBe(0);
+          expect(frame.renderingUpdate.layoutDurationMs).toBe(0);
+        }
       }
     });
   }
 });
 
 describe('vendor-listener: three slices, not one', () => {
+  /** The three declared slices, in registration order. */
+  const declared = arrayAt(loadGroundTruth('vendor-listener'), ['expected', 'slices']).map(
+    (slice) => ({
+      slice: stringAt(slice, ['slice']),
+      line: numberAt(slice, ['loafAttributesTo', 'line']),
+      charPosition: numberAt(slice, ['loafAttributesTo', 'sourceCharPosition']),
+      isThirdParty: get(slice, ['isThirdParty']) === true,
+    }),
+  );
+
+  /*
+   * The fixture's scripts are served out of `public/`, which Vite copies
+   * byte-for-byte in both build modes, so the repo's own copy *is* the text
+   * the character offsets index into. That is what makes this check possible
+   * with no capture of the text and no server: it is the only place in the
+   * corpus where the served bytes are in version control.
+   */
+  const appJs = createScriptLineIndex(readRepoFile('fixtures/vendor-listener/public/app.js'));
+
   for (const mode of BUILD_MODES) {
     it(`${mode}: the frame comes apart into its three listeners`, () => {
       const signals = loadSignals('vendor-listener', mode);
+      expect(signals.frames.length).toBeGreaterThan(0);
 
       for (const frame of signals.frames) {
         const decomposition = decomposeFrame(frame);
@@ -551,6 +660,46 @@ describe('vendor-listener: three slices, not one', () => {
         );
         expect(forcing).toHaveLength(1);
       }
+    });
+
+    it(`${mode}: LoAF locates each listener at the line that registered it, in app.js`, () => {
+      const signals = loadSignals('vendor-listener', mode);
+      expect(signals.frames.length).toBeGreaterThan(0);
+
+      for (const frame of signals.frames) {
+        /*
+         * Each entry's `sourceCharPosition`, resolved against the served text,
+         * lands on the `addEventListener` line the ground truth declares for
+         * that slice, in registration order: offsets 9092, 9268 and 9443, lines
+         * 188, 192 and 196, on every frame in both build modes (4x). The ground
+         * truth anchors those lines, and the line after each, since the three
+         * are byte-identical.
+         */
+        expect(
+          frame.scripts.map((script) => script.sourceCharPosition),
+        ).toEqual(declared.map((slice) => slice.charPosition));
+        for (const [index, script] of frame.scripts.entries()) {
+          const at = script.sourceCharPosition;
+          expect(at, `script ${String(index)}`).not.toBeNull();
+          if (at === null) continue;
+          expect(lineColumnAt(appJs, at)?.line).toBe(declared[index]?.line);
+
+          /*
+           * Two further halves of the same finding. `sourceFunctionName` is
+           * absent for all three, because the listeners are anonymous arrows,
+           * so the character offset did all the work: that is what makes it
+           * worth resolving outside a framework. And `vendor.js` is named by
+           * no entry, though one slice is entirely the vendor's: LoAF
+           * attributes to the registration site, so its script attribution
+           * reports a 100% first-party frame. A third-party share is not in
+           * this signal; `accuracy.test.ts` asserts it from the profiler.
+           */
+          expect(script.sourceFunctionName).toBeNull();
+          expect(script.sourceUrl).toContain('/app.js');
+          expect(JSON.stringify(script)).not.toContain('vendor.js');
+        }
+      }
+      expect(declared.some((slice) => slice.isThirdParty)).toBe(true);
     });
   }
 });

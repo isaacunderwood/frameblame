@@ -381,6 +381,18 @@
     "acceptableAttribution": {
       "note": "For every row above, a correct attribution names the components under `componentsThatRender` with their share of the frame, and states which tier it worked from. Naming only the components under `componentsGivenASpan` is wrong, and reporting nothing for `state-owner-self` is the specific failure this fixture exists to catch. Because all six components burn the same amount, a correct attribution must also not rank them by anything that correlates with span presence.",
       "requiredTier": "React DevTools hook plus fiber actualDuration",
+      "declaredTier": {
+        "development": "react-fiber-timings"
+      },
+      "$declaredTierComment": [
+        "requiredTier above, in the engine's AttributionTier vocabulary, so the",
+        "accuracy suite asserts it rather than paraphrasing it. Development only:",
+        "every claim in this file is made under reproduction.buildMode, and a",
+        "production build has neither the spans nor actualDuration (see",
+        "expected.gate.source.$comment). This fixture makes no claim about the tier",
+        "a production build degrades to; that is the engine's rule, and handoff.md's",
+        "`Step 6 - outcome` records the gap."
+      ],
       "corroborationOnly": "React performance.measure spans"
     }
   },

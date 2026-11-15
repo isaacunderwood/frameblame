@@ -29,8 +29,14 @@ export {
 } from './corpus.ts';
 export type { BuildMode, CorpusRun, RunEnvelope, RunFileKey } from './corpus.ts';
 
-export { checkSourceAnchor, collectSourceAnchors } from './ground-truth.ts';
-export type { SourceAnchor } from './ground-truth.ts';
+export {
+  checkSourceAnchor,
+  checkTierDeclaration,
+  collectSourceAnchors,
+  collectTierDeclarations,
+  declaredTierAt,
+} from './ground-truth.ts';
+export type { SourceAnchor, TierDeclaration } from './ground-truth.ts';
 
 export { framesOf } from './loaf-records.ts';
 export { profileOf } from './profiler-records.ts';

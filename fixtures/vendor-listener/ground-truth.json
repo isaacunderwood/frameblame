@@ -134,6 +134,18 @@
         "isThirdParty": true,
         "recoverableFrom": {
           "tier": "profiler",
+          "declaredTier": {
+            "development": "profiler-unmapped",
+            "production": "profiler-unmapped"
+          },
+          "$declaredTierComment": [
+            "tier above, in the engine's AttributionTier vocabulary. `Unmapped` adds",
+            "no claim: trueOwner.note says vendor.js is served from public/,",
+            "untransformed, and `why` says the samples name vendor.js and vendorTrack",
+            "directly - as served, with no source map to resolve through, which is",
+            "what the engine calls profiler-unmapped. Both modes, because Vite copies",
+            "public/ byte-for-byte in a production build too (observedJank.$measured)."
+          ],
           "why": "Sampled stacks carry a resource id per frame, so samples inside the vendor's hot loop name `vendor.js` and `vendorTrack` directly. LoAF cannot: it reports one registration site per listener and has no field for what that listener went on to call.",
           "$comment": [
             "Note the sampling floor when asserting on this: 5ms requested becomes 10ms,",

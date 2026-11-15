@@ -312,7 +312,7 @@ Progress (updated before each next step starts):
 - [x] Step 3 — components, the React tier
 - [x] Step 4 — lines, the profiler tier
 - [x] Step 5 — the confidence model
-- [ ] Step 6 — the accuracy suite
+- [x] Step 6 — the accuracy suite
 
 ### Step 0.1 — cleanup refactor
 
@@ -967,6 +967,103 @@ No weight, subject, tier, order or lead changed. Two consequences are worth read
   its expected source text. The anchor suite validates it against the source.
 
 Step 6 starts next.
+
+### Step 6 — outcome
+
+`corpus.test.ts`'s throwaway readers are deleted, and its claims are asserted through the engine.
+`capture.test.ts` is renamed `accuracy.test.ts` and is the accuracy suite. Its module comment
+holds a table of culprit, tier and confidence per fixture and build mode, each with where in the
+ground truth it comes from. `pnpm check` is green at 297 tests (161 core, 136 corpus), and `pnpm
+build` passes. Not committed.
+
+**Deleted.** These readers in `corpus.test.ts`: `longFrames`, `scriptsOfFrame`, `traceOf`,
+`sourceMapsOf`, `inAnyFrame`, `deepestOriginalLine` (the stack walk and hand source-map
+resolution), `inFrameSamples` and `inStepSamples` (sample-window filters), `componentSpanNames`,
+`stepsOf` and `framesOfStep`. Its nine claim tests went with them. Corpus coverage, the envelope
+check and the source anchors stay, now joined by a tier-declaration check. Two hand-written pieces
+in `records.test.ts` are also gone: the unforced cross-check that filtered profile samples into
+frame windows with `isWithinFrame`, and the frame selection by `startTimeMs` against an
+interaction window, which now goes through `framesOfInteraction`.
+
+**Where each old claim now lives.**
+
+| old `corpus.test.ts` claim | now |
+| --- | --- |
+| derive-in-render: 60%+ of the replay's `OrderTable.tsx` samples in 34-36, line 36 first | `lines.test.ts` `derive-in-render: the profiler names the function on the declared line` (same population, floor and file filter); `accuracy.test.ts` asserts the line-36 function first at the declared tier. The previous capture's in-frame shares, which the old comment quoted, are in the ground truth's `shareInDeclaredRangeAcrossCaptures`. |
+| vendor-listener: each offset resolves to its registration line in `app.js`; no function name; `vendor.js` named nowhere | `records.test.ts` `vendor-listener … > {mode}: LoAF locates each listener at the line that registered it, in app.js`. It is a claim about the raw signal, and it now covers every frame in both modes instead of one development frame. |
+| innerhtml unforced: zero style/layout, residual above 70% | `records.test.ts` `innerhtml-rebuild … > {mode}: the unforced rebuild is mostly unattributed` (now both modes) |
+| innerhtml unforced: pooled empty-stack share above 40% | `accuracy.test.ts` `{mode}/unforced`: per-frame cross-check verdict `agrees` within the ground truth's tolerance. This is stronger, because it is per frame rather than pooled with the forced frames. |
+| innerhtml unforced: the delay probe (listener under 40ms, delivery over 60ms and over 3x the listener) | `records.test.ts` `{mode}: the fixture's own probe says the thread was busy, not idle` (now both modes) |
+| innerhtml forced: forced over 50ms, nested in its script, style/layout zero | `records.test.ts` `{mode}: forcing the same work inline charges it to the script that forced it` (per-script nesting and zero style/layout added); `accuracy.test.ts` `{mode}/forced` |
+| spans state-owner-self: one commit, `StateOwner` and `App` both ~25ms, no span | `components.test.ts` `state-owner-self: names StateOwner from its commit alone` (`App` bailed out) and the per-row test: span corroboration equals `componentsGivenASpan`, and the naive `actualDuration` sum is the trap. Its "no frame in the step" is a long-frame count of zero and is not asserted. |
+| spans initial-mount: five components over 20ms, no span, window opens at 0 | `components.test.ts` initial-mount row (names, self time of at least `BURN_MS` minus tolerance, no span); `records.test.ts` `spans/{mode}: the mount's window opens at the page clock's origin` |
+| spans production: no spans, `actualDuration` null | `records.test.ts` `keeps React's two kinds of span apart…` (already asserted) |
+
+**Long-frame counts removed** from `records.test.ts`:
+- `toHaveLength(8)` on forced scripts becomes one forcing script per frame of the `forced` interaction.
+- `toHaveLength(2)` on unpainted frames becomes a per-frame rule against Chrome's serialised entry:
+  `kind: 'none'` exactly when `renderStart` is 0, plus the old properties. It runs over every run,
+  with one test per run.
+- The two `toHaveLength(4)` checks become a non-empty guard.
+- `anonymous.length` of 18 was a count too: 6 frames times 3 entries. It becomes "every entry is
+  anonymous and located".
+
+**Ground-truth changes.** Every fixture now has a `declaredTier`: an object keyed by build mode,
+naming the engine's `AttributionTier`, beside the prose that already made the claim. Each has a
+`$declaredTierComment` quoting that prose. `ground-truth.ts` gains `collectTierDeclarations`,
+`checkTierDeclaration` and `declaredTierAt`. They reject unknown build modes and tiers, and
+`corpus.test.ts` requires every fixture to declare at least one tier, all of them valid. A
+mutation check confirmed both failure paths: a wrong valid tier fails `accuracy.test.ts`, and a
+misspelt one also fails `corpus.test.ts`.
+- `spans` `acceptableAttribution`: `{development: react-fiber-timings}`, which is `requiredTier`.
+  It is development only, because the file's claims are made under `reproduction.buildMode` and
+  it says nothing about production's tier.
+- `vendor-listener` vendor slice `recoverableFrom`: `profiler-unmapped` in both modes, which is
+  `tier: "profiler"`. "Unmapped" is read from the same entry's claim that `vendor.js` is served
+  from `public/` "untransformed" and that samples name it "directly". It is consistent with the
+  capture: neither script resource carries a map in either mode (4x).
+- `innerhtml-rebuild` unforced: `unattributed` in both modes, from `mustReportUnattributedShare`
+  and the file's "a defensible unattributed tier". Forced: `loaf-script-registration` in both
+  modes, from "charged to the script that forced it … not to whatever function the profiler's few
+  samples happened to land in".
+- `derive-in-render` `lineRange`: `profiler-mapped` in both modes, from line 36's role "where
+  sampled stacks are expected to land". The lines are lines of `src/OrderTable.tsx`, which
+  neither build serves as written, so only the map reaches them.
+
+**Gaps, recorded rather than invented.** The ground truth names the culprit but no tier for:
+- `derive-in-render`'s component, in both modes;
+- `spans` in production;
+- `vendor-listener`'s slice ranking and its two first-party owners.
+
+For each, the suite asserts the culprit and the tier the engine's rule gives (react-fiber-timings
+in development, profiler-mapped in production), and says beside the assertion that the fixture
+does not declare it. `spans` production asserts that `declaredTierAt` returns `null`, so the gap
+is visible in the test.
+
+**Choices made without a human**, each the conservative option:
+1. **The `vendor-listener` vendor tier is the specific `profiler-unmapped`, not "either profiler
+   tier".** The ground truth's own wording supports it, as above. If the morning disagrees,
+   loosening it is one line in the ground truth.
+2. **No tier was invented for the gaps above.**
+3. **One window lookup is left**, in `records.test.ts`'s span test. It finds which interaction an
+   `Update` phase span's `startTimeMs` falls in. It is a claim about React's raw spans, which the
+   engine does not consume, and no engine function answers it. It does not touch samples or
+   frames.
+4. **Non-empty guards (`frames.length > 0`) stay where a per-frame loop would otherwise pass
+   vacuously.** This is the pattern `capture.test.ts` already used. They assert that a fixture
+   janked at all, not how often.
+
+**Figures introduced**, each from a script run against `corpus/` (4x):
+- The unforced probe in production: listeners of 13.4-14.2ms and deliveries of 117.6-147.2ms,
+  with every delivery over eight times its listener (development reproduced at 13.3-14.3ms and
+  116.7-148.8ms).
+- The `spans` mount commit lands at 239.4ms in development and 175.8ms in production, inside a
+  window opening at 0.
+- The unpainted frames are `derive-in-render`'s last frame in each mode: 13 of 14 in development,
+  starting at 60943.7ms, and 2 of 3 in production, at 115168.1ms. They are 2 of the corpus's 53
+  frames.
+- `vendor-listener` offsets 9092, 9268 and 9443 resolve to lines 188, 192 and 196 on every frame
+  in both modes.
 
 ## Questions for the morning
 

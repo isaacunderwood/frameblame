@@ -59,6 +59,18 @@
       "correctAttribution": {
         "mustReportUnattributedShare": true,
         "unattributedShareFloor": 0.75,
+        "declaredTier": {
+          "development": "unattributed",
+          "production": "unattributed"
+        },
+        "$declaredTierComment": [
+          "The tier mustReportUnattributedShare declares, named as the engine names",
+          "it: the frame's largest share is claimed for nothing, which",
+          "expected.unattributedCrossCheck calls `a defensible unattributed tier`",
+          "once two signals agree on it. Both modes, because",
+          "reproduction.productionParity declares the fixture identical in a",
+          "production build."
+        ],
         "$comment": [
           "The honest answer is: a few milliseconds of script at the listener",
           "registration line, and a large unattributed remainder that the tool states",
@@ -103,6 +115,18 @@
       },
       "correctAttribution": {
         "mustReportUnattributedShare": false,
+        "declaredTier": {
+          "development": "loaf-script-registration",
+          "production": "loaf-script-registration"
+        },
+        "$declaredTierComment": [
+          "The tier the comment below declares, named as the engine names it. The",
+          "share is LoAF's own forcedStyleAndLayoutDuration, `charged to the script",
+          "that forced it` - the script entry LoAF reports, located where its",
+          "listener was registered - and explicitly not to `whatever function the",
+          "profiler's few samples happened to land in`, which would be a profiler",
+          "tier. Both modes, by reproduction.productionParity."
+        ],
         "$comment": [
           "Here the frame does decompose: the script entry covers nearly all of it and",
           "`forcedStyleAndLayoutDuration` names most of the script entry as browser",

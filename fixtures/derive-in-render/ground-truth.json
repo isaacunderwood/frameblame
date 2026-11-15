@@ -52,7 +52,26 @@
       "component": "OrderTable",
       "lineRange": {
         "from": 34,
-        "to": 36
+        "to": 36,
+        "declaredTier": {
+          "development": "profiler-mapped",
+          "production": "profiler-mapped"
+        },
+        "$declaredTierComment": [
+          "The tier the line range is claimed at, in the engine's AttributionTier",
+          "vocabulary, so the accuracy suite asserts it rather than paraphrasing it.",
+          "Not a new claim. Line 36's role above is `where sampled stacks are",
+          "expected to land`, and the note below says which line `a sampled frame",
+          "reports`: the claim is the profiler's. The lines are lines of",
+          "src/OrderTable.tsx, which neither build serves as written - Vite",
+          "transforms the TSX in development and bundles it in production - so a",
+          "sampled stack can only reach them through the source map. Hence",
+          "profiler-mapped, in both modes.",
+          "No tier is declared for `component`. Nothing in this file says which",
+          "signal must name OrderTable, so the suite asserts the component and",
+          "leaves its tier to the engine's documented rule; handoff.md's",
+          "`Step 6 - outcome` records the gap."
+        ]
       },
       "note": "Any of the three lines counts as correct: they are one expression split across three lines by the formatter, and which one a sampled frame reports depends on whether the sample landed in the comparator or in the enclosing render. Naming App, the input's onChange, or a React internal is wrong."
     }
