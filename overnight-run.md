@@ -89,7 +89,7 @@ Two rules bind the refactor every time it runs:
   re-derived; `findings.md` exists because three conclusions were lost once already. A tidy-up
   that shortens them has destroyed the most valuable thing in the file.
 
-The review subagent's brief, each time. Not style, not preferences — these five questions:
+The review subagent's brief, each time. Ask for all six answers explicitly:
 
 1. Does the code do what its comments claim?
 2. Does it meet the completion criteria the step declares in `handoff.md`?
@@ -100,9 +100,27 @@ The review subagent's brief, each time. Not style, not preferences — these fiv
    derive it with a script and say which. A figure that can be found in neither is fabricated, and
    that is the finding this review exists for above all others. The project has already shipped a
    wrong number twice and a dangling citation once.
+6. **Is any of it hard to read, or is there a clearly more elegant way to write it?** Readability
+   is a stated requirement of this repo, not a preference: this code is read by strangers judging
+   whether the author is any good, and by agents with no memory of the conversation that produced
+   it. In scope, and expected: code that cannot be followed on one read; a comment explaining
+   *what* the code does because the code does not say it; a function doing two things; duplication;
+   a misleading name; a module long enough that a real seam has appeared; a formulation that is
+   simply clearer at identical behaviour.
 
-A review that reports nothing is a suspicious review; a review that reports taste is a useless
-one. Ask for the five answers explicitly.
+On that last question, three rules keep it from becoming churn:
+
+- **Bring the rewrite, not the opinion.** An elegance finding arrives as the actual replacement
+  code, or a sketch precise enough to apply. "This could be cleaner" is not a finding.
+- **Behaviour and recorded reasons outrank beauty.** If a clearer formulation loses a measurement,
+  a browser quirk, or the reason a heuristic is shaped the way it is, it loses. `CLAUDE.md` is the
+  arbiter: comments explain *why*, the code carries the *what*, and the obscure browser behaviour
+  in this repo is deliberately over-documented rather than under-.
+- **Prettier owns formatting and ESLint owns its rules.** Neither is review material. Line breaks,
+  quote style and import order are already decided and already enforced.
+
+A review that reports nothing is a suspicious review. A review whose findings are all preference
+between equivalent spellings is a useless one.
 
 ## Version control, already set up
 
