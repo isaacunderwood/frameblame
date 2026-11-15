@@ -64,6 +64,7 @@ import {
   type ScriptLineIndex,
 } from './char-position.ts';
 import {
+  independentSampleWeights,
   type ProfiledFrame,
   profiledFramePosition,
   type ProfileTrace,
@@ -167,6 +168,12 @@ export interface ResolvedProfile {
   readonly trace: ProfileTrace;
   /** Aligned with `trace.frames`: entry `i` is frame `i`, resolved. */
   readonly frames: readonly FrameResolution[];
+  /**
+   * Aligned with `trace.samples`: how much independent evidence each sample
+   * is, by `independentSampleWeights`. Computed once here so that every
+   * share taken from the profile counts bursts the same way.
+   */
+  readonly independence: readonly number[];
 }
 
 /**
@@ -411,7 +418,11 @@ function resolveFrame(
  */
 export function resolveProfile(trace: ProfileTrace): ResolvedProfile {
   const maps = trace.resources.map(resourceMapOf);
-  return { trace, frames: trace.frames.map((frame) => resolveFrame(trace, maps, frame)) };
+  return {
+    trace,
+    frames: trace.frames.map((frame) => resolveFrame(trace, maps, frame)),
+    independence: independentSampleWeights(trace),
+  };
 }
 
 /**

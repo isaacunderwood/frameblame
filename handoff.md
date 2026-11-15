@@ -165,7 +165,7 @@ both build modes, with 60%+ of in-frame `OrderTable` samples inside the declared
 (measured 76% development, 83% production; those are v0.2-era figures, from `findings.md`, and match
 neither the previous corpus nor the current one).
 *Orchestrator's note, 2026-11-15 overnight run:* the v0.3 re-capture left production with long
-frames after only 1 of 24 presses (LoAF reported 2 frames, one of them the page load), so in-frame production `OrderTable` samples number 3, and this
+frames after only 1 of 24 presses (LoAF reported 3 frames: the page load, one in the replay, and one after the replay window closed), so in-frame production `OrderTable` samples number 3, and this
 criterion cannot be met as written. The step 4 suite therefore asserts the 60% floor over the
 replay, meaning every sample inside the drive's steps: 70.7% of the 92 replay samples charged to `OrderTable.tsx` in development (of 96 stacked
 replay samples) and 83.6%
@@ -744,12 +744,18 @@ with `attribution.ts`, `profiler.ts`, `line-attribution.ts` and `component-attri
   `confidenceWeight(fraction, basis, support)` derives the rest and throws if a sampled fraction is
   not the share its own counts give.
 - *Range*: the interval the true share plausibly lies in. The timing grid either side of a
-  measurement, a 95% Wilson interval for a sampled share. Thin evidence widens the answer.
-- *Level*: `high`, `moderate` or `low`, by one rule in `confidenceLevelOf`. A measurement is high. A
-  sampled share is moderate from 21 independent samples up and low below, and never high. A
-  subtraction is high when the second signal agrees, moderate when nothing could check it, low when
-  it disagrees. The 21 comes from the findings' own line: plus or minus 20 points is unusable, and
-  a Wilson interval at an even split is first inside that at 21 samples.
+  measurement, and of a subtraction whose check agreed or was not made; a 95% Wilson interval for a
+  sampled share. Thin evidence widens the answer.
+- *Level*: `high`, `moderate` or `low`, by one rule in `confidenceLevelOf`. A measurement is high,
+  unless its whole is under 1ms and the timing grid alone is more than 20 points of it, which is
+  low; no corpus weight is that short. A sampled share is moderate from 21 independent samples up
+  and low below, and never high; a frame's pooled function share is judged on the fewer of its
+  pool's samples and its own slice's. A subtraction is high when the second signal agrees over 21
+  or more in-frame samples, moderate when it agrees on fewer or nothing could check it, and low
+  when it disagrees. The 21 is a choice, not a derivation: `findings.md`'s "±20 points at five
+  samples" is its measure of unusable, roughly one standard error of an even split there, and
+  applied as a 95% half-width, the stricter reading, a Wilson interval at an even split is first
+  inside it at 21 samples. At five samples the 95% range is ±33 points.
 
 The tier stays on the candidate, as before. A ranking also carries `lead`: whether the first
 candidate's range clears the second's (`clear`, `within-noise`, `sole`, `none`).
@@ -761,21 +767,24 @@ candidate's range clears the second's (`clear`, `within-noise`, `sole`, `none`).
   first: of the corpus's 16,451 gaps, 16,376 are 9ms or longer, 11 fall between 5 and 9ms, and 64
   are under 5ms, in 14 bursts holding 78 samples (4x, both build modes). Four of the bursts are
   `vendor-listener`'s first click. This is F2. Every sample share in the engine is now a share of
-  independent samples, and the raw counts stay on the evidence.
+  independent samples, and the raw counts stay on the evidence. A burst counts as one look only
+  while it is shorter than the 10ms floor; every corpus burst spans 6.0ms or less, so each still
+  counts once (4x, both build modes).
 - `crossCheckEmptyStacks` in `confidence.ts`. It compares the share of a frame outside every
   reported script with the share of in-frame samples that had no stack. They agree within the
   larger of one sample and two binomial standard deviations, and are left unchecked under five
-  samples. On the corpus's 53 frames 45 agree, 8 are unchecked (all `derive-in-render`), none
-  disagree (4x, both build modes). The comparison is against time outside *scripts*, not against
-  the unattributed charge, because the rendering update's own layout also runs with no stack:
+  samples. On the corpus's 53 frames 45 agree, 8 are unchecked (all `derive-in-render`: five with
+  four samples each, and three outside the profile's span, which say so as
+  `frame-outside-profile`), none disagree (4x, both build modes). The comparison is against time
+  outside *scripts*, not against the unattributed charge, because the rendering update's own layout also runs with no stack:
   `spans`' first frame is 0.1% unattributed and 15.8% outside scripts (development, 4x).
 - `attributeFrames` in `frame-attribution.ts`. Every slice of a frame becomes a candidate whose
   weight is a share of the frame's duration, and the weights sum to 1 on all 53 frames. A script
   slice's JavaScript is divided by the strongest signal available: fiber self times where a timed
   commit landed in it, else functions sampled in that site's slices across the interaction, else
   the script entry as LoAF named it. Forced style and layout is one candidate charged to its
-  script entry. Time nothing can name is an explicit `unattributed` candidate per place in the
-  frame, with the cross-check on its confidence.
+  script entry. Time nothing can name is an explicit `unattributed` candidate per reason, with
+  the cross-check on its confidence.
 - `attributeCapture` in `capture-attribution.ts`: the entry point. Per frame, per interaction
   (`components`, `functions`, `frames`), every commit, `workingFrom` naming each missing signal,
   and `statementLevel: 'unavailable-in-page'`.
@@ -810,8 +819,10 @@ candidate's range clears the second's (`clear`, `within-noise`, `sole`, `none`).
     of 14 raw, so `low` (4x).
   - `spans … > development: says when equal components cannot be ranked`.
 - *A large unattributed share.* `innerhtml-rebuild … > {mode}/unforced`: 88.9-90.3% unattributed,
-  top-ranked, `high` because the empty-stack share is within 2.8 points of the share outside
-  scripts; the largest named candidate is 9.7-11.1% (4x, both build modes).
+  top-ranked, cross-checked: the empty-stack share is within 2.8 points of the share outside
+  scripts. `moderate`, not `high`, because each frame holds 9 to 12 in-frame samples, fewer than
+  the 21 that would let agreement confirm it. The largest named candidate is `rebuildRows` at
+  9.7-11.1%, `low` (4x, both build modes).
 - *The degraded tiers*, each by removing a signal from a real capture: `degraded tiers … > no
   profiler, …` (five tests), `no React hook, …`, `no source map, …`.
 
@@ -916,7 +927,8 @@ it under Questions.
 **Figures reviewer (F):**
 - **F1, accepted.** The vendor slice is 7.7–9.0%, not 7.7–8.9%; production reaches 9.018%.
 - **F2, accepted.** Production `derive-in-render` produced a long frame after **1** of 24 presses,
-  not 2: one of LoAF's two frames was the page load. Fixed in `capture-attribution.ts`. The
+  not 2. LoAF reported 3 frames: the page load at 48.9ms, one at 443.2ms in the replay, and one at
+  115168.1ms after the window closed. The "2" came from `sawNewFrame`, which counted the page load. Fixed in `capture-attribution.ts`. The
   orchestrator fixed both occurrences in this file, including its own note on step 4's
   done-when. The in-frame population figures are unaffected.
 - **F3, accepted** with C5.
@@ -933,6 +945,28 @@ it under Questions.
 - **F8, accepted.** The `innerhtml-rebuild` tests also assert the function name, and that its
   definition line falls at or before the ground truth's range.
 - **F9, accepted.** `.sort` is read from the ground truth's `expectedSourceText`, not hard-coded.
+
+### Step 5 — closed
+
+The fix pass applied every accepted finding. `pnpm check` is green at 289 tests (161 core, 128
+corpus). A before-and-after snapshot of all 8 captures, run with and without the profile, changed
+exactly as decided and in nothing else:
+- 103 agreeing unattributed candidates went from `high` to `moderate` (C1).
+- 32 pooled function candidates went from `moderate` to `low` (C4).
+- Every subtraction range is now ±grid (C7).
+- 3 frames are now `frame-outside-profile` (C6).
+- The no-profiler commit remainder's basis is now `sole-candidate` (C3).
+
+No weight, subject, tier, order or lead changed. Two consequences are worth reading:
+- **The no-profiler `innerhtml-rebuild` test weakened** from "strictly lower confidence than with
+  the profile" to "never higher". C1 forces this, because both runs are now `moderate`. The
+  degradation still shows elsewhere: script time drops to `loaf-script-registration`, and
+  `workingFrom` names the missing profiler.
+- **F8 needed a ground-truth field.** `rebuildRows` was not in the `innerhtml-rebuild` ground
+  truth, so `acceptableAttribution.sampledListener` was added, holding the function, line 133 and
+  its expected source text. The anchor suite validates it against the source.
+
+Step 6 starts next.
 
 ## Questions for the morning
 
@@ -966,8 +1000,8 @@ it under Questions.
   standard error noted beside it.
 - **Step 4's "60%+ of in-frame `OrderTable` samples" is now measured over the replay, every sample
   inside the drive's steps, instead of inside long frames.** In-frame production holds 3 samples
-  after the re-capture, because LoAF reported a long frame after only 1 of 24 presses (2 frames, one of them the page
-  load), against 5 of 24 before (not re-checked for the same page-load misreading).
+  after the re-capture, because LoAF reported a long frame after only 1 of 24 presses (3 frames: the page load, one in the
+  replay, and one after the window closed), against 5 of 24 before (not re-checked for the same page-load misreading).
   Orchestrator's decision: accept the replay population. It is the same function work, a frame
   under the 50ms threshold is still a slow keypress, and it follows the settled rule that long-frame
   counts are not assertable. The in-frame share is still reported. If you want the claim limited

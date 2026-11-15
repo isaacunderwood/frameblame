@@ -515,6 +515,7 @@ describe('attributeCommit without fiber timings', () => {
       independentSamples: 2,
       ofIndependentSamples: 4,
       ofMeasuredShare: 1,
+      inOwnWindow: null,
     });
     expect(g?.weight.confidence.range.low).toBeLessThan(0.2);
     expect(g?.weight.confidence.range.high).toBeGreaterThan(0.8);
@@ -750,12 +751,16 @@ describe('attributeCommit without fiber timings', () => {
     expect(whole?.subject).toEqual({ kind: 'unattributed', reason: 'no-profiler' });
     expect(whole?.tier).toBe('unattributed');
     expect(whole?.weight.fraction).toBe(1);
+    // The one candidate there could be, and a count of commits rather than a
+    // duration, so no timing grid widens it.
+    expect(whole?.weight.basis).toBe('sole-candidate');
     expect(whole?.weight.confidence).toEqual({
       level: 'moderate',
       range: { low: 1, high: 1 },
       support: {
         kind: 'subtraction',
         check: { verdict: 'unchecked', reason: 'no-profiler' },
+        gridShare: 0,
       },
     });
     expect(whole?.evidence).toEqual([

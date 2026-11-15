@@ -113,7 +113,14 @@ describe('a frame whose time went to browser work nothing can name', () => {
     expect(answer.denominator).toBe('frame-duration');
   });
 
-  it('is at high confidence when the profiler agrees that no script was running', () => {
+  it('is at moderate confidence when the profiler agrees on too few samples to have disagreed', () => {
+    /*
+     * 11 of 12 stackless agrees with a frame 90% outside scripts, but twelve
+     * samples are fewer than a sampled share needs to be an estimate at all,
+     * so agreement confirms only that the two signals are not far apart. The
+     * corpus's agreeing frames hold 5 to 14 independent samples (4x, both
+     * build modes).
+     */
     const answer = attributedWith(trace(APP_JS, samples(null)));
     const [top] = answer.causes.causes;
 
@@ -122,16 +129,42 @@ describe('a frame whose time went to browser work nothing can name', () => {
       samplesWithoutStack: 11,
       ofSamplesInFrame: 12,
     });
-    expect(top?.weight.confidence.level).toBe('high');
+    expect(top?.weight.confidence.level).toBe('moderate');
     expect(top?.weight.confidence.support).toEqual({
       kind: 'subtraction',
       check: answer.unattributed.check,
+      gridShare: 0.2 / 150,
     });
+    // Exact to the timing grid either side, since the slices were coarsened.
+    expect(top?.weight.confidence.range.low).toBeCloseTo(130 / 150 - 0.2 / 150, 10);
+    expect(top?.weight.confidence.range.high).toBeCloseTo(130 / 150 + 0.2 / 150, 10);
     // Both signals are on the evidence: the slice, and the empty stacks.
     expect(top?.evidence).toEqual([
       { kind: 'frame-slice', slice: 'script-to-render', durationMs: 130 },
       { kind: 'empty-stack-share', samplesWithoutStack: 11, ofSamplesInFrame: 12 },
     ]);
+  });
+
+  it('is at high confidence when the profiler agrees over enough samples to have disagreed', () => {
+    // 21 stackless samples 6ms apart across the gap, and one in the listener.
+    const answer = attributedWith(
+      trace(APP_JS, [
+        { atMs: 1004, stack: [[0, 'rebuildRows', 10]] },
+        ...Array.from({ length: 21 }, (_, index) => ({
+          atMs: 1018 + 6 * index,
+          stack: null,
+        })),
+      ]),
+    );
+    const [top] = answer.causes.causes;
+
+    expect(answer.unattributed.check).toMatchObject({
+      verdict: 'agrees',
+      samplesWithoutStack: 21,
+      ofSamplesInFrame: 22,
+    });
+    expect(top?.subject).toMatchObject({ kind: 'unattributed' });
+    expect(top?.weight.confidence.level).toBe('high');
   });
 
   it('is at moderate confidence on subtraction alone, and names the entry instead of a function', () => {
@@ -192,6 +225,40 @@ describe('a frame whose time went to browser work nothing can name', () => {
       reason: 'too-few-samples',
       ofSamplesInFrame: 3,
     });
+  });
+
+  it('says a frame the profiler was not looking at is outside the profile, not short of samples', () => {
+    /*
+     * The shape of `derive-in-render`'s production page-load frame,
+     * 48.9-181.5ms against a first sample at 201.1ms, and of frames that end
+     * after the last sample (4x): LoAF reports them, and the profiler cannot
+     * have seen them.
+     */
+    const answer = attributedWith(
+      trace(APP_JS, [
+        { atMs: 1200, stack: null },
+        { atMs: 1215, stack: null },
+      ]),
+    );
+    expect(answer.unattributed.check).toEqual({
+      verdict: 'unchecked',
+      reason: 'frame-outside-profile',
+    });
+    const note = only(answer.notes);
+    expect(note).toEqual({
+      kind: 'frame-outside-profile',
+      firstSampleAtMs: 1200,
+      lastSampleAtMs: 1215,
+    });
+    expect(describeFrameNote(note, PROVENANCE)).toContain(
+      'outside the span the profiler',
+    );
+    const [top] = answer.causes.causes;
+    expect(top?.weight.confidence.level).toBe('moderate');
+
+    // A sample just inside the tolerance `isWithinFrame` allows is in the frame.
+    const edge = attributedWith(trace(APP_JS, [{ atMs: 1150.1, stack: null }]));
+    expect(edge.unattributed.check).toMatchObject({ reason: 'too-few-samples' });
   });
 
   it('counts a burst of in-frame samples once', () => {
@@ -325,16 +392,91 @@ describe('a script slice with a React commit inside it', () => {
     expect(ofKind(answer.causes.causes, 'script-entry').subject).toMatchObject({
       scope: 'whole-entry',
     });
-    const note = only(answer.notes);
-    expect(note).toMatchObject({
+    /*
+     * Both conditions fail, and each is said apart: the render cannot have
+     * begun after the script did, by 26ms, and it is 24ms longer than the
+     * script's 56ms of JavaScript.
+     */
+    const [start, sum, ...more] = answer.notes;
+    expect(more).toEqual([]);
+    expect(start).toEqual({
       kind: 'commit-render-does-not-fit-script',
       scriptIndex: 0,
+      committedAtMs: 1056,
       byMs: 26,
     });
-    expect(describeFrameNote(note, PROVENANCE)).toContain(
+    expect(sum).toEqual({
+      kind: 'commit-renders-exceed-script',
+      scriptIndex: 0,
+      renderMs: 80,
+      javaScriptMs: 56,
+      byMs: 24,
+    });
+    if (start === undefined || sum === undefined) return;
+    expect(describeFrameNote(start, PROVENANCE)).toContain(
       '26.0ms (production, 4x CPU throttle',
     );
+    expect(describeFrameNote(sum, PROVENANCE)).toContain('80.0ms (production, 4x');
     // The commit is still reported beside the frame.
+    expect(answer.commits).toHaveLength(1);
+  });
+
+  it('notes renders that each fit but together outrun the script, by the shortfall alone', () => {
+    // Two 30ms renders, each beginning after the script did, in 56ms of it.
+    const signals = capture({
+      frames: [frame],
+      react: {
+        hookInstalled: true,
+        spans: [],
+        commits: [
+          commit([fiber(0, 'First', null, 30)], 1040),
+          commit([fiber(0, 'Second', null, 30)], 1056),
+        ],
+      },
+    });
+    const answer = only(attributed(signals));
+
+    expect(answer.notes).toEqual([
+      {
+        kind: 'commit-renders-exceed-script',
+        scriptIndex: 0,
+        renderMs: 60,
+        javaScriptMs: 56,
+        byMs: 4,
+      },
+    ]);
+    expect(answer.causes.causes.some((cause) => cause.subject.kind === 'component')).toBe(
+      false,
+    );
+  });
+
+  it('notes a commit that landed in a script with no JavaScript of its own', () => {
+    // All 56ms of the script is forced style and layout.
+    const forcing = script({
+      startTimeMs: 1002,
+      durationMs: 56,
+      forcedStyleAndLayoutDurationMs: 56,
+    });
+    const signals = capture({
+      frames: [paintedFrame(1000, 60, [forcing], 59)],
+      react: {
+        hookInstalled: true,
+        spans: [],
+        commits: [commit([fiber(0, 'App', null, 10)], 1056)],
+      },
+    });
+    const answer = only(attributed(signals));
+    const note = only(answer.notes);
+
+    expect(note).toEqual({
+      kind: 'commit-in-script-without-javascript',
+      scriptIndex: 0,
+      committedAtMs: 1056,
+    });
+    expect(describeFrameNote(note, PROVENANCE)).toContain('ran no JavaScript of its own');
+    expect(answer.causes.causes.some((cause) => cause.subject.kind === 'component')).toBe(
+      false,
+    );
     expect(answer.commits).toHaveLength(1);
   });
 
@@ -393,10 +535,12 @@ describe('sampled functions in a script slice', () => {
 
   it('pools the samples of one registration site across an interaction’s frames', () => {
     /*
-     * A 12ms slice at a 12-15ms cadence is about one sample per frame (4x,
-     * both build modes), so one frame cannot say what ran in it. The two
-     * frames of the replayed interaction can, a little: each frame's
-     * candidate rests on both samples.
+     * `vendor-listener`'s vendor slices last 12.0-12.4ms, and the sampler's
+     * median cadence was 14.2-14.7ms per capture in the v0.3 re-capture and
+     * 12.2ms in the one before (4x, both build modes), so one frame holds
+     * about one sample and cannot say what ran in it. The two frames of the
+     * replayed interaction can, a little: each frame's candidate rests on
+     * both samples, and on the one in its own slice.
      */
     const signals = capture({
       frames,
@@ -423,6 +567,7 @@ describe('sampled functions in a script slice', () => {
         independentSamples: 2,
         ofIndependentSamples: 2,
         ofMeasuredShare: 12 / 60,
+        inOwnWindow: 1,
       });
       // Two samples is a guess, and the weight says so.
       expect(vendor.weight.confidence.level).toBe('low');

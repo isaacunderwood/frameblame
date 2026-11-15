@@ -23,9 +23,10 @@
  * capture and asserting what the answer falls back to.
  *
  * Nothing here walks a stack, partitions a frame or counts samples by hand,
- * and nothing asserts how many long frames a capture holds: every assertion
- * about frames is made of each frame the engine returns, however many there
- * are. Every figure quoted is from the v0.3 re-capture, Chromium
+ * and nothing asserts how many long frames a capture or an interaction holds,
+ * zero included: every assertion about frames is made of each frame the
+ * engine returns, however many there are. Every figure quoted is from the
+ * v0.3 re-capture, Chromium
  * 159.0.8154.6, 4x CPU throttle, with the build mode given.
  */
 
@@ -120,6 +121,18 @@ describe('derive-in-render: the declared component, and the declared function', 
   const notAtFault = arrayAt(truth, ['notAtFault', 'components']).map((name, index) =>
     asString(name, ['notAtFault', 'components', index]),
   );
+  /**
+   * The call a declared culprit line begins with, read off its
+   * `expectedSourceText`: `.sort` for line 36's `.sort((a, b) => ...)`, and
+   * `null` for a line that does not begin with one.
+   */
+  const callTokenOnLine = (line: number | null): string | null => {
+    const declared = arrayAt(truth, ['expected', 'culpritLines']).find(
+      (entry) => numberAt(entry, ['line']) === line,
+    );
+    if (declared === undefined) return null;
+    return /^\.\w+/.exec(stringAt(declared, ['expectedSourceText']).trim())?.[0] ?? null;
+  };
 
   it('development: the component is known, at high confidence, from fiber timings', () => {
     const answer = attributeCapture(loadSignals('derive-in-render', 'development'));
@@ -204,12 +217,14 @@ describe('derive-in-render: the declared component, and the declared function', 
       const [top, second] = replay.causes.causes;
       expect(replay.population.window).toBe('interaction');
       expect(top?.tier).toBe('profiler-mapped');
+      const line = definedOnLine(top);
+      const token = callTokenOnLine(line);
+      expect(token).not.toBeNull();
       expect(top?.subject).toMatchObject({
         kind: 'source-location',
         granularity: 'function-definition',
-        enclosingCallToken: '.sort',
+        enclosingCallToken: token,
       });
-      const line = definedOnLine(top);
       expect(line).toBeGreaterThanOrEqual(from);
       expect(line).toBeLessThanOrEqual(to);
       expect(
@@ -301,6 +316,16 @@ describe('spans: the components that rendered, per interaction and per frame', (
      * timing grid can separate (development, 4x). The ranking says so rather
      * than presenting 0.1ms as an order.
      */
+    /*
+     * These two rows were chosen from the engine's output, not declared by
+     * the ground truth. The other two multi-component rows lead clearly with
+     * `App`, and neither is a real difference. In `initial-mount` `App` reads
+     * 35.7ms of self time against 25.5-26.5ms for each other component,
+     * because host-fiber time, the DOM it creates on mount, is charged to the
+     * nearest component above it (step 3, review finding 1). In `bump` it
+     * reads 26.6ms against 25.0-25.2ms, a margin too small to tell apart from
+     * that same charge (development, 4x). So neither is asserted either way.
+     */
     for (const id of ['mount-toggle', 'bump-again']) {
       expect(mergedOf(interactionOf(answer, id)).causes.lead).toBe('within-noise');
     }
@@ -308,7 +333,6 @@ describe('spans: the components that rendered, per interaction and per frame', (
     const alone = mergedOf(interactionOf(answer, 'state-owner-self')).causes;
     expect(alone.lead).toBe('sole');
     expect(componentNames(alone.causes)).toEqual(['StateOwner']);
-    expect(interactionOf(answer, 'state-owner-self').frames).toEqual([]);
   });
 
   it('production: the same names from samples, at the confidence a handful of samples earns', () => {
@@ -352,6 +376,16 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
     'unattributedCrossCheck',
     'agreementToleranceShare',
   ]);
+  const culpritFrom = numberAt(truth, [
+    'expected',
+    'acceptableAttribution',
+    'lineRange',
+    'from',
+  ]);
+  const listener = {
+    name: stringAt(truth, ['expected', 'acceptableAttribution', 'sampledListener', 'function']),
+    line: numberAt(truth, ['expected', 'acceptableAttribution', 'sampledListener', 'line']),
+  };
 
   /** How far apart the two signals' shares are, for a frame that was checked. */
   function signalsApartBy(frame: FrameAttribution): number {
@@ -387,18 +421,29 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
          * The cross-check: the profiler's empty-stack share is within 2.8
          * points of the share of the frame outside every script (4x, both
          * build modes), far inside the fixture's declared tolerance. Two
-         * signals agreeing is what makes the unattributed share high
-         * confidence rather than a subtraction.
+         * signals agreeing is what makes this a finding rather than a bare
+         * subtraction. It is `moderate`, not `high`: each frame holds 9 to 12
+         * independent samples, fewer than the 21 a sampled share needs to be
+         * an estimate, so the agreement says the two are not far apart and no
+         * more (`confidenceLevelOf`).
          */
         expect(frame.unattributed.check.verdict).toBe('agrees');
         expect(signalsApartBy(frame)).toBeLessThanOrEqual(agreement);
         for (const cause of frame.causes.causes) {
           if (cause.subject.kind !== 'unattributed') continue;
-          expect(cause.weight.confidence.level).toBe('high');
-          expect(cause.weight.confidence.support).toEqual({
+          expect(cause.weight.confidence.level).toBe('moderate');
+          const { support } = cause.weight.confidence;
+          if (support.kind !== 'subtraction') throw new Error('expected a subtraction');
+          expect(support).toEqual({
             kind: 'subtraction',
             check: frame.unattributed.check,
+            gridShare: support.gridShare,
           });
+          // The timing grid over the frame, which is what the range widens by.
+          expect(support.gridShare).toBeCloseTo(
+            COARSENED_TIMING_TOLERANCE_MS / frame.frame.durationMs,
+            12,
+          );
           expect(cause.evidence.map((evidence) => evidence.kind)).toContain(
             'empty-stack-share',
           );
@@ -409,13 +454,19 @@ describe('innerhtml-rebuild: a large unattributed share, not a confident wrong a
          * that happen to be visible. The largest named candidate is the
          * listener's own function at 9.7-11.1% of the frame, which is its
          * 13.4-15.8ms and no more (4x, both build modes), and it rests on
-         * four samples and says so.
+         * four samples and says so. It is the function the ground truth
+         * points a human at, at function level: defined at or before the
+         * first culprit line, which is the write it makes, not where it is
+         * defined.
          */
         for (const cause of frame.causes.causes) {
           if (cause.subject.kind === 'unattributed') continue;
           expect(cause.weight.fraction).toBeLessThan(1 - floor);
           if (cause.subject.kind === 'source-location') {
             expect(cause.weight.confidence.level).toBe('low');
+            expect(cause.subject.functionName?.text).toBe(listener.name);
+            expect(definedOnLine(cause)).toBe(listener.line);
+            expect(definedOnLine(cause)).toBeLessThanOrEqual(culpritFrom);
           }
         }
         expect(frame.causes.totalWeight).toBeCloseTo(1, 6);
@@ -499,7 +550,7 @@ describe('vendor-listener: three slices, and the vendor at the confidence its sa
 
         /*
          * Three slices, not one cause: forced layout at 66.4-74.6% of the
-         * frame, first-party compute at 11.8-13.5%, the vendor at 7.7-8.9%
+         * frame, first-party compute at 11.8-13.5%, the vendor at 7.7-9.0%
          * (4x, both build modes). Ranked as the ground truth declares.
          */
         const byShare = [...declared].sort(
@@ -636,7 +687,11 @@ describe('thin evidence: the answer may only be wrong where it says it is unsure
      * `derive-in-render`'s frames last 57.1-66.7ms and hold 0 to 6 samples
      * (development, 4x). Below five, one sample moves a share by more than 20
      * points, so the unattributed share's cross-check is not attempted, and
-     * its confidence is the lower one that subtraction alone earns.
+     * its confidence is the lower one that subtraction alone earns. Where it
+     * is attempted and agrees, five or six samples are too few for agreement to
+     * make it `high`. A frame after the profiler's last sample, which LoAF
+     * still reports, is outside the profile rather than short of samples, and
+     * says so in a note.
      */
     for (const frame of answer.frames) {
       const { check } = frame.unattributed;
@@ -644,12 +699,13 @@ describe('thin evidence: the answer may only be wrong where it says it is unsure
         (cause) => cause.subject.kind === 'unattributed',
       );
       for (const cause of unattributed) {
-        expect(cause.weight.confidence.level).toBe(
-          check.verdict === 'agrees' ? 'high' : 'moderate',
-        );
+        expect(cause.weight.confidence.level).toBe('moderate');
       }
       if (check.verdict === 'unchecked') {
-        expect(check.reason).toBe('too-few-samples');
+        expect(['too-few-samples', 'frame-outside-profile']).toContain(check.reason);
+        expect(frame.notes.some((note) => note.kind === 'frame-outside-profile')).toBe(
+          check.reason === 'frame-outside-profile',
+        );
       } else {
         expect(check.ofSamplesInFrame).toBeGreaterThanOrEqual(5);
       }
@@ -671,7 +727,7 @@ describe('degraded tiers: a real capture with one signal removed', () => {
   }
 
   for (const mode of BUILD_MODES) {
-    it(`no profiler, innerhtml-rebuild/${mode}: the unattributed share stands on subtraction alone, at lower confidence`, () => {
+    it(`no profiler, innerhtml-rebuild/${mode}: the unattributed share stands on subtraction alone, and says so`, () => {
       const signals = loadSignals('innerhtml-rebuild', mode);
       const full = attributeCapture(signals);
       const degraded = attributeCapture(withoutProfile(signals));
@@ -684,22 +740,27 @@ describe('degraded tiers: a real capture with one signal removed', () => {
         full.frames.map((frame) => frame.unattributed.fraction),
       );
 
-      // And a lower confidence in every one of them, with the reason in the data.
+      /*
+       * And the reason in the data for every one of them: no second signal.
+       * The level is `moderate` either way, because with the profile the
+       * agreement rests on 9 to 12 in-frame samples, too few to make it `high`
+       * (4x, both build modes); what is lost is the check itself, and the
+       * level is never higher without it.
+       */
       const before = unattributedIn(full);
       const after = unattributedIn(degraded);
       expect(after).toHaveLength(before.length);
       for (const [index, cause] of after.entries()) {
+        const prior = before[index]?.weight.confidence ?? never();
+        if (prior.support.kind !== 'subtraction') throw new Error('expected a subtraction');
+        expect(prior.support.check.verdict).toBe('agrees');
         expect(cause.weight.confidence.support).toEqual({
           kind: 'subtraction',
           check: { verdict: 'unchecked', reason: 'no-profiler' },
+          gridShare: prior.support.gridShare,
         });
         expect(cause.weight.confidence.level).toBe('moderate');
-        expect(
-          isLowerConfidence(
-            cause.weight.confidence.level,
-            before[index]?.weight.confidence.level ?? 'low',
-          ),
-        ).toBe(true);
+        expect(isLowerConfidence(prior.level, cause.weight.confidence.level)).toBe(false);
         expect(cause.evidence.map((evidence) => evidence.kind)).not.toContain(
           'empty-stack-share',
         );
@@ -842,7 +903,9 @@ describe('degraded tiers: a real capture with one signal removed', () => {
     /*
      * No component can be named, so each frame's script is divided among the
      * functions the profiler saw, pooled over the replay's frames: 59 stacked
-     * samples, 39 of them in the `.sort` comparator (development, 4x).
+     * samples, 39 of them in the `.sort` comparator (development, 4x). The
+     * pool names the function; each frame's own slice holds 3 to 6 of those
+     * samples, so how that frame split is a guess, and the level is `low`.
      */
     for (const frame of replay.frames) {
       const [top] = frame.causes.causes;
@@ -853,7 +916,11 @@ describe('degraded tiers: a real capture with one signal removed', () => {
         enclosingCallToken: '.sort',
       });
       expect(definedOnLine(top)).toBe(36);
-      expect(top?.weight.confidence.level).toBe('moderate');
+      expect(top?.weight.confidence.level).toBe('low');
+      expect(top?.weight.confidence.support).toMatchObject({
+        kind: 'sampled',
+        ofIndependentSamples: 59,
+      });
       expect(
         frame.causes.causes.some((cause) => cause.subject.kind === 'component'),
       ).toBe(false);

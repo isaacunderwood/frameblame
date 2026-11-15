@@ -113,6 +113,7 @@ export {
   describeConfidence,
   describeCrossCheck,
   isLowerConfidence,
+  isUsableSampleCount,
   MIN_SAMPLES_TO_COMPARE_SHARES,
   USABLE_SHARE_HALF_WIDTH,
   weightRangeOf,
@@ -121,6 +122,7 @@ export {
 export type {
   ConfidenceLevel,
   CrossCheck,
+  SampledSupport,
   WeightConfidence,
   WeightRange,
   WeightSupport,

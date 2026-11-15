@@ -388,6 +388,15 @@ export interface SampleCounts {
  * separate observations of the vendor's function, when it is one (4x, both
  * build modes).
  *
+ * A burst counts as one look only while it is short. It is bounded by its
+ * span: a burst lasting `spanMs` counts as `spanMs / SAMPLE_INTERVAL_FLOOR_MS`
+ * looks, and never fewer than one, which is as many as a sampler at the floor
+ * could have taken in that time. Without the bound, a sampler that really did
+ * tick faster than the floor, every 1ms for a second, would chain into one
+ * burst and be collapsed into a single sample. Every corpus burst spans 6.0ms
+ * or less, the longest being `vendor-listener` production's 24 samples in
+ * 163.5-169.5ms, so each still counts once (4x, both build modes).
+ *
  * Assumes the samples are in timestamp order, as the API reports them and as
  * every capture has them. Timestamps are page-clock milliseconds.
  */
@@ -406,7 +415,11 @@ export function independentSampleWeights(trace: ProfileTrace): readonly number[]
     if (continuesBurst) continue;
 
     const size = index - burstStart;
-    if (size > 1) weights.fill(1 / size, burstStart, index);
+    const first = samples[burstStart];
+    if (size > 1 && first !== undefined && previous !== undefined) {
+      const looks = Math.max(1, (previous.atMs - first.atMs) / SAMPLE_INTERVAL_FLOOR_MS);
+      weights.fill(looks / size, burstStart, index);
+    }
     burstStart = index;
   }
 

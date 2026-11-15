@@ -103,7 +103,7 @@ import {
 } from './attribution.ts';
 import { sampleShareSupport } from './confidence.ts';
 import { isWithinFrame, type LongAnimationFrame } from './loaf.ts';
-import { independentSampleWeights, type SampleCounts } from './profiler.ts';
+import type { SampleCounts } from './profiler.ts';
 import type { CaptureProvenance } from './provenance.ts';
 import type { CapturedSignals } from './signals.ts';
 import {
@@ -354,11 +354,13 @@ function unlocatedCandidate(
  * profile and `population`'s ranges are page-clock milliseconds on the same
  * clock, which every capture's are.
  *
- * Per-candidate shares are coarse at small sample counts: plus or minus 20
- * points at five samples, which is why the replay population exists. Each
- * weight says so itself: its confidence carries the independent counts and
- * the range they leave, and the ranking's `lead` says whether the first
- * candidate is distinguishable from the second.
+ * Per-candidate shares are coarse at small sample counts. `findings.md` calls
+ * them unusable at "±20 points at five samples", which is roughly one
+ * standard error of an even split; the 95% range there is ±33 points. That is
+ * why the replay population exists. Each weight says so itself: its
+ * confidence carries the independent counts and the range they leave, and the
+ * ranking's `lead` says whether the first candidate is distinguishable from
+ * the second.
  */
 export function attributeSampledFunctions(
   resolved: ResolvedProfile,
@@ -366,7 +368,7 @@ export function attributeSampledFunctions(
   population: SamplePopulation,
 ): FunctionAttribution {
   const tallies = new Map<string, FunctionTally>();
-  const independence = independentSampleWeights(resolved.trace);
+  const { independence } = resolved;
   const stacked: SampleCounts = { samples: 0, independent: 0 };
   const unlocated: SampleCounts = { samples: 0, independent: 0 };
   let samples = 0;

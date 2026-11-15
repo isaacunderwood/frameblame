@@ -27,19 +27,26 @@
  *    with 0.3-12.0ms to spare before the render and 0.0-1.9ms after the
  *    commit (development, 4x). Where it does not fit, the render ran partly
  *    somewhere else, the placement is not established, and the components
- *    are not charged; a note says so.
+ *    are not charged; a note says which condition failed, per commit for the
+ *    start and once for the slice when the renders together outrun its
+ *    JavaScript. A commit landing in a slice that ran no JavaScript of its own
+ *    has nothing to divide, and is noted too.
  * 2. **Sampled functions.** Otherwise, where the profiler holds stacked
  *    samples inside this entry's slices, the JavaScript is divided among the
  *    functions they ran in, by sample share. The samples are pooled over
  *    every slice LoAF attributed to the same registration site within the
  *    same interaction, because that is what a replay is: the function is a
  *    distribution over replayed frames, and one 12ms slice holds about one
- *    sample. Pooled within the interaction and not across the capture,
- *    because React registers one listener for every event, so a capture-wide
- *    pool would mix every interaction on the page. The weight is the slice's
- *    measured share times the sampled share, and it is only as good as the
- *    sampled half: its confidence carries the pool's independent sample
- *    count.
+ *    sample (4x, both build modes). Pooled within the interaction and not
+ *    across the capture, because React registers one listener for every
+ *    event, so a capture-wide pool would mix every interaction on the page.
+ *    The weight is the slice's measured share times the sampled share, and it
+ *    is only as good as the sampled half. Its range is the pool's. Its level
+ *    is judged on the fewer of the pool's independent samples and the slice's
+ *    own (`SampledSupport.inOwnWindow`): the pool says which functions ran at
+ *    that site and in what proportion, and only the slice's own samples say
+ *    how this frame split, which is `findings.md` point 2's "per-frame
+ *    percentages remain unusable".
  * 3. **The entry itself.** With neither, the candidate is the script entry as
  *    LoAF named it, at the `loaf-script-registration` tier: the right
  *    milliseconds, charged to the line that registered a listener. This is
@@ -53,16 +60,27 @@
  * (`component-attribution.ts`), where the hook's names are joined to the
  * samples.
  *
+ * A frame's ranking can list one function more than once, once per slice it
+ * was sampled in, because each slice is divided by its own site's pool and
+ * the candidates are not merged across slices. Every development
+ * `vendor-listener` frame lists `vendorTrack` twice: once in the vendor's own
+ * slice, and once in the forced-layout slice after it, whose pool holds the
+ * one boundary sample `scriptSlicePopulation`'s tie-break gives to the later
+ * slice (4x). Merging them would add a share sampled in one slice to a share
+ * sampled in another, which is two estimates over two different populations.
+ *
  * ## The unattributed share, and its cross-check
  *
  * Time outside every reported script and outside the rendering update's
  * style, layout and paint has no cause LoAF can name. It is charged to
- * `unattributed` candidates, one per place in the frame it sits, never
- * shared out among the scripts that happen to be visible. Subtraction alone
- * cannot tell browser work from a gap in LoAF's accounting, so each of these
- * weights carries the verdict of a second signal: the share of in-frame
- * profiler samples with no JavaScript on the stack, compared with the share
- * of the frame outside every script (`crossCheckEmptyStacks`).
+ * `unattributed` candidates, one per reason, summed over the slices that
+ * share it, never shared out among the scripts that happen to be visible.
+ * Subtraction alone cannot tell browser work from a gap in LoAF's accounting,
+ * so each of these weights carries the verdict of a second signal: the share
+ * of in-frame profiler samples with no JavaScript on the stack, compared with
+ * the share of the frame outside every script (`crossCheckEmptyStacks`). A
+ * frame that lies wholly outside the span the profiler sampled is not
+ * checked, and says so apart from a frame that merely held too few samples.
  *
  * Measured, the two move together. `innerhtml-rebuild`'s unforced frames are
  * 88.9-90.3% outside scripts with 88.9-91.7% of in-frame samples stackless;
@@ -99,11 +117,14 @@ import {
   rankCauses,
   type UnattributedReason,
 } from './attribution.ts';
-import { type CommitAttribution, renderedEvidence } from './component-attribution.ts';
+import type { CommitAttribution } from './component-attribution.ts';
+import { renderedEvidence } from './component-samples.ts';
 import {
   type CrossCheck,
   crossCheckEmptyStacks,
   measuredSupport,
+  scaledSampleSupport,
+  subtractionSupport,
   type WeightSupport,
 } from './confidence.ts';
 import { didRender } from './fiber-self-time.ts';
@@ -119,10 +140,11 @@ import {
 } from './line-attribution.ts';
 import {
   exceedsByMoreThanCoarsening,
+  frameEndMs,
   isWithinFrame,
   type LongAnimationFrame,
 } from './loaf.ts';
-import { independentSampleWeights, type ProfileTrace } from './profiler.ts';
+import type { ProfileTrace } from './profiler.ts';
 import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
 import {
   scriptEntrySiteKey,
@@ -138,15 +160,40 @@ export type FrameAttributionNote =
   | {
       /**
        * A commit with fiber timings landed inside a script slice, but its
-       * render time does not fit between the slice's start and the commit, by
-       * `byMs`. Part of the render ran somewhere else, in an earlier task or
-       * an earlier frame, so the commit's components are not charged to this
-       * frame. The slice falls back to sampled functions or to the entry.
+       * render cannot have begun after the slice did: `committedAtMs` less
+       * the render's total time is earlier than the slice's start, by `byMs`.
+       * Part of the render ran somewhere else, in an earlier task or an
+       * earlier frame, so no commit's components are charged to this slice.
+       * The slice falls back to sampled functions or to the entry.
        */
       readonly kind: 'commit-render-does-not-fit-script';
       readonly scriptIndex: number;
       readonly committedAtMs: number;
       readonly byMs: number;
+    }
+  | {
+      /**
+       * The timed commits that landed in a script slice render for longer,
+       * together, than the slice's own JavaScript, by `byMs`: `renderMs`
+       * against `javaScriptMs`. Each may fit on its own, but they cannot all
+       * have run there, so no commit's components are charged to this slice.
+       */
+      readonly kind: 'commit-renders-exceed-script';
+      readonly scriptIndex: number;
+      readonly renderMs: number;
+      readonly javaScriptMs: number;
+      readonly byMs: number;
+    }
+  | {
+      /**
+       * A commit landed inside a script slice that ran no JavaScript of its
+       * own, all of its time being forced style and layout, so there is
+       * nothing for the commit to divide and its components are not charged
+       * or named here. It is still listed in the frame's `commits`.
+       */
+      readonly kind: 'commit-in-script-without-javascript';
+      readonly scriptIndex: number;
+      readonly committedAtMs: number;
     }
   | {
       /**
@@ -156,13 +203,30 @@ export type FrameAttributionNote =
        */
       readonly kind: 'commit-outside-every-script';
       readonly committedAtMs: number;
+    }
+  | {
+      /**
+       * A profile was captured, but the frame ended before its first sample
+       * or began after its last, so the profiler was not looking and the
+       * unattributed share is not cross-checked. LoAF reports frames the
+       * profiler cannot have seen: one that began during the page load,
+       * before the profiler started, and one after the drive's last sample.
+       */
+      readonly kind: 'frame-outside-profile';
+      readonly firstSampleAtMs: number;
+      readonly lastSampleAtMs: number;
     };
 
 /** The time in a frame that no candidate names a cause for. */
 export interface UnattributedShare {
   /** The partition's unattributed charge, in milliseconds. */
   readonly ms: number;
-  /** `ms` as a share of the frame's duration: the unattributed candidates' weights, summed. */
+  /**
+   * `ms` as a share of the frame, over the same whole every candidate divides
+   * by, so it is the frame's `unattributed` candidates' weights summed. Not
+   * the share the cross-check compares, which is all of the frame outside
+   * every script, the rendering update included.
+   */
   readonly fraction: number;
   /**
    * Whether the profiler agrees about how much of the frame had no script
@@ -215,19 +279,37 @@ interface InFrameSamples {
   readonly independentSamplesWithoutStack: number;
 }
 
+/** The page-clock span the profiler sampled: its first and last samples. */
+interface ProfileSpan {
+  readonly firstSampleAtMs: number;
+  readonly lastSampleAtMs: number;
+}
+
+/** The functions sampled at a script slice's site, and how many of them were in the slice. */
+interface PooledFunctions {
+  /** Every slice of the same site and interaction. */
+  readonly pool: FunctionAttribution;
+  /** Independent stacked samples inside this slice alone. */
+  readonly inOwnWindow: number;
+}
+
+/** What the profiler says about one frame. */
+interface ProfilerView {
+  readonly inFrameSamples: InFrameSamples;
+  /** `null` for a profile with no samples, which has no span to be outside of. */
+  readonly span: ProfileSpan | null;
+  /** For a script slice of this frame, its site's pool. */
+  readonly pooledFunctions: (slice: ScriptSlice) => PooledFunctions | undefined;
+}
+
 /** What the rest of the capture says about one frame. */
 interface FrameContext {
   readonly provenance: CaptureProvenance;
   readonly interaction: string | null;
   /** The commits that landed in this frame, in commit order. */
   readonly commits: readonly CommitAttribution[];
-  /**
-   * For a script slice, the functions the profiler saw in every slice of the
-   * same site and interaction, or `undefined` with no profile.
-   */
-  readonly pooledFunctions: (slice: ScriptSlice) => FunctionAttribution | undefined;
   /** `null` with no profile. */
-  readonly inFrameSamples: InFrameSamples | null;
+  readonly profiler: ProfilerView | null;
 }
 
 /** Why each non-script, non-rendering slice has no cause. */
@@ -258,30 +340,48 @@ function landedIn(slice: ScriptSlice, commit: CommitAttribution): boolean {
 }
 
 /**
- * How far a slice's timed commits fall short of fitting inside it, in
- * milliseconds, or 0 when they fit to within the timing grid.
+ * Why a slice's timed commits do not fit inside it, as notes, or none when
+ * they fit to within the timing grid. Their components are charged to the
+ * slice only when this is empty.
  *
  * Two conditions, both LoAF's boundaries checking React's timers. Each
  * commit's render must have begun after the slice did: the hook reports only
  * when a commit finished, but the render cannot have ended later than that,
- * so `committedAt - totalMs` is the latest it can have begun. And together
- * the renders cannot be longer than the JavaScript the slice ran.
+ * so `committedAt - totalMs` is the latest it can have begun. A commit that
+ * fails this gets its own note, by its own shortfall. And together the
+ * renders cannot be longer than the JavaScript the slice ran, which is a
+ * property of the slice rather than of any one commit, so it is one note.
  */
-function shortfallOfFit(slice: ScriptSlice, commits: readonly TimedCommit[]): number {
-  let shortfallMs = 0;
-  let totalMs = 0;
+function fitNotesOf(
+  slice: ScriptSlice,
+  commits: readonly TimedCommit[],
+): FrameAttributionNote[] {
+  const notes: FrameAttributionNote[] = [];
+  let renderMs = 0;
   for (const commit of commits) {
-    const { totalMs: renderMs } = commit.basis.times;
-    totalMs += renderMs;
-    const latestStartMs = commit.commit.committedAtMs - renderMs;
+    const { totalMs } = commit.basis.times;
+    renderMs += totalMs;
+    const latestStartMs = commit.commit.committedAtMs - totalMs;
     if (exceedsByMoreThanCoarsening(slice.startMs, latestStartMs)) {
-      shortfallMs = Math.max(shortfallMs, slice.startMs - latestStartMs);
+      notes.push({
+        kind: 'commit-render-does-not-fit-script',
+        scriptIndex: slice.scriptIndex,
+        committedAtMs: commit.commit.committedAtMs,
+        byMs: slice.startMs - latestStartMs,
+      });
     }
   }
-  if (exceedsByMoreThanCoarsening(totalMs, slice.interior.selfJavaScriptMs)) {
-    shortfallMs = Math.max(shortfallMs, totalMs - slice.interior.selfJavaScriptMs);
+  const javaScriptMs = slice.interior.selfJavaScriptMs;
+  if (exceedsByMoreThanCoarsening(renderMs, javaScriptMs)) {
+    notes.push({
+      kind: 'commit-renders-exceed-script',
+      scriptIndex: slice.scriptIndex,
+      renderMs,
+      javaScriptMs,
+      byMs: renderMs - javaScriptMs,
+    });
   }
-  return shortfallMs;
+  return notes;
 }
 
 /** Milliseconds of one named thing in a frame, with the evidence for them. */
@@ -354,13 +454,13 @@ function chargeTimedComponents(
  * `landed` is the commits whose timestamp fell in the slice. Component self
  * times are added to `components`, which the caller turns into candidates
  * once the whole frame has been walked, because one component can render in
- * more than one slice. Everything else is returned as candidates, with a note
- * for each commit whose render did not fit.
+ * more than one slice. Everything else is returned as candidates, with notes
+ * saying why the timed commits did not fit, where they did not.
  */
 function nameScriptJavaScript(
   slice: ScriptSlice,
   landed: readonly CommitAttribution[],
-  pooled: FunctionAttribution | undefined,
+  pooled: PooledFunctions | undefined,
   components: Map<string, ComponentCharge>,
   { shareOf, measured }: FrameShares,
 ): { candidates: CandidateCause[]; notes: FrameAttributionNote[] } {
@@ -374,19 +474,10 @@ function nameScriptJavaScript(
   };
 
   const timed = landed.filter(isTimed);
-  const shortfallMs = shortfallOfFit(slice, timed);
-  const notes: FrameAttributionNote[] =
-    shortfallMs > 0
-      ? timed.map((commit) => ({
-          kind: 'commit-render-does-not-fit-script',
-          scriptIndex: slice.scriptIndex,
-          committedAtMs: commit.commit.committedAtMs,
-          byMs: shortfallMs,
-        }))
-      : [];
+  const notes = fitNotesOf(slice, timed);
 
   // 1. Fiber timings: components hold their self time, the entry the rest.
-  if (timed.length > 0 && shortfallMs === 0) {
+  if (timed.length > 0 && notes.length === 0) {
     const renderedMs = chargeTimedComponents(timed, scriptEvidence, components);
     const restMs = selfJavaScriptMs - renderedMs;
     const rest: CandidateCause[] =
@@ -405,23 +496,27 @@ function nameScriptJavaScript(
 
   // 2. Sampled functions, pooled over this site's slices in the interaction.
   const jsShare = shareOf(selfJavaScriptMs);
-  if (pooled !== undefined && pooled.causes.causes.length > 0) {
-    const candidates = pooled.causes.causes.flatMap((cause): CandidateCause[] => {
+  if (pooled !== undefined && pooled.pool.causes.causes.length > 0) {
+    const candidates = pooled.pool.causes.causes.map((cause): CandidateCause => {
       const { support } = cause.weight.confidence;
-      // Every weight `attributeSampledFunctions` builds is sampled.
-      if (support.kind !== 'sampled') return [];
-      return [
-        {
-          subject: cause.subject,
-          weight: confidenceWeight(
-            jsShare * cause.weight.fraction,
-            'frame-slice-sample-share',
-            { ...support, ofMeasuredShare: jsShare },
-          ),
-          tier: cause.tier,
-          evidence: [...cause.evidence, scriptEvidence],
-        },
-      ];
+      // Every weight `attributeSampledFunctions` builds is sampled. Dropping
+      // one that was not would leave the slice's weights short of its share
+      // without saying so, so a broken contract fails here.
+      if (support.kind !== 'sampled') {
+        throw new Error(
+          `a pooled function weight is ${support.kind}, not sampled, at script ${String(slice.scriptIndex)}`,
+        );
+      }
+      return {
+        subject: cause.subject,
+        weight: confidenceWeight(
+          jsShare * cause.weight.fraction,
+          'frame-slice-sample-share',
+          scaledSampleSupport(support, jsShare, pooled.inOwnWindow),
+        ),
+        tier: cause.tier,
+        evidence: [...cause.evidence, scriptEvidence],
+      };
     });
     return { candidates, notes };
   }
@@ -513,13 +608,14 @@ function renderingUpdateCandidate(
 }
 
 /**
- * The unattributed candidates, one per reason, each resting on subtraction and
- * carrying the frame's cross-check.
+ * The unattributed candidates, one per reason, each resting on subtraction
+ * from the frame's `wholeMs` and carrying the frame's cross-check.
  */
 function unattributedCandidates(
   unattributed: ReadonlyMap<UnattributedReason, Charge>,
   check: CrossCheck,
   inFrameSamples: InFrameSamples | null,
+  wholeMs: number,
   { shareOf }: FrameShares,
 ): CandidateCause[] {
   /*
@@ -537,26 +633,72 @@ function unattributedCandidates(
             ofSamplesInFrame: inFrameSamples.samples,
           },
         ];
+  const support = subtractionSupport(check, wholeMs);
   return [...unattributed].map(([reason, { ms, evidence }]) => ({
     subject: { kind: 'unattributed', reason },
-    weight: confidenceWeight(shareOf(ms), 'frame-slice-share', {
-      kind: 'subtraction',
-      check,
-    }),
+    weight: confidenceWeight(shareOf(ms), 'frame-slice-share', support),
     tier: 'unattributed',
     evidence: [...evidence, ...emptyStackEvidence],
   }));
 }
 
 /**
- * Attributes one frame. See the module header for how each slice is named.
- * Every weight is a share of the frame's duration.
+ * Whether a frame lies wholly outside the span the profiler sampled: it ended
+ * before the first sample or began after the last, by more than the
+ * tolerance `isWithinFrame` allows, so no sample could have been counted in
+ * it.
+ *
+ * LoAF and the profiler start and stop at different times. The collector's
+ * LoAF observer is `buffered` (`spike/collectors.ts`) and so reports frames
+ * from the page load, before the profiler started; the drive's last frame can end after the profiler's last sample.
+ * Such a frame holds no samples because nobody was looking, which says
+ * nothing about whether a script ran in it, and calling that "too few
+ * samples" would blur the two.
+ */
+function isOutsideProfile(frame: LongAnimationFrame, span: ProfileSpan): boolean {
+  return (
+    exceedsByMoreThanCoarsening(span.firstSampleAtMs, frameEndMs(frame)) ||
+    exceedsByMoreThanCoarsening(frame.startTimeMs, span.lastSampleAtMs)
+  );
+}
+
+/**
+ * The frame's cross-check, and the note that goes with it when the frame lay
+ * outside the profile. `shareOutsideScripts` is from LoAF's partition.
+ */
+function crossCheckOf(
+  frame: LongAnimationFrame,
+  shareOutsideScripts: number,
+  profiler: ProfilerView | null,
+): { readonly check: CrossCheck; readonly note: FrameAttributionNote | null } {
+  if (profiler === null) {
+    return { check: crossCheckEmptyStacks(shareOutsideScripts, null), note: null };
+  }
+  const { span, inFrameSamples } = profiler;
+  if (span !== null && isOutsideProfile(frame, span)) {
+    return {
+      check: { verdict: 'unchecked', reason: 'frame-outside-profile' },
+      note: { kind: 'frame-outside-profile', ...span },
+    };
+  }
+  return {
+    check: crossCheckEmptyStacks(shareOutsideScripts, {
+      samplesWithoutStack: inFrameSamples.independentSamplesWithoutStack,
+      ofSamplesInFrame: inFrameSamples.independentSamples,
+    }),
+    note: null,
+  };
+}
+
+/**
+ * Attributes one frame, given its partition. See the module header for how
+ * each slice is named. Every weight is a share of the frame's duration.
  */
 function attributeFrame(
   frame: LongAnimationFrame,
+  decomposition: FrameDecomposition,
   context: FrameContext,
 ): FrameAttribution {
-  const decomposition = decomposeFrame(frame);
   const { wholeMs, shares } = frameSharesOf(frame, decomposition);
   const { shareOf } = shares;
 
@@ -564,19 +706,13 @@ function attributeFrame(
     (sum, slice) => sum + (slice.kind === 'script' ? slice.durationMs : 0),
     0,
   );
-  const { inFrameSamples } = context;
-  const check = crossCheckEmptyStacks(
-    shareOf(wholeMs - scriptMs),
-    inFrameSamples === null
-      ? null
-      : {
-          samplesWithoutStack: inFrameSamples.independentSamplesWithoutStack,
-          ofSamplesInFrame: inFrameSamples.independentSamples,
-        },
-  );
+  const { profiler } = context;
+  const crossChecked = crossCheckOf(frame, shareOf(wholeMs - scriptMs), profiler);
+  const { check } = crossChecked;
 
   const candidates: CandidateCause[] = [];
-  const notes: FrameAttributionNote[] = [];
+  const notes: FrameAttributionNote[] =
+    crossChecked.note === null ? [] : [crossChecked.note];
   /** Component self time by name, summed across the frame's slices and commits. */
   const components = new Map<string, ComponentCharge>();
   /** Unattributed time by reason, summed across the slices that share one. */
@@ -595,12 +731,21 @@ function attributeFrame(
           (commit) => !placed.has(commit) && landedIn(slice, commit),
         );
         for (const commit of landed) placed.add(commit);
-        if (slice.interior.selfJavaScriptMs <= 0) break;
+        if (slice.interior.selfJavaScriptMs <= 0) {
+          for (const commit of landed) {
+            notes.push({
+              kind: 'commit-in-script-without-javascript',
+              scriptIndex: slice.scriptIndex,
+              committedAtMs: commit.commit.committedAtMs,
+            });
+          }
+          break;
+        }
 
         const named = nameScriptJavaScript(
           slice,
           landed,
-          context.pooledFunctions(slice),
+          profiler?.pooledFunctions(slice),
           components,
           shares,
         );
@@ -655,7 +800,15 @@ function attributeFrame(
     });
   }
 
-  candidates.push(...unattributedCandidates(unattributed, check, inFrameSamples, shares));
+  candidates.push(
+    ...unattributedCandidates(
+      unattributed,
+      check,
+      profiler?.inFrameSamples ?? null,
+      wholeMs,
+      shares,
+    ),
+  );
 
   const unattributedMs = decomposition.charges.unattributedMs;
   return {
@@ -674,8 +827,7 @@ function attributeFrame(
 /** The samples inside one frame, by `isWithinFrame`, raw and independent. */
 function inFrameSamplesOf(
   frame: LongAnimationFrame,
-  profile: ProfileTrace,
-  independence: readonly number[],
+  resolved: ResolvedProfile,
 ): InFrameSamples {
   const counts = {
     samples: 0,
@@ -683,10 +835,10 @@ function inFrameSamplesOf(
     independentSamples: 0,
     independentSamplesWithoutStack: 0,
   };
-  for (const [index, sample] of profile.samples.entries()) {
+  for (const [index, sample] of resolved.trace.samples.entries()) {
     if (!isWithinFrame(frame, sample.atMs)) continue;
     // One weight per sample, by `independentSampleWeights`' contract.
-    const independent = independence[index] ?? 1;
+    const independent = resolved.independence[index] ?? 1;
     counts.samples += 1;
     counts.independentSamples += independent;
     if (sample.stackId !== null) continue;
@@ -694,6 +846,14 @@ function inFrameSamplesOf(
     counts.independentSamplesWithoutStack += independent;
   }
   return counts;
+}
+
+/** The span a profile sampled, or `null` for one with no samples. */
+function profileSpanOf(trace: ProfileTrace): ProfileSpan | null {
+  const first = trace.samples[0];
+  const last = trace.samples.at(-1);
+  if (first === undefined || last === undefined) return null;
+  return { firstSampleAtMs: first.atMs, lastSampleAtMs: last.atMs };
 }
 
 /** The label of the interaction whose window a frame began in. See `framesOfInteraction`. */
@@ -708,49 +868,51 @@ function interactionOf(
 
 /**
  * The sampled functions of every script slice in the capture, pooled by the
- * interaction its frame began in and the site LoAF named, and looked up by
- * that same pair. `labels` holds each frame's interaction label, in
- * `signals.frames` order.
+ * interaction its frame began in and the site LoAF named, with each slice's
+ * own share of its pool's samples. `decompositions` and `labels` hold each
+ * frame's partition and interaction label, in `signals.frames` order.
+ *
+ * Returned by slice, which is safe because each frame is decomposed once, in
+ * `attributeFrames`, and the slices looked up are the ones grouped here.
  */
 function functionPools(
   signals: CapturedSignals,
   resolved: ResolvedProfile,
+  decompositions: readonly FrameDecomposition[],
   labels: readonly (string | null)[],
-): (label: string | null, slice: ScriptSlice) => FunctionAttribution | undefined {
-  /*
-   * The pools: every script slice in the capture, grouped by the interaction
-   * its frame began in and the site LoAF named, with one function
-   * attribution per group. A slice finds its pool by that same pair, so
-   * nothing depends on the slice objects being shared: each frame is
-   * decomposed once here and again in `attributeFrame`, and the partition is
-   * deterministic.
-   */
-  const poolKeyOf = (label: string | null, slice: ScriptSlice): string =>
-    JSON.stringify([label, scriptEntrySiteKey(scriptEntrySiteOf(slice))]);
-
+): ReadonlyMap<ScriptSlice, PooledFunctions> {
+  // Grouped by a key made of the interaction label and everything LoAF says
+  // about the site, which is what "the same site in the same interaction" is.
   const groups = new Map<string, ScriptSlice[]>();
-  for (const [index, frame] of signals.frames.entries()) {
-    for (const slice of decomposeFrame(frame).slices) {
+  for (const [index, decomposition] of decompositions.entries()) {
+    const label = labels[index] ?? null;
+    for (const slice of decomposition.slices) {
       if (slice.kind !== 'script') continue;
-      const key = poolKeyOf(labels[index] ?? null, slice);
+      const key = JSON.stringify([label, scriptEntrySiteKey(scriptEntrySiteOf(slice))]);
       const group = groups.get(key) ?? [];
       group.push(slice);
       groups.set(key, group);
     }
   }
 
-  const pools = new Map<string, FunctionAttribution>();
-  for (const [key, slices] of groups) {
-    pools.set(
-      key,
-      attributeSampledFunctions(
-        resolved,
-        signals.provenance,
-        scriptSlicePopulation(slices),
-      ),
+  const sampled = (slices: readonly ScriptSlice[]): FunctionAttribution =>
+    attributeSampledFunctions(
+      resolved,
+      signals.provenance,
+      scriptSlicePopulation(slices),
     );
+
+  const pools = new Map<ScriptSlice, PooledFunctions>();
+  for (const slices of groups.values()) {
+    const pool = sampled(slices);
+    for (const slice of slices) {
+      pools.set(slice, {
+        pool,
+        inOwnWindow: sampled([slice]).independentStackedSamples,
+      });
+    }
   }
-  return (label, slice) => pools.get(poolKeyOf(label, slice));
+  return pools;
 }
 
 /**
@@ -764,8 +926,9 @@ function functionPools(
  * working from.
  *
  * `resolved` is `resolveProfile(signals.profile)`, or `null` when the capture
- * has no profile, in which case no function is named and no unattributed
- * share is cross-checked. `commits` is every commit attribution the caller
+ * has no profile. It alone decides whether the profiler is used: with `null`
+ * no function is named and no unattributed share is cross-checked, whatever
+ * `signals.profile` holds. `commits` is every commit attribution the caller
  * holds for this capture; each is matched to the frame it recorded landing
  * in. Assumes both were built from `signals`.
  */
@@ -774,23 +937,29 @@ export function attributeFrames(
   resolved: ResolvedProfile | null,
   commits: readonly CommitAttribution[],
 ): readonly FrameAttribution[] {
+  const decompositions = signals.frames.map(decomposeFrame);
   const labels = signals.frames.map((frame) => interactionOf(signals, frame));
-  const pooledFunctions =
-    resolved === null ? null : functionPools(signals, resolved, labels);
-  const independence =
-    signals.profile === null ? null : independentSampleWeights(signals.profile);
+  const pools =
+    resolved === null ? null : functionPools(signals, resolved, decompositions, labels);
+  const span = resolved === null ? null : profileSpanOf(resolved.trace);
 
   return signals.frames.map((frame, index) => {
-    const label = labels[index] ?? null;
-    return attributeFrame(frame, {
+    const decomposition = decompositions[index];
+    // One partition per frame, built just above in the same order.
+    if (decomposition === undefined)
+      throw new Error(`frame ${String(index)} has no partition`);
+    return attributeFrame(frame, decomposition, {
       provenance: signals.provenance,
-      interaction: label,
+      interaction: labels[index] ?? null,
       commits: commits.filter((commit) => commit.frame === frame),
-      pooledFunctions: (slice) => pooledFunctions?.(label, slice),
-      inFrameSamples:
-        signals.profile === null || independence === null
+      profiler:
+        resolved === null || pools === null
           ? null
-          : inFrameSamplesOf(frame, signals.profile, independence),
+          : {
+              inFrameSamples: inFrameSamplesOf(frame, resolved),
+              span,
+              pooledFunctions: (slice) => pools.get(slice),
+            },
     });
   });
 }
@@ -807,7 +976,24 @@ export function describeFrameNote(
         `${formatMilliseconds(note.byMs, provenance)} too long to have run there, so its ` +
         'components are not charged to this frame'
       );
+    case 'commit-renders-exceed-script':
+      return (
+        `the React commits that landed inside script ${String(note.scriptIndex)} render for ` +
+        `${formatMilliseconds(note.renderMs, provenance)} against its ` +
+        `${formatMilliseconds(note.javaScriptMs, provenance)} of JavaScript, so they cannot all ` +
+        'have run there and their components are not charged to this frame'
+      );
+    case 'commit-in-script-without-javascript':
+      return (
+        `a React commit landed inside script ${String(note.scriptIndex)}, which ran no ` +
+        'JavaScript of its own, so its components are not charged to this frame'
+      );
     case 'commit-outside-every-script':
       return 'a React commit landed inside the frame but outside every script it reported';
+    case 'frame-outside-profile':
+      return (
+        'the frame lies outside the span the profiler sampled, so its unattributed share is ' +
+        'not cross-checked'
+      );
   }
 }

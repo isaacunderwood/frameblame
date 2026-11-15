@@ -99,6 +99,7 @@ describe('attributeSampledFunctions', () => {
       independentSamples: 2,
       ofIndependentSamples: 3,
       ofMeasuredShare: 1,
+      inOwnWindow: null,
     });
     expect(result.independentStackedSamples).toBe(3);
     expect(app?.tier).toBe('profiler-mapped');

@@ -115,10 +115,12 @@ export interface ScriptDisagreement {
  * Every script slice in a capture that LoAF attributed to one registration
  * site, with what the profiler says ran in them.
  *
- * Grouped across frames because one entry's share is a handful of samples: a
- * 12ms slice at a 12-15ms cadence is about one sample per frame (4x, both
- * build modes), so the profiler's answer for it is only stable over every
- * frame that entry appeared in.
+ * Grouped across frames because one entry's share is a handful of samples:
+ * `vendor-listener`'s vendor slices last 12.0-12.4ms against a median cadence
+ * of 14.2-14.7ms per capture in the v0.3 re-capture, and 12.2ms in the one
+ * before, so each holds about one sample per frame (4x, both build modes),
+ * and the profiler's answer for it is only stable over every frame that entry
+ * appeared in.
  *
  * Nor are a group's samples evenly spread. Of `vendor-listener`'s vendor
  * slice samples, 9 of 13 in development fall in a 1.1ms burst on the first

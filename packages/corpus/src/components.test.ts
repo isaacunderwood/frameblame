@@ -6,8 +6,9 @@
  *
  * 1. Every interaction in `spans` names the components that rendered, with
  *    self times that sum to the commit's own total.
- * 2. `state-owner-self` names `StateOwner` from a commit with no long frame
- *    around it.
+ * 2. `state-owner-self` names `StateOwner` from its commit alone, which is
+ *    the only signal that saw it: no long frame surrounds it in the v0.3
+ *    capture, and nothing here depends on whether one does.
  * 3. The production run degrades to the profiler tier and says so, rather than
  *    reporting nothing because `actualDuration` is null and the names are
  *    minified. Since step 4 the shipped source map gives the names back, so
@@ -16,8 +17,9 @@
  *
  * Nothing here walks a fiber tree, subtracts a duration or counts samples by
  * hand: the engine does that, and these tests check its answer. Nothing here
- * counts long frames either. "No frame" for `state-owner-self` is asserted as
- * the absence of a frame around one commit, which is the claim, not a count.
+ * counts long frames either, zero included: whether a 25ms render crosses
+ * LoAF's 50ms threshold is the quantity a re-capture moves, so "no frame" for
+ * `state-owner-self` is recorded in a comment, not asserted.
  *
  * Every figure quoted below is from the v0.3 re-capture, Chromium
  * 159.0.8154.6, 4x CPU throttle, with the build mode given. `spans` burns
@@ -179,17 +181,18 @@ describe('spans/development: the React tier names what rendered', () => {
     });
   }
 
-  it('state-owner-self: names StateOwner from a commit with no frame', () => {
+  it('state-owner-self: names StateOwner from its commit alone', () => {
     const result = attributed(signals, 'state-owner-self');
     const commit = onlyCommit(result);
 
     /*
-     * ~25ms of render is under LoAF's 50ms threshold, so no long frame
-     * surrounds this commit and none began in the interaction's window. The
-     * commit is the only evidence, and the answer is built from it alone.
+     * ~25ms of render is under LoAF's 50ms threshold, so in the v0.3 capture
+     * no long frame surrounds this commit and none began in the interaction's
+     * window (development, 4x). The commit is the only evidence, and the
+     * answer is built from it alone. Whether a frame surrounds it is not
+     * asserted: that is a long-frame count of zero, and the claim does not
+     * depend on it.
      */
-    expect(commit.frame).toBeNull();
-    expect(result.frames).toEqual([]);
 
     /*
      * `StateOwner` holds all of the commit: 25.2ms (development, 4x). `App`
@@ -337,11 +340,11 @@ describe('spans/production: the profiler tier, named as such', () => {
     });
   }
 
-  it('state-owner-self: names StateOwner, from a commit with no frame', () => {
+  it('state-owner-self: names StateOwner, from its commit alone', () => {
+    // No long frame surrounds the commit in the v0.3 capture (production,
+    // 4x), and, as in development, that is not asserted.
     const result = attributed(production, 'state-owner-self');
     const commit = onlyCommit(result);
-    expect(commit.frame).toBeNull();
-    expect(result.frames).toEqual([]);
 
     // `g` in this bundle, named `StateOwner` by the map. Every stacked sample
     // in the window lands in it: 2 of 2 (production, 4x).

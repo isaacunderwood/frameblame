@@ -32,6 +32,7 @@ function sampled(samples: number, of: number, ofMeasuredShare = 1): WeightSuppor
     independentSamples: samples,
     ofIndependentSamples: of,
     ofMeasuredShare,
+    inOwnWindow: null,
   };
 }
 

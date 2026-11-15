@@ -42,8 +42,9 @@
  *
  * ## Confidence
  *
- * A fiber self time is a measurement, so its weight is `high` and exact to
- * the timing grid. A sample share is an estimate over the independent samples
+ * A fiber self time is a measurement, so its weight is exact to the timing
+ * grid and `high`, on any commit whose render took 1ms or more; under that
+ * the grid swamps the share and it is `low`. A sample share is an estimate over the independent samples
  * in the commit's window, bursts collapsed (`independentSampleWeights`), and
  * its weight says how many there were. 2 to 15 stacked samples fall in a
  * `spans` production commit's window (4x), so those weights are `low` and say
@@ -74,7 +75,7 @@
  * the minified identifier, because that is the one thing the hook and the
  * profiler share. Without a usable map the commit is `profiler-unmapped`, and
  * the names are reported as minified and the positions as generated code,
- * with the reason on each position.
+ * with the reason on each position. The join itself is `component-samples.ts`.
  *
  * ## What this module does not do
  *
@@ -103,7 +104,18 @@ import {
   type UnattributedReason,
   type WeightBasis,
 } from './attribution.ts';
-import { measuredSupport, sampleShareSupport, type WeightSupport } from './confidence.ts';
+import {
+  type IndexedProfile,
+  indexProfile,
+  renderedEvidence,
+  tallySamples,
+} from './component-samples.ts';
+import {
+  measuredSupport,
+  sampleShareSupport,
+  subtractionSupport,
+  type WeightSupport,
+} from './confidence.ts';
 import {
   type CommitRenderTimes,
   type CommitTimingNote,
@@ -114,33 +126,16 @@ import {
   participationIn,
   participationsOf,
   type ReactTierShortfall,
-  type RenderedParticipation,
 } from './fiber-self-time.ts';
 import {
   exceedsByMoreThanCoarsening,
   isWithinFrame,
   type LongAnimationFrame,
 } from './loaf.ts';
-import {
-  independentSampleWeights,
-  type ProfileTrace,
-  type SampleCounts,
-  stackFrames,
-} from './profiler.ts';
 import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
 import type { FiberId, ReactCommit, ReactSpan } from './react.ts';
-import {
-  type CapturedSignals,
-  framesOfInteraction,
-  type InteractionWindow,
-} from './signals.ts';
-import {
-  definitionSite,
-  type FrameResolution,
-  generatedSiteKey,
-  resolveProfile,
-  type ResolvedProfile,
-} from './source-map.ts';
+import { type CapturedSignals, frameBeganIn, type InteractionWindow } from './signals.ts';
+import { resolveProfile, type ResolvedProfile } from './source-map.ts';
 
 /**
  * One recorded component fiber and what the hook says it did, available at
@@ -235,8 +230,8 @@ export type ComponentAttributionNote =
        * one definition site somewhere in the capture's profile, so no sample
        * was charged to it. Minified names are reused across scopes, and at
        * least one of those sites is some other function. The samples stay in
-       * the denominator, so the commit's ranked weights fall short of 1 by
-       * their share.
+       * the denominator and are counted in the commit's `unattributed`
+       * remainder, so the ranking still sums to 1.
        */
       readonly kind: 'ambiguous-minified-name';
       readonly componentName: string;
@@ -276,8 +271,11 @@ export interface CommitAttribution {
   readonly notes: readonly ComponentAttributionNote[];
 }
 
-/** One candidate's raw share before it becomes a weight, so commits can be merged. */
-interface Tally {
+/**
+ * One candidate's raw share before it becomes a weight, so commits can be
+ * merged. Exported, as a type only, for `component-samples.ts` to fill in.
+ */
+export interface Tally {
   /** The hook's name, which the join and the merge key on. */
   readonly name: string;
   readonly subject: CauseSubject;
@@ -291,8 +289,9 @@ interface Tally {
 /**
  * The part of a commit no component is charged with, in the same unit as the
  * commit's tallies, so that it merges across commits the way they do.
+ * Exported, as a type only, for `component-samples.ts` to fill in.
  */
-interface Remainder {
+export interface Remainder {
   readonly reason: UnattributedReason;
   numerator: number;
   readonly evidence: NonEmptyEvidence;
@@ -322,9 +321,20 @@ interface CommitTally {
   readonly notes: readonly ComponentAttributionNote[];
 }
 
-/** The weight basis each unit's shares are quoted under. */
+/**
+ * The weight basis each unit's shares are quoted under. A commit nothing
+ * measured has one candidate, holding the whole commit because nothing else
+ * could be weighed, which is what `sole-candidate` names.
+ */
 function weightBasisOf(unit: ShareUnit): WeightBasis {
-  return unit === 'independent-samples' ? 'sample-share' : 'fiber-self-time-share';
+  switch (unit) {
+    case 'fiber-self-time':
+      return 'fiber-self-time-share';
+    case 'independent-samples':
+      return 'sample-share';
+    case 'whole-commit':
+      return 'sole-candidate';
+  }
 }
 
 /**
@@ -334,7 +344,8 @@ function weightBasisOf(unit: ShareUnit): WeightBasis {
  * coarsening steps over the denominator's milliseconds; with no denominator
  * nothing is distinguishable, and the grid is the whole. A sample share
  * carries its independent counts. A commit nothing measured is a subtraction
- * that no profile was there to check.
+ * that no profile was there to check, of a whole that is a count of commits
+ * rather than a duration, so no timing grid applies to it.
  */
 function supportOf(
   unit: ShareUnit,
@@ -347,10 +358,7 @@ function supportOf(
     case 'independent-samples':
       return sampleShareSupport(numerator, denominator);
     case 'whole-commit':
-      return {
-        kind: 'subtraction',
-        check: { verdict: 'unchecked', reason: 'no-profiler' },
-      };
+      return subtractionSupport({ verdict: 'unchecked', reason: 'no-profiler' }, null);
   }
 }
 
@@ -423,27 +431,6 @@ function fiberRenderTimeEvidence(entry: FiberSelfTime): CauseEvidence {
     actualDurationMs: entry.actualDurationMs,
     selfDurationMs: entry.selfMs,
   };
-}
-
-/**
- * The `fiber-rendered` evidence for every component the hook says rendered:
- * which components took part, with nothing about how long they took. Empty
- * where the record does not say which fibers rendered.
- */
-export function renderedEvidence(
-  components: readonly CommitComponent[],
-): CauseEvidence[] {
-  return components.flatMap((component): CauseEvidence[] =>
-    component.participation !== 'not-recorded' && didRender(component.participation)
-      ? [
-          {
-            kind: 'fiber-rendered',
-            componentName: component.name,
-            participation: component.participation,
-          },
-        ]
-      : [],
-  );
 }
 
 /**
@@ -525,314 +512,6 @@ function tallyFiberTimings(
   }
 
   return { tallies: [...tallies.values()], remainder, denominator };
-}
-
-/**
- * Every named function in a profile, by name, with one frame per distinct
- * definition site.
- *
- * Built once per capture, over all of `profile.frames` rather than over the
- * samples in any one window. Whether a minified name is ambiguous is a
- * property of the bundle, not of which functions happened to be sampled
- * between two commits: a name with a second site anywhere in the profile is
- * shared by two functions, and a window that sampled only one of them cannot
- * tell which one it was. Deciding per window would charge a commit's samples
- * to a name that another window shows to be shared.
- *
- * What remains assumed: a name with exactly one site in the whole profile is
- * taken to be the component. A component that was never sampled, sharing its
- * minified name with one other function that was, would have that function's
- * samples charged to it. Nothing in an unmapped profile can rule that out. A
- * source map could, by checking that the one site resolves to a function the
- * hook's component could be; the join does not do that yet, and on a mapped
- * profile it only renames the candidate after the fact.
- *
- * In the corpus every name the hook reported has exactly one site in its
- * capture's profile: `h` and `re` in `derive-in-render`, and `b`, `m`, `h`,
- * `g`, `v` and `_` in `spans` (production, 4x).
- */
-type DefinitionSites = ReadonlyMap<string, readonly number[]>;
-
-/**
- * Indexes a profile's frames by name and definition site, as the index into
- * `profile.frames` of the first frame seen at each site. See
- * `DefinitionSites`.
- */
-function definitionSitesOf(profile: ProfileTrace): DefinitionSites {
-  const byName = new Map<string, Map<string, number>>();
-  for (const [frameId, frame] of profile.frames.entries()) {
-    if (frame.name === null) continue;
-    const sites = byName.get(frame.name) ?? new Map<string, number>();
-    const key = generatedSiteKey(frame);
-    if (!sites.has(key)) sites.set(key, frameId);
-    byName.set(frame.name, sites);
-  }
-  return new Map([...byName].map(([name, sites]) => [name, [...sites.values()]]));
-}
-
-/** A component the hook says rendered, or one whose participation is unknown. */
-type RenderedOrUnknown = CommitComponent & {
-  readonly participation: RenderedParticipation | 'not-recorded';
-};
-
-/** Whether the hook says a component rendered, or did not record whether it did. */
-function isRenderedOrUnknown(component: CommitComponent): component is RenderedOrUnknown {
-  return component.participation === 'not-recorded' || didRender(component.participation);
-}
-
-/** A profile and its per-capture name index, built together. */
-interface IndexedProfile {
-  readonly profile: ProfileTrace;
-  readonly sites: DefinitionSites;
-  /**
-   * The profile's frames resolved through its source maps, computed on first
-   * use. Lazy because only the profiler tier reads it: a development commit
-   * with fiber timings never needs React's 1.7MB development map (for a 3.1MB
-   * served script) decoded.
-   */
-  readonly resolved: () => ResolvedProfile;
-  /**
-   * How much independent evidence each sample is, one weight per sample,
-   * computed on first use. See `independentSampleWeights`.
-   */
-  readonly independence: () => readonly number[];
-}
-
-/**
- * The capture's profile with its name index, or `null` when there was no
- * profiler. `alreadyResolved` is the same profile's resolution where a caller
- * holds one, so that the maps are decoded once per capture.
- */
-function indexProfile(
-  profile: ProfileTrace | null,
-  alreadyResolved?: ResolvedProfile,
-): IndexedProfile | null {
-  if (profile === null) return null;
-  let resolved = alreadyResolved;
-  let independence: readonly number[] | undefined;
-  return {
-    profile,
-    sites: definitionSitesOf(profile),
-    resolved: () => (resolved ??= resolveProfile(profile)),
-    independence: () => (independence ??= independentSampleWeights(profile)),
-  };
-}
-
-/**
- * A commit's tier at the profiler: whether its components came back through a
- * source map.
- *
- * Returns `profiler-mapped` when every rendered name with a single definition
- * site in the profile resolved through a source map, and at least one did,
- * and `profiler-unmapped` otherwise. It is decided from the sites rather than
- * from the window's samples, so that a commit whose window happened to catch
- * no sample stands at the same tier as its neighbours. A name never sampled
- * anywhere has no site and decides nothing; an ambiguous name keeps the
- * commit unmapped, because its candidate cannot be resolved.
- */
-function commitProfilerTier(
-  renderedNames: Iterable<string>,
-  sites: DefinitionSites,
-  resolved: () => ResolvedProfile,
-): 'profiler-mapped' | 'profiler-unmapped' {
-  const sampledNames = [...renderedNames]
-    .map((name) => sites.get(name) ?? [])
-    .filter((nameSites) => nameSites.length > 0);
-  const allMapped =
-    sampledNames.length > 0 &&
-    sampledNames.every(
-      ([site, ...others]) =>
-        others.length === 0 &&
-        site !== undefined &&
-        resolved().frames[site]?.kind === 'mapped',
-    );
-  return allMapped ? 'profiler-mapped' : 'profiler-unmapped';
-}
-
-/**
- * A sampled component's subject, and the tier it stands on, from its one
- * definition site's resolution, or `undefined` when it has no single site.
- *
- * The name is the map's name for the identifier at the definition site, where
- * there is one. For a function declaration that is the function's own name,
- * which is how `h` becomes `OrderTable`. Without it the hook's name stands,
- * minified in production, and the position stays generated with the reason
- * the map did not apply. `nameIsMinified` is whether the hook's name is.
- */
-function sampledComponentSubject(
-  hookName: string,
-  resolution: FrameResolution | undefined,
-  nameIsMinified: boolean,
-): { readonly subject: CauseSubject; readonly tier: AttributionTier } {
-  const mapped = resolution?.kind === 'mapped' ? resolution : null;
-  const realName = mapped?.originalName ?? null;
-  return {
-    subject: {
-      kind: 'component',
-      name: realName ?? hookName,
-      nameIsMinified: realName === null && nameIsMinified,
-      definedAt: resolution === undefined ? null : definitionSite(resolution),
-    },
-    tier: mapped === null ? 'profiler-unmapped' : 'profiler-mapped',
-  };
-}
-
-/**
- * The profiler tier: samples in the commit's window charged to rendered
- * components by name.
- *
- * Each sample with a stack is walked from the leaf outward to the first frame
- * whose name is a rendered component's. The innermost match is the one that
- * counts, because the leaf is where the time was spent. In `spans` the leaf is
- * the shared `burn` helper, and the frame beneath it is the component that
- * called it. A sample with no matching frame stays in the denominator only:
- * it is React's own reconciliation and commit work, or whatever ran in the
- * window before the render began.
- *
- * A name with more than one definition site in the capture's profile is not
- * charged at all (see `ambiguous-minified-name` and `DefinitionSites`). A
- * component is one function at one site, so a second site means another
- * function shares the minified name, and there is no way to tell which
- * samples were whose. Its samples are not passed on to a component further
- * out on the stack either: whichever function it was, its time is not that
- * outer component's self time.
- *
- * The commit's tier is `commitProfilerTier`'s, and each candidate's is
- * `sampledComponentSubject`'s.
- *
- * Numerators and the denominator are independent samples, bursts collapsed,
- * so that a burst in the window is one observation of whatever it caught. The
- * raw counts are kept beside them, for the evidence and the basis. The
- * remainder is the stacked samples charged to no component.
- */
-function tallySamples(
-  components: readonly CommitComponent[],
-  { profile, sites, resolved, independence }: IndexedProfile,
-  window: CommitSampleWindow,
-  provenance: CaptureProvenance,
-): {
-  tier: 'profiler-mapped' | 'profiler-unmapped';
-  tallies: Tally[];
-  remainder: Remainder | null;
-  /** Independent stacked samples in the window: the weights' denominator. */
-  denominator: number;
-  samplesInWindow: number;
-  unchargedSamples: number;
-  notes: ComponentAttributionNote[];
-} {
-  // Where render evidence was not recorded, every fiber is a possible
-  // renderer: nothing in the record can rule one out.
-  const fibersByName = new Map<string, RenderedOrUnknown[]>();
-  for (const component of components.filter(isRenderedOrUnknown)) {
-    const fibers = fibersByName.get(component.name) ?? [];
-    fibers.push(component);
-    fibersByName.set(component.name, fibers);
-  }
-
-  const counts = new Map<string, SampleCounts>();
-  const inWindow: SampleCounts = { samples: 0, independent: 0 };
-  const weights = independence();
-  for (const [index, sample] of profile.samples.entries()) {
-    if (sample.stackId === null) continue;
-    if (sample.atMs <= window.fromMs || sample.atMs > window.toMs) continue;
-    // One weight per sample, by `independentSampleWeights`' contract.
-    const independent = weights[index] ?? 1;
-    inWindow.samples += 1;
-    inWindow.independent += independent;
-
-    const match = stackFrames(profile, sample.stackId).find(
-      (frame) => frame.name !== null && fibersByName.has(frame.name),
-    );
-    if (match?.name == null) continue;
-    const count = counts.get(match.name) ?? { samples: 0, independent: 0 };
-    count.samples += 1;
-    count.independent += independent;
-    counts.set(match.name, count);
-  }
-  const samplesInWindow = inWindow.samples;
-
-  const tier = commitProfilerTier(fibersByName.keys(), sites, resolved);
-
-  // Reported rather than divided by: with nothing in the window, every
-  // rendered component would otherwise carry a weight of 0 of 0.
-  if (samplesInWindow === 0 && fibersByName.size > 0) {
-    return {
-      tier,
-      tallies: [],
-      remainder: null,
-      denominator: 0,
-      samplesInWindow,
-      unchargedSamples: 0,
-      notes: [{ kind: 'no-samples-in-window' }],
-    };
-  }
-
-  const notes: ComponentAttributionNote[] = [];
-  const tallies: Tally[] = [];
-  const nameIsMinified = provenance.buildMode === 'production';
-  const charged: SampleCounts = { samples: 0, independent: 0 };
-
-  for (const [name, fibers] of fibersByName) {
-    const nameSites = sites.get(name) ?? [];
-    const ambiguous = nameSites.length > 1;
-    const [site] = nameSites;
-    if (ambiguous) {
-      notes.push({
-        kind: 'ambiguous-minified-name',
-        componentName: name,
-        definitionSites: nameSites.length,
-      });
-    }
-
-    const count = ambiguous ? undefined : counts.get(name);
-    const samples = count?.samples ?? 0;
-    charged.samples += samples;
-    charged.independent += count?.independent ?? 0;
-
-    const resolution =
-      !ambiguous && site !== undefined ? resolved().frames[site] : undefined;
-    tallies.push({
-      name,
-      ...sampledComponentSubject(name, resolution, nameIsMinified),
-      numerator: count?.independent ?? 0,
-      evidence: [
-        {
-          kind: 'profiler-samples',
-          samples,
-          ofSamplesInWindow: samplesInWindow,
-          window: 'since-previous-commit',
-        },
-        ...renderedEvidence(fibers),
-      ],
-    });
-  }
-
-  const unchargedSamples = samplesInWindow - charged.samples;
-  return {
-    tier,
-    tallies,
-    remainder:
-      unchargedSamples === 0
-        ? null
-        : {
-            reason: 'no-rendered-component-on-stack',
-            // Floored at 0: the two sums add the same weights in different
-            // orders, so they can differ by a float hair.
-            numerator: Math.max(inWindow.independent - charged.independent, 0),
-            evidence: [
-              {
-                kind: 'profiler-samples',
-                samples: unchargedSamples,
-                ofSamplesInWindow: samplesInWindow,
-                window: 'since-previous-commit',
-              },
-            ],
-          },
-    denominator: inWindow.independent,
-    samplesInWindow,
-    unchargedSamples,
-    notes,
-  };
 }
 
 /**
@@ -979,21 +658,27 @@ function frameAt(
  * degraded case. Weights are shares of this commit, not of any frame, and
  * sum to 1: what the components do not account for is an explicit
  * `unattributed` candidate. Assumes `commit` is one of
- * `signals.react.commits`, though only its own fields are read. `resolved`
- * is `resolveProfile(signals.profile)` where the caller already holds it.
+ * `signals.react.commits`, though only its own fields are read.
+ *
+ * `resolved` is `resolveProfile(signals.profile)`, or `null` for a capture
+ * with no profile, and is resolved here when not passed. Resolving decodes
+ * every map a profiled frame points into, React's 1.7MB development map (for
+ * a 3.1MB served script) among them, even for a commit with fiber timings that
+ * never reads it. A caller attributing more than one commit of a capture
+ * should resolve once and pass it, as `attributeCapture` does.
  */
 export function attributeCommit(
   signals: CapturedSignals,
   commit: ReactCommit,
   sinceMs: number,
-  resolved?: ResolvedProfile,
+  resolved: ResolvedProfile | null = resolvedProfileOf(signals),
 ): CommitAttribution {
-  return attributeInWindow(
-    signals,
-    indexProfile(signals.profile, resolved),
-    commit,
-    sinceMs,
-  ).attribution;
+  return attributeInWindow(signals, indexProfile(resolved), commit, sinceMs).attribution;
+}
+
+/** A capture's profile, resolved, or `null` when it has none: the public edges' default. */
+function resolvedProfileOf(signals: CapturedSignals): ResolvedProfile | null {
+  return signals.profile === null ? null : resolveProfile(signals.profile);
 }
 
 /**
@@ -1114,29 +799,44 @@ export type InteractionComponents =
     };
 
 /**
+ * Attributes the commits inside the interaction labelled `label` to the
+ * components that rendered in them. See `componentsOfInteraction`.
+ *
+ * Returns `null` when no interaction has that label, and the first window's
+ * answer when several share it. `resolved` is as for `attributeCommit`, and
+ * is resolved here when not passed.
+ */
+export function attributeInteractionComponents(
+  signals: CapturedSignals,
+  label: string,
+  resolved: ResolvedProfile | null = resolvedProfileOf(signals),
+): InteractionComponents | null {
+  const interaction = signals.interactions.find((candidate) => candidate.label === label);
+  if (interaction === undefined) return null;
+  return componentsOfInteraction(signals, interaction, resolved);
+}
+
+/**
  * Attributes the commits inside one interaction's window to the components
  * that rendered in them.
  *
  * A commit belongs to the interaction whose window contains its
  * `committedAtMs`, inclusive at both ends. Its sample window opens at
- * `commitWindowStart`. A frame is not required: the interaction's frames are
- * reported beside the answer, and an interaction with none is still
- * attributed from its commits.
+ * `commitWindowStart`. A frame is not required: the frames that began in the
+ * window are reported beside the answer, and an interaction with none is
+ * still attributed from its commits.
  *
- * Returns `null` when no interaction has that label. `resolved` is
- * `resolveProfile(signals.profile)` where the caller already holds it.
+ * Assumes `interaction` is one of `signals.interactions`. `resolved` is
+ * `resolveProfile(signals.profile)`, or `null` for a capture with no profile.
  */
-export function attributeInteractionComponents(
+export function componentsOfInteraction(
   signals: CapturedSignals,
-  label: string,
-  resolved?: ResolvedProfile,
-): InteractionComponents | null {
-  const interaction = signals.interactions.find((candidate) => candidate.label === label);
-  if (interaction === undefined) return null;
-
-  const frames = framesOfInteraction(signals, label);
+  interaction: InteractionWindow,
+  resolved: ResolvedProfile | null,
+): InteractionComponents {
+  const frames = signals.frames.filter((frame) => frameBeganIn(frame, interaction));
   const { commits } = signals.react;
-  const profile = indexProfile(signals.profile, resolved);
+  const profile = indexProfile(resolved);
 
   const attributed: CommitAttribution[] = [];
   const tallies: CommitTally[] = [];

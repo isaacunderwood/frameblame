@@ -10,11 +10,18 @@ import { describe, expect, it } from 'vitest';
 
 import {
   confidenceLevelOf,
+  type CrossCheck,
   crossCheckEmptyStacks,
   describeConfidence,
   describeCrossCheck,
   isLowerConfidence,
+  isUsableSampleCount,
+  measuredSupport,
   MIN_SAMPLES_TO_COMPARE_SHARES,
+  type SampledSupport,
+  scaledSampleSupport,
+  sampleShareSupport,
+  subtractionSupport,
   USABLE_SHARE_HALF_WIDTH,
   weightRangeOf,
   type WeightSupport,
@@ -27,6 +34,7 @@ function sampled(samples: number, of: number, ofMeasuredShare = 1): WeightSuppor
     independentSamples: samples,
     ofIndependentSamples: of,
     ofMeasuredShare,
+    inOwnWindow: null,
   };
 }
 
@@ -62,22 +70,44 @@ describe('wilsonRange', () => {
     expect(wilsonRange(0, 0)).toEqual({ low: 0, high: 1 });
   });
 
-  it('puts the usable line where the findings put it', () => {
+  it('puts the usable line at 21 samples, the bar the project chose', () => {
     /*
-     * "Plus or minus 20 points at five samples" is unusable, and 24 presses is
-     * what makes the distribution stable: an even split is first inside the
-     * usable half-width at 21 independent samples.
+     * `findings.md`'s "±20 points at five samples" is roughly one standard
+     * error of an even split there, its measure of unusable. Taken as a 95%
+     * half-width, the stricter reading, an even split is first inside it at
+     * 21 independent samples, below the 24 presses that make the replay
+     * stable. At five samples the 95% half-width is 33 points.
      */
-    expect(halfWidth(2.5, 5)).toBeGreaterThan(USABLE_SHARE_HALF_WIDTH);
+    expect(halfWidth(2.5, 5)).toBeCloseTo(0.33, 2);
     expect(halfWidth(10, 20)).toBeGreaterThan(USABLE_SHARE_HALF_WIDTH);
     expect(halfWidth(10.5, 21)).toBeLessThanOrEqual(USABLE_SHARE_HALF_WIDTH);
     expect(halfWidth(12, 24)).toBeLessThanOrEqual(USABLE_SHARE_HALF_WIDTH);
+    expect(isUsableSampleCount(20)).toBe(false);
+    expect(isUsableSampleCount(21)).toBe(true);
+    expect(isUsableSampleCount(0)).toBe(false);
   });
 });
 
 describe('confidenceLevelOf', () => {
   it('calls a measurement high', () => {
     expect(confidenceLevelOf({ kind: 'measured', gridShare: 0.003 })).toBe('high');
+  });
+
+  it('calls a measurement low when the timing grid swamps its whole', () => {
+    // Two 0.1ms grid steps over a 1ms whole is the usable half-width exactly.
+    expect(confidenceLevelOf(measuredSupport(1))).toBe('high');
+    // Under 1ms, the grid alone is more than a fifth of the whole.
+    expect(confidenceLevelOf(measuredSupport(0.5))).toBe('low');
+    // With no whole at all, the grid is everything.
+    expect(measuredSupport(0)).toEqual({ kind: 'measured', gridShare: 1 });
+    expect(confidenceLevelOf(measuredSupport(0))).toBe('low');
+    expect(
+      describeConfidence({
+        level: 'low',
+        range: weightRangeOf(0, measuredSupport(0)),
+        support: measuredSupport(0),
+      }),
+    ).toContain('the timing grid is 100.0% of the whole');
   });
 
   it('never calls a sampled share high, and calls a thin one low', () => {
@@ -96,16 +126,65 @@ describe('confidenceLevelOf', () => {
     expect(confidenceLevelOf(sampled(1, 21))).toBe('moderate');
   });
 
-  it('calls a subtraction high only when a second signal agrees with it', () => {
-    const level = (check: ReturnType<typeof crossCheckEmptyStacks>) =>
-      confidenceLevelOf({ kind: 'subtraction', check });
-
+  it('judges a pooled share by the fewer of its pool and its own window', () => {
+    /*
+     * A frame's slice divided by a pool of 59 samples, of which the slice
+     * itself holds 4: which functions ran is an estimate, how this frame
+     * split is not.
+     */
+    const pool: SampledSupport = sampleShareSupport(39, 59);
+    expect(confidenceLevelOf(pool)).toBe('moderate');
+    const inFrame = scaledSampleSupport(pool, 0.8, 4);
+    expect(inFrame).toEqual({
+      kind: 'sampled',
+      independentSamples: 39,
+      ofIndependentSamples: 59,
+      ofMeasuredShare: 0.8,
+      inOwnWindow: 4,
+    });
+    expect(confidenceLevelOf(inFrame)).toBe('low');
+    expect(confidenceLevelOf(scaledSampleSupport(pool, 0.8, 21))).toBe('moderate');
+    // The range is still the pool's.
+    expect(weightRangeOf(0.8 * (39 / 59), inFrame)).toEqual(
+      weightRangeOf(0.8 * (39 / 59), scaledSampleSupport(pool, 0.8, 59)),
+    );
     expect(
-      level(
-        crossCheckEmptyStacks(0.9, { samplesWithoutStack: 11, ofSamplesInFrame: 12 }),
-      ),
-    ).toBe('high');
+      describeConfidence({
+        level: confidenceLevelOf(inFrame),
+        range: weightRangeOf(0.8 * (39 / 59), inFrame),
+        support: inFrame,
+      }),
+    ).toContain(
+      '39.0 of the 59.0 independent samples at this site across the interaction, 4.0 of them in this slice',
+    );
+  });
+
+  it('calls a subtraction high only when a second signal agrees over enough samples to disagree', () => {
+    const level = (check: CrossCheck) =>
+      confidenceLevelOf(subtractionSupport(check, 150));
+
+    /*
+     * 11 of 12 empty stacks against a frame 90% outside scripts agrees, but
+     * twelve samples are fewer than a sampled share needs to be an estimate
+     * at all, so the agreement confirms only that the two are not far apart.
+     */
+    const thin = crossCheckEmptyStacks(0.9, {
+      samplesWithoutStack: 11,
+      ofSamplesInFrame: 12,
+    });
+    expect(thin.verdict).toBe('agrees');
+    expect(level(thin)).toBe('moderate');
+    const usable = crossCheckEmptyStacks(0.9, {
+      samplesWithoutStack: 19,
+      ofSamplesInFrame: 21,
+    });
+    expect(usable.verdict).toBe('agrees');
+    expect(level(usable)).toBe('high');
+
     expect(level(crossCheckEmptyStacks(0.9, null))).toBe('moderate');
+    expect(level({ verdict: 'unchecked', reason: 'frame-outside-profile' })).toBe(
+      'moderate',
+    );
     expect(
       level(crossCheckEmptyStacks(0.9, { samplesWithoutStack: 1, ofSamplesInFrame: 12 })),
     ).toBe('low');
@@ -174,6 +253,9 @@ describe('crossCheckEmptyStacks', () => {
     const none = crossCheckEmptyStacks(0.9, null);
     expect(none).toEqual({ verdict: 'unchecked', reason: 'no-profiler' });
     expect(describeCrossCheck(none)).toContain('subtraction alone');
+    expect(
+      describeCrossCheck({ verdict: 'unchecked', reason: 'frame-outside-profile' }),
+    ).toContain('outside the span the profiler sampled');
   });
 });
 
@@ -192,15 +274,22 @@ describe('weightRangeOf', () => {
     expect(slice.low).toBeCloseTo(whole.low * 0.1, 10);
   });
 
-  it('is a point for a subtraction that agrees, and a span for one that does not', () => {
+  it('is the timing grid either side of a subtraction that agrees, and a span for one that does not', () => {
     const agrees = crossCheckEmptyStacks(0.9, {
       samplesWithoutStack: 11,
       ofSamplesInFrame: 12,
     });
-    expect(weightRangeOf(0.82, { kind: 'subtraction', check: agrees })).toEqual({
+    // A point where the whole has no grid.
+    expect(weightRangeOf(0.82, subtractionSupport(agrees, null))).toEqual({
       low: 0.82,
       high: 0.82,
     });
+    // Two 0.1ms steps over a 100ms frame either side, agreeing or unchecked.
+    for (const check of [agrees, crossCheckEmptyStacks(0.9, null)]) {
+      const range = weightRangeOf(0.82, subtractionSupport(check, 100));
+      expect(range.low).toBeCloseTo(0.818, 10);
+      expect(range.high).toBeCloseTo(0.822, 10);
+    }
 
     // One of the two signals is wrong, and nothing says which: the range runs
     // from what the samples imply to what the partition says.
@@ -208,7 +297,7 @@ describe('weightRangeOf', () => {
       samplesWithoutStack: 1,
       ofSamplesInFrame: 10,
     });
-    const range = weightRangeOf(0.9, { kind: 'subtraction', check: disagrees });
+    const range = weightRangeOf(0.9, subtractionSupport(disagrees, 100));
     expect(range.low).toBeCloseTo(0.1, 10);
     expect(range.high).toBe(0.9);
   });

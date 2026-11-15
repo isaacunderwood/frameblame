@@ -411,9 +411,11 @@ export type WeightBasis =
    */
   | 'frame-slice-sample-share'
   /**
-   * The only candidate the evidence allows: the degenerate case. Not
-   * produced: a sole candidate keeps the basis its weight was measured on,
-   * and `RankedCauses.lead` is what says it stands alone.
+   * The only candidate the evidence allows, holding the whole because nothing
+   * else could be weighed: a commit nothing measured, whose one
+   * `unattributed` candidate is the whole commit (`component-attribution.ts`).
+   * A sole candidate that was measured or sampled keeps the basis its weight
+   * was computed on, and `RankedCauses.lead` is what says it stands alone.
    */
   | 'sole-candidate'
   /**
@@ -518,9 +520,10 @@ export type SampleWindowKind =
  *
  * Every variant carries its own denominator where it has one, so that "46
  * samples" is never reported without the "of 63" that makes it mean something.
- * Per-frame sample percentages are not usable on their own — plus or minus 20
- * points at five samples — which is why the replay exists and why the counts
- * travel with the claim.
+ * Per-frame sample percentages are not usable on their own — `findings.md`'s
+ * "±20 points at five samples", roughly one standard error, is a 95% range of
+ * ±33 points at an even split — which is why the replay exists and why the
+ * counts travel with the claim.
  */
 export type CauseEvidence =
   | {
@@ -635,11 +638,14 @@ export interface CandidateCause {
 /**
  * Candidate causes in descending weight order, with their total.
  *
- * The total is carried rather than recomputed because it is the honest part: it
- * says how much of the frame the ranking accounts for, and the remainder is the
- * unattributed share. A ranking that summed to 1.0 on a frame that was 90%
- * browser work would be the exact failure the unattributed tier exists to
- * prevent.
+ * A frame's ranking sums to 1, and so does a commit's or a population's
+ * wherever its denominator is not zero. What nothing names is not left out
+ * of the sum: it is itself a candidate, `unattributed`, with the reason it
+ * could not be named, so a frame that was 90% browser work nobody can name
+ * says so in its first candidate rather than in a total that falls short. A
+ * total below 1 therefore means an empty population, a commit whose
+ * components rendered in 0ms on the grid or whose window held no sample, and
+ * not a share the engine declined to explain.
  */
 export interface RankedCauses {
   readonly causes: readonly CandidateCause[];

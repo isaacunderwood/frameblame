@@ -12,8 +12,11 @@
  *   whether or not any frame crossed LoAF's 50ms threshold. `spans`'
  *   `state-owner-self` renders for 25.2ms and produces no long frame
  *   (development, 4x); `derive-in-render`'s production replay produced a long
- *   frame after 2 of its 24 presses. An answer keyed on frames alone would
- *   say nothing about the first and almost nothing about the second.
+ *   frame after 1 of its 24 presses (4x). LoAF reported two more in that run,
+ *   neither from a press: one during the page load, starting at 48.9ms before
+ *   the first press at 205.1ms, and one after the replay's window closed. An
+ *   answer keyed on frames alone would say nothing about the first and almost
+ *   nothing about the second.
  *
  * ## The three levels of claim
  *
@@ -60,8 +63,8 @@
 
 import {
   attributeCommit,
-  attributeInteractionComponents,
   type CommitAttribution,
+  componentsOfInteraction,
   type InteractionComponents,
 } from './component-attribution.ts';
 import { attributeFrames, type FrameAttribution } from './frame-attribution.ts';
@@ -167,7 +170,7 @@ export interface CaptureAttribution {
 function attributeCommits(
   signals: CapturedSignals,
   interactions: readonly InteractionComponents[],
-  resolved: ResolvedProfile | undefined,
+  resolved: ResolvedProfile | null,
 ): CommitAttribution[] {
   const attributed = new Map<ReactCommit, CommitAttribution>();
   for (const interaction of interactions) {
@@ -223,63 +226,49 @@ function degradationsOf(
  * `workingFrom` names each absence, and the tiers on the candidates say what
  * each claim was derived from.
  *
- * Assumes interaction labels are unique within the capture, which every
- * corpus capture's are; with a repeated label the first window answers for
- * all of them. Every timing in the result is page-clock milliseconds, and
- * `provenance` carries the build mode and throttle rate they must be quoted
- * with.
+ * Each interaction is attributed over its own window, so a label repeated
+ * within the capture does not make one window answer for another. Every
+ * timing in the result is page-clock milliseconds, and `provenance` carries
+ * the build mode and throttle rate they must be quoted with.
  */
 export function attributeCapture(signals: CapturedSignals): CaptureAttribution {
   const resolved = signals.profile === null ? null : resolveProfile(signals.profile);
 
-  const components = signals.interactions.map((interaction) => {
-    const attributed = attributeInteractionComponents(
-      signals,
-      interaction.label,
-      resolved ?? undefined,
-    );
-    // The label was read off `signals.interactions`, so it is always found.
-    if (attributed === null) {
-      throw new Error(
-        `interaction ${interaction.label} is not in the capture it came from`,
-      );
-    }
-    return attributed;
-  });
+  const perInteraction = signals.interactions.map((interaction) => ({
+    interaction,
+    components: componentsOfInteraction(signals, interaction, resolved),
+  }));
 
-  const commits = attributeCommits(signals, components, resolved ?? undefined);
+  const commits = attributeCommits(
+    signals,
+    perInteraction.map((each) => each.components),
+    resolved,
+  );
   const frames = attributeFrames(signals, resolved, commits);
 
-  const interactions = signals.interactions.map(
-    (interaction, index): InteractionAttribution => {
-      const ofInteraction = components[index];
-      // One entry of `components` per interaction, built just above.
-      if (ofInteraction === undefined) {
-        throw new Error(`interaction ${interaction.label} has no component attribution`);
-      }
-      return {
-        interaction,
-        frames: frames.filter((frame) => ofInteraction.frames.includes(frame.frame)),
-        components: ofInteraction,
-        functions:
-          resolved === null
-            ? { kind: 'unavailable', reason: 'no-profiler' }
-            : {
-                kind: 'sampled',
-                attribution: attributeSampledFunctions(resolved, signals.provenance, {
-                  window: 'interaction',
-                  ranges: [
-                    {
-                      kind: 'interval',
-                      fromMs: interaction.fromMs,
-                      toMs: interaction.toMs,
-                      end: 'inclusive',
-                    },
-                  ],
-                }),
-              },
-      };
-    },
+  const interactions = perInteraction.map(
+    ({ interaction, components }): InteractionAttribution => ({
+      interaction,
+      frames: frames.filter((frame) => components.frames.includes(frame.frame)),
+      components,
+      functions:
+        resolved === null
+          ? { kind: 'unavailable', reason: 'no-profiler' }
+          : {
+              kind: 'sampled',
+              attribution: attributeSampledFunctions(resolved, signals.provenance, {
+                window: 'interaction',
+                ranges: [
+                  {
+                    kind: 'interval',
+                    fromMs: interaction.fromMs,
+                    toMs: interaction.toMs,
+                    end: 'inclusive',
+                  },
+                ],
+              }),
+            },
+    }),
   );
 
   return {

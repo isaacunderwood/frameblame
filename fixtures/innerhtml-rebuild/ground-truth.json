@@ -173,6 +173,18 @@
         "to": 150
       },
       "forcedScenarioLine": 166,
+      "sampledListener": {
+        "$comment": [
+          "The one function the profiler can see here: the listener's own few",
+          "milliseconds of JavaScript, which make the writes above and then return.",
+          "Named at function level, so the line is where it is defined, at or before",
+          "`lineRange.from`, and never one of the culprit lines themselves. `app.js` is",
+          "served from public/ with no source map, so the name and line are as served."
+        ],
+        "function": "rebuildRows",
+        "line": 133,
+        "expectedSourceText": "function rebuildRows(scenario, forceStyleAndLayout) {"
+      },
       "note": "Correctness here is mostly about the shares, not the line. The required answer is: this frame's time is dominated by work that was not JavaScript, stated as such, with the script slice given its true few milliseconds."
     },
     "unattributedCrossCheck": {

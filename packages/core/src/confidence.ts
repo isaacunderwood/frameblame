@@ -31,7 +31,7 @@
  * to a support rather than to a number between 0 and 1. The component is
  * known in development: fiber self times are measurements. The function is a
  * distribution over replayed frames, not a per-frame percentage: a sample
- * share, with a range that is plus or minus 20 points at five samples. The
+ * share, whose 95% range at five samples is ±33 points at an even split. The
  * statement is unavailable from inside the page: no support exists for it, so
  * no candidate can claim it (`CauseSubject`'s `granularity` has one value).
  * The unattributed remainder is cross-checked against the empty-stack share:
@@ -50,14 +50,17 @@ import { COARSENED_TIMING_TOLERANCE_MS } from './loaf.ts';
 /**
  * A weight's confidence in one word, strongest first in `CONFIDENCE_LEVELS`.
  *
- * - `high` — the share was measured rather than estimated, or it was inferred
- *   by subtraction and a second, independent signal agrees with it.
+ * - `high` — the share was measured, over a whole long enough that the timing
+ *   grid is inside `USABLE_SHARE_HALF_WIDTH`; or it was inferred by
+ *   subtraction and a second, independent signal agrees with it over enough
+ *   samples to have been able to disagree.
  * - `moderate` — a sampled share over enough independent samples that no
  *   share's range could be wider than plus or minus
- *   `USABLE_SHARE_HALF_WIDTH`, or a subtraction nothing was available to
- *   check.
+ *   `USABLE_SHARE_HALF_WIDTH`, or a subtraction whose check was not made or
+ *   agreed on too few samples to count.
  * - `low` — a sampled share over too few samples to be more than a ranked
- *   guess, or a subtraction the second signal contradicts.
+ *   guess, a subtraction the second signal contradicts, or a measurement over
+ *   a whole so short that the timing grid swamps it.
  *
  * A sampled share is never `high`. The word is kept for a number that was
  * measured or independently confirmed; how precise an estimate is, is what
@@ -86,12 +89,15 @@ export interface WeightRange {
  * The widest a sampled share's 95% range may be, as a half-width, and still be
  * called an estimate rather than a guess: plus or minus 20 points.
  *
- * The figure is the project's own. `findings.md` calls per-frame percentages
- * unusable at "plus or minus 20 points at five samples", and says 24 presses
- * is what makes the function-level distribution stable. A Wilson interval at
- * an even split, where it is widest, reaches this half-width at 21
- * independent samples and is inside it from there on, which puts the line
- * where those two sentences put it.
+ * A choice, not a derivation. `findings.md` point 2 calls per-frame
+ * percentages unusable at "±20 points at five samples", and says 24 presses
+ * is what makes the function-level distribution stable. Twenty points there
+ * is its measure of *unusable*: roughly one standard error of an even split
+ * at five samples, which is 22.4 points. Here it is applied as a 95%
+ * half-width, the stricter reading. A Wilson interval at an even split, where
+ * it is widest, is first inside it at 21 independent samples (19.7 points,
+ * against 20.1 at 20), and is inside it from there on. At five samples the
+ * same 95% range is ±33 points.
  */
 export const USABLE_SHARE_HALF_WIDTH = 0.2;
 
@@ -145,6 +151,20 @@ export function wilsonRange(successes: number, trials: number): WeightRange {
 }
 
 /**
+ * Whether `samples` independent samples are enough for a share of them to be
+ * an estimate: an even split of them, where a Wilson interval is widest, has a
+ * 95% half-width within `USABLE_SHARE_HALF_WIDTH`. First true at 21.
+ *
+ * Judged at the even split so that the answer is a property of how much
+ * evidence there was, and not of where a share happened to fall. No samples
+ * is never enough.
+ */
+export function isUsableSampleCount(samples: number): boolean {
+  const widest = wilsonRange(samples / 2, samples);
+  return (widest.high - widest.low) / 2 <= USABLE_SHARE_HALF_WIDTH;
+}
+
+/**
  * The verdict of comparing the frame partition against the profiler about how
  * much of a frame had no script running.
  *
@@ -158,8 +178,9 @@ export function wilsonRange(successes: number, trials: number): WeightRange {
  *
  * - `agrees` and `disagrees` carry both shares and the counts behind the
  *   sampled one, in independent samples.
- * - `unchecked` says why there was no comparison: no profile at all, or fewer
- *   than `MIN_SAMPLES_TO_COMPARE_SHARES` independent samples inside the frame.
+ * - `unchecked` says why there was no comparison: no profile at all, a frame
+ *   that lies wholly outside the span the profiler sampled, or fewer than
+ *   `MIN_SAMPLES_TO_COMPARE_SHARES` independent samples inside the frame.
  */
 export type CrossCheck =
   | {
@@ -177,6 +198,16 @@ export type CrossCheck =
       readonly toleranceSamples: number;
     }
   | { readonly verdict: 'unchecked'; readonly reason: 'no-profiler' }
+  | {
+      /**
+       * A profile was captured, but the frame ended before its first sample
+       * or began after its last, so the profiler was not looking. Said apart
+       * from `too-few-samples`, because an empty frame inside the profile
+       * says something about the frame and one outside it says nothing.
+       */
+      readonly verdict: 'unchecked';
+      readonly reason: 'frame-outside-profile';
+    }
   | {
       readonly verdict: 'unchecked';
       readonly reason: 'too-few-samples';
@@ -202,10 +233,14 @@ export type CrossCheck =
  * 1.15 samples (`derive-in-render`, development, 4x). The one-sample floor
  * is the count's own resolution.
  *
- * Measured on the corpus's 53 frames (4x, both build modes): 45 agree, 8 are
- * unchecked for holding fewer than five samples (all in `derive-in-render`:
- * five frames with four samples each and three with none), and none disagree.
- * What a disagreement looks like is therefore reasoned: the unforced
+ * Measured on the corpus's 53 frames (4x, both build modes): 45 agree, none
+ * disagree, and 8 are unchecked, all in `derive-in-render`. Five hold four
+ * samples each, too few to compare. Three lie outside the profile, which the
+ * caller decides and reports as `frame-outside-profile`: a production frame
+ * during the page load at 48.9ms, before the first sample at 201.1ms, and
+ * one frame in each build that begins after the last sample, at 60943.7ms
+ * against 60933.4ms in development and 115168.1ms against 115162.6ms in
+ * production. What a disagreement looks like is therefore reasoned: the unforced
  * `innerHTML` frames are 88.9-90.3% outside scripts, and they would disagree
  * if their samples showed the forced frames' 10-30% of empty stacks instead of
  * the 88.9-91.7% they do show.
@@ -267,23 +302,7 @@ export type WeightSupport =
        */
       readonly gridShare: number;
     }
-  | {
-      /**
-       * A share of profiler samples, counted in independent samples: bursts
-       * collapsed, so a sample taken nine times in a millisecond counts once.
-       */
-      readonly kind: 'sampled';
-      readonly independentSamples: number;
-      readonly ofIndependentSamples: number;
-      /**
-       * The measured share the sample share divides, in (0, 1]. 1 where the
-       * weight is the sample share itself. Less where the weight is a frame
-       * slice's measured share of its frame, split among functions by their
-       * share of the samples: the weight is then
-       * `ofMeasuredShare * independentSamples / ofIndependentSamples`.
-       */
-      readonly ofMeasuredShare: number;
-    }
+  | SampledSupport
   | {
       /**
        * What was left when everything attributable was taken out. The
@@ -292,7 +311,55 @@ export type WeightSupport =
        */
       readonly kind: 'subtraction';
       readonly check: CrossCheck;
+      /**
+       * The timing grid as a share of the whole the remainder was subtracted
+       * from, as for a measurement: the durations subtracted were coarsened,
+       * so what is left is exact only to within this. 0 where the whole is
+       * not a duration, such as a commit counted whole.
+       */
+      readonly gridShare: number;
     };
+
+/** A share of profiler samples: the sampled kind of `WeightSupport`. */
+export interface SampledSupport {
+  /**
+   * A share of profiler samples, counted in independent samples: bursts
+   * collapsed, so a sample taken nine times in a millisecond counts once.
+   */
+  readonly kind: 'sampled';
+  readonly independentSamples: number;
+  readonly ofIndependentSamples: number;
+  /**
+   * The measured share the sample share divides, in (0, 1]. 1 where the
+   * weight is the sample share itself. Less where the weight is a frame
+   * slice's measured share of its frame, split among functions by their
+   * share of the samples: the weight is then
+   * `ofMeasuredShare * independentSamples / ofIndependentSamples`.
+   */
+  readonly ofMeasuredShare: number;
+  /**
+   * Where the counts above were pooled over a larger population than the
+   * window the weight describes, the independent samples inside that window
+   * alone, counted the way `ofIndependentSamples` is; `null` where the counts
+   * are the window's own.
+   *
+   * A frame's script slice is divided by the functions sampled across every
+   * slice of its site in the interaction, because one slice holds a sample or
+   * two. The pool says which functions ran there and in what proportion, and
+   * its range is the pool's. Whether that proportion held *in this frame* is
+   * only as well known as the frame's own samples, which is `findings.md`
+   * point 2: per-frame percentages remain unusable. So the level is judged on
+   * the smaller of the two counts.
+   */
+  readonly inOwnWindow: number | null;
+}
+
+/** The timing grid as a share of `denominatorMs`: the whole, with no denominator. */
+function gridShareOf(denominatorMs: number): number {
+  return denominatorMs > 0
+    ? Math.min(COARSENED_TIMING_TOLERANCE_MS / denominatorMs, 1)
+    : 1;
+}
 
 /**
  * The support of a measured duration as a share of `denominatorMs`
@@ -301,27 +368,54 @@ export type WeightSupport =
  * no denominator nothing is distinguishable, and the grid is the whole.
  */
 export function measuredSupport(denominatorMs: number): WeightSupport {
-  return {
-    kind: 'measured',
-    gridShare:
-      denominatorMs > 0 ? Math.min(COARSENED_TIMING_TOLERANCE_MS / denominatorMs, 1) : 1,
-  };
+  return { kind: 'measured', gridShare: gridShareOf(denominatorMs) };
 }
 
 /**
  * The support of a share that is itself a sample share: `independentSamples`
  * of `ofIndependentSamples`, both counted with bursts collapsed, dividing the
- * whole (`ofMeasuredShare` of 1).
+ * whole (`ofMeasuredShare` of 1), over the window's own samples.
  */
 export function sampleShareSupport(
   independentSamples: number,
   ofIndependentSamples: number,
-): WeightSupport {
+): SampledSupport {
   return {
     kind: 'sampled',
     independentSamples,
     ofIndependentSamples,
     ofMeasuredShare: 1,
+    inOwnWindow: null,
+  };
+}
+
+/**
+ * A pooled sample share applied to one window: the same counts, dividing a
+ * measured share `ofMeasuredShare` of the whole rather than all of it, with
+ * `inOwnWindow` independent samples of the pool inside the window itself.
+ * See `SampledSupport.inOwnWindow` for why both counts are kept.
+ */
+export function scaledSampleSupport(
+  sampled: SampledSupport,
+  ofMeasuredShare: number,
+  inOwnWindow: number,
+): SampledSupport {
+  return { ...sampled, ofMeasuredShare, inOwnWindow };
+}
+
+/**
+ * The support of what was left by subtraction from a whole of
+ * `denominatorMs` milliseconds, with the verdict of its cross-check. `null`
+ * for a whole that is not a duration, which has no timing grid.
+ */
+export function subtractionSupport(
+  check: CrossCheck,
+  denominatorMs: number | null,
+): WeightSupport {
+  return {
+    kind: 'subtraction',
+    check,
+    gridShare: denominatorMs === null ? 0 : gridShareOf(denominatorMs),
   };
 }
 
@@ -336,41 +430,53 @@ export interface WeightConfidence {
  * The level a support earns. This is the whole rule, and it is the only place
  * a level is decided.
  *
- * - `measured` is `high`: the number is a measurement of the thing claimed.
+ * - `measured` is `high` where the timing grid is within
+ *   `USABLE_SHARE_HALF_WIDTH` of the whole, and `low` where it is not: the
+ *   number is a measurement of the thing claimed, but over a whole of under
+ *   1ms two coarsening steps are more than a fifth of it, and a share of that
+ *   cannot be told from its neighbours. No corpus weight is that short.
  * - `sampled` is `moderate` when there are enough independent samples that
  *   an even split of them would have a 95% range within plus or minus
- *   `USABLE_SHARE_HALF_WIDTH`, and `low` otherwise. Judged at the even split,
- *   the widest a range can be at that count, so that the level is a property
- *   of how much evidence there was and not of where the share happened to
- *   fall: one sample of thirteen has a narrow range and is no better founded
- *   than nine of thirteen, and every candidate in one ranking gets the same
- *   answer. The candidate's own range still says how wide its share is.
- *   Scaling by `ofMeasuredShare` does not enter into it, because scaling a
- *   guess by a small slice makes its range narrow without making it less of
- *   a guess.
- * - `subtraction` is `high` when the cross-check agrees, `moderate` when
- *   nothing was available to check it, and `low` when the check disagrees.
+ *   `USABLE_SHARE_HALF_WIDTH` (`isUsableSampleCount`), and `low` otherwise.
+ *   Judged at the even split, the widest a range can be at that count, so
+ *   that the level is a property of how much evidence there was and not of
+ *   where the share happened to fall: one sample of thirteen has a narrow
+ *   range and is no better founded than nine of thirteen, and every
+ *   candidate counted over the same samples gets the same answer. The
+ *   candidate's own range still says how wide its share is. A pooled share
+ *   is judged on the smaller of the pool and its own window
+ *   (`SampledSupport.inOwnWindow`). Scaling by `ofMeasuredShare` does not
+ *   enter into it, because scaling a guess by a small slice makes its range
+ *   narrow without making it less of a guess.
+ * - `subtraction` is `low` when the cross-check disagrees and `moderate` when
+ *   nothing was available to check it. When the check agrees it is `high`
+ *   only over a usable sample count, the same bar a sampled share must clear
+ *   to be an estimate at all. Agreement is only as strong as the samples that
+ *   could have disagreed: the corpus's agreeing frames hold 5 to 14
+ *   independent samples, and at that count the empty-stack share's own range
+ *   is too wide to confirm more than that the two signals are not far apart.
  */
 export function confidenceLevelOf(support: WeightSupport): ConfidenceLevel {
   switch (support.kind) {
     case 'measured':
-      return 'high';
-    case 'sampled': {
-      const samples = support.ofIndependentSamples;
-      const widest = wilsonRange(samples / 2, samples);
-      return (widest.high - widest.low) / 2 <= USABLE_SHARE_HALF_WIDTH
+      return support.gridShare <= USABLE_SHARE_HALF_WIDTH ? 'high' : 'low';
+    case 'sampled':
+      return isUsableSampleCount(
+        Math.min(support.ofIndependentSamples, support.inOwnWindow ?? Infinity),
+      )
         ? 'moderate'
         : 'low';
-    }
-    case 'subtraction':
-      switch (support.check.verdict) {
+    case 'subtraction': {
+      const { check } = support;
+      switch (check.verdict) {
         case 'agrees':
-          return 'high';
+          return isUsableSampleCount(check.ofSamplesInFrame) ? 'high' : 'moderate';
         case 'unchecked':
           return 'moderate';
         case 'disagrees':
           return 'low';
       }
+    }
   }
 }
 
@@ -379,12 +485,13 @@ export function confidenceLevelOf(support: WeightSupport): ConfidenceLevel {
  *
  * - `measured`: the fraction plus or minus the timing grid's share.
  * - `sampled`: the Wilson range of the sample share, scaled by the measured
- *   share it divides.
- * - `subtraction`: the fraction itself where the check agrees or was not
- *   made. Where the check disagrees, the span between the fraction and what
- *   it would be if the profiler's empty-stack share were the true share
- *   outside scripts, since one of the two signals is wrong and nothing here
- *   says which.
+ *   share it divides. A pooled share keeps the pool's range.
+ * - `subtraction`: the fraction plus or minus the timing grid's share where
+ *   the check agrees or was not made, since the durations it was subtracted
+ *   from were coarsened. Where the check disagrees, the span between the
+ *   fraction and what it would be if the profiler's empty-stack share were
+ *   the true share outside scripts, since one of the two signals is wrong and
+ *   nothing here says which.
  */
 export function weightRangeOf(fraction: number, support: WeightSupport): WeightRange {
   switch (support.kind) {
@@ -403,7 +510,10 @@ export function weightRangeOf(fraction: number, support: WeightSupport): WeightR
     case 'subtraction': {
       const { check } = support;
       if (check.verdict !== 'disagrees' || check.shareOutsideScripts <= 0) {
-        return { low: fraction, high: fraction };
+        return {
+          low: clampShare(fraction - support.gridShare),
+          high: clampShare(fraction + support.gridShare),
+        };
       }
       const sampledShare = check.samplesWithoutStack / check.ofSamplesInFrame;
       const bySamples = clampShare((fraction * sampledShare) / check.shareOutsideScripts);
@@ -415,9 +525,14 @@ export function weightRangeOf(fraction: number, support: WeightSupport): WeightR
 /** One line of prose for a cross-check, for a report that must say what it compared. */
 export function describeCrossCheck(check: CrossCheck): string {
   if (check.verdict === 'unchecked') {
-    return check.reason === 'no-profiler'
-      ? 'not cross-checked: no profile was captured, so this rests on subtraction alone'
-      : `not cross-checked: only ${check.ofSamplesInFrame.toFixed(1)} independent samples fell inside the frame, too few to compare a share over`;
+    switch (check.reason) {
+      case 'no-profiler':
+        return 'not cross-checked: no profile was captured, so this rests on subtraction alone';
+      case 'frame-outside-profile':
+        return 'not cross-checked: the frame lies outside the span the profiler sampled, so this rests on subtraction alone';
+      case 'too-few-samples':
+        return `not cross-checked: only ${check.ofSamplesInFrame.toFixed(1)} independent samples fell inside the frame, too few to compare a share over`;
+    }
   }
   const outside = `${(100 * check.shareOutsideScripts).toFixed(1)}%`;
   const empty =
@@ -434,13 +549,22 @@ export function describeConfidence(confidence: WeightConfidence): string {
   const percent = (share: number): string => `${(100 * share).toFixed(1)}%`;
   switch (support.kind) {
     case 'measured':
-      return `${level} confidence: measured, exact to the timing grid`;
-    case 'sampled':
+      return support.gridShare <= USABLE_SHARE_HALF_WIDTH
+        ? `${level} confidence: measured, exact to the timing grid`
+        : `${level} confidence: measured, but the timing grid is ${percent(support.gridShare)} of the whole`;
+    case 'sampled': {
+      const counts =
+        support.inOwnWindow === null
+          ? `${support.independentSamples.toFixed(1)} of ` +
+            `${support.ofIndependentSamples.toFixed(1)} independent samples`
+          : `${support.independentSamples.toFixed(1)} of the ` +
+            `${support.ofIndependentSamples.toFixed(1)} independent samples at this site ` +
+            `across the interaction, ${support.inOwnWindow.toFixed(1)} of them in this slice`;
       return (
-        `${level} confidence: sampled, ${support.independentSamples.toFixed(1)} of ` +
-        `${support.ofIndependentSamples.toFixed(1)} independent samples, so between ` +
+        `${level} confidence: sampled, ${counts}, so between ` +
         `${percent(range.low)} and ${percent(range.high)} at 95%`
       );
+    }
     case 'subtraction':
       return `${level} confidence: what was left after subtraction, ${describeCrossCheck(support.check)}`;
   }

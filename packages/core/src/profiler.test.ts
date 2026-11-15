@@ -50,6 +50,22 @@ describe('independentSampleWeights', () => {
     expect(weightsAt([100, 105])).toEqual([1, 1]);
   });
 
+  it('does not collapse a sampler that really ticks faster than the floor', () => {
+    /*
+     * Every corpus burst spans 6.0ms or less (4x, both build modes), so each
+     * counts once. A sampler ticking every 1ms for 100ms would chain into one
+     * burst, and is 101 samples over the span of ten looks at the floor: ten
+     * independent samples, not one.
+     */
+    const fast = Array.from({ length: 101 }, (_, index) => 100 + index);
+    const weights = weightsAt(fast);
+    for (const weight of weights) expect(weight).toBeCloseTo(10 / 101, 12);
+    expect(weights.reduce((sum, weight) => sum + weight, 0)).toBeCloseTo(10, 10);
+
+    // A burst shorter than the floor still counts once, however it is spread.
+    expect(weightsAt([100, 104.9, 109.8])).toEqual([1 / 3, 1 / 3, 1 / 3]);
+  });
+
   it('treats samples sharing a timestamp as one', () => {
     // 32 pairs of corpus samples share a timestamp exactly (4x, both build modes).
     expect(weightsAt([100, 100])).toEqual([0.5, 0.5]);
