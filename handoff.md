@@ -152,7 +152,14 @@ attribution is unavailable at any sample count.
 
 **Done when** `derive-in-render` resolves to `OrderTable.tsx` line 36 as the top-ranked line in
 both build modes, with 60%+ of in-frame `OrderTable` samples inside the declared range 34–36
-(measured 76% development, 83% production); and `vendor-listener` attributes its vendor slice to
+(measured 76% development, 83% production).
+*Orchestrator's note, 2026-11-15 overnight run:* the v0.3 re-capture left production with long
+frames on only 2 of 24 presses, so in-frame production `OrderTable` samples number 3, and this
+criterion cannot be met as written. The step 4 suite therefore asserts the 60% floor over the
+replay, meaning every sample inside the drive's steps: 70.7% of 92 samples in development and 83.6%
+of 67 in production, 4×. It reports the in-frame share beside that without asserting it. The
+reason is the settled rule that the aggregate line histogram is the stable quantity and long-frame
+counts are not. See Questions for the morning; and `vendor-listener` attributes its vendor slice to
 `vendor.js` from the profiler while reporting that LoAF named `app.js` for the same slice.
 
 ### 5. The confidence model
@@ -282,8 +289,8 @@ Progress (updated before each next step starts):
 
 - [x] Step 0.1 — cleanup refactor
 - [x] Step 0.2 — collector change (fiber parent id, forced style/layout on scripts)
-- [ ] Step 0.3 — re-capture all eight runs in one pass
-- [ ] Step 0.4 — re-derive moved figures
+- [x] Step 0.3 — re-capture all eight runs in one pass
+- [x] Step 0.4 — re-derive moved figures
 - [ ] Step 0 cycle (refactor, review, fix) and commit
 - [ ] Step 3 — components, the React tier
 - [ ] Step 4 — lines, the profiler tier
@@ -328,8 +335,65 @@ Progress (updated before each next step starts):
 - The old corpus reads as `unrecorded` with `truncated: null`. New synthetic tests are in
   `packages/corpus/src/collector-fields.test.ts`. The gate is green at 123 tests.
 
+### Step 0.3 — re-capture
+
+- `pnpm spike:corpus` captured all eight runs serially in one invocation, with a warm-up, in 288s,
+  exit 0, under `caffeinate -dims`, and with nothing else running. The new corpus is 6.8MB.
+- Against the new corpus, four tests fail. Step 0.4 diagnoses them:
+  - `derive-in-render` production: only 3 samples resolve into `OrderTable.tsx`, where the
+    assertion expects more than 10.
+  - The forced split's residual is 0.20000000000000284, against a bound of `<= 0.2`.
+  - The spans test expects `StateOwner` among the commit names and gets `[null, 'App', 'App']`.
+  - `innerhtml-rebuild` development frame 5 does not partition cleanly.
+
+### Step 0.4 — diagnose the four failures, verify the new fields, re-derive moved figures
+
+No re-capture is needed: none of the four was a collector bug. `pnpm check` green at 130 tests (59
+core, 71 corpus); `pnpm build` passes. Not committed.
+
+- **derive-in-render production, "3 samples" — (b), the threshold.** LoAF reported a frame after 2 of
+  24 production presses (5 of 24 before), so only 4 stacked samples fell inside long frames. The
+  bundle (`index-FhbDr_RJ.js`), its captured source map and the profiler start (before the drive)
+  were unchanged, and 67 of the replay's 69 stacked samples still resolve into `OrderTable.tsx`,
+  83.6% in range, line 36 first. The in-frame floor was a long-frame count by another name. The test
+  now counts every sample inside the drive's steps: 70.7% of 92 (development), 83.6% of 67
+  (production). Same 60% floor, same top-line-36 assertion.
+- **Forced split 0.20000000000000284 and frame 5's note — (b), float at the boundary.** One forced
+  entry is 23.2 + 71.5 against 94.9, exactly two grid steps, which is the tolerance itself. The new
+  `exceedsCoarsenedTolerance` in `core/loaf.ts` is inclusive at 0.2ms plus a 1e-6ms float slack,
+  used by `decomposeFrame` and the record test; two new core tests pin two steps as quiet and three
+  as a note. The spec defines the combined figure as exactly the sum, so the drift is Chrome's; the
+  comments that said the spec coarsens the halves independently are corrected.
+- **No `StateOwner` originator — (b), an intermittent span.** React emits `Update` only when render
+  starts strictly after the update on the coarsened clock (`react-dom-client.development.js:18619`).
+  The re-capture has two `Update` spans naming `App` and none for `StateOwner`. The test now asserts
+  that every named originator lacks a component span, plus the label-parsed `root.render()` row.
+- **New fields, verified and asserted** (new `records.test.ts` block): all 58 commits in `spans` and
+  `derive-in-render` are `recorded` with `truncated: false`; `carriedOver` is false on all 150
+  fibers; the 3 fibers at 0ms actual have bit 0 clear; all 12 mounting fibers have it set; the
+  projection's forced split equals `toJSON`'s and is numeric on all 77 scripts. `App` in
+  `state-owner-self` has flags 0, which settles the spans ground truth's open question: its 25.2ms
+  is `StateOwner`'s.
+- **Moved, and worth the morning's attention.** The profiler's median cadence went from 12.2ms to
+  14.5ms in all eight runs alike, request unchanged, so fewer samples everywhere. Several figures
+  quoted before were already wrong against the old corpus and are corrected with a note: "36 of 80"
+  anonymous scripts was 54, "6 of 20" one-step drifts was 11, "50 of 54" frames with zero
+  style/layout was 51.
+- **Left for the orchestrator.** Step 4's done-when below still says "60%+ of in-frame `OrderTable`
+  samples" in both modes; in-frame production now holds 3 samples, so that criterion cannot be met
+  as written. The collector's `run.json` sampling note still says "~12ms median cadence" (spike
+  text, not edited). Findings has a new closing section, "What the v0.3 re-capture found".
+
 ## Questions for the morning
 
+- **Step 4's "60%+ of in-frame `OrderTable` samples" is now measured over the replay, every sample
+  inside the drive's steps, instead of inside long frames.** In-frame production holds 3 samples
+  after the re-capture, because LoAF fired on only 2 of 24 presses, against 5 of 24 before.
+  Orchestrator's decision: accept the replay population. It is the same function work, a frame
+  under the 50ms threshold is still a slow keypress, and it follows the settled rule that long-frame
+  counts are not assertable. The in-frame share is still reported. If you want the claim limited
+  strictly to long frames, production needs more presses per run, which means a fixture plan change
+  and a re-capture.
 - **Should the root package depend on `@frameblame/core` so that `spike/fixtures.ts` can drop its own
   `BuildMode`?** Chosen for tonight: leave the duplicate, because it avoids a lockfile change in an
   unattended run.

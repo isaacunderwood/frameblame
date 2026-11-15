@@ -319,7 +319,14 @@
           "self time will double-count this frame - which is why self time is",
           "actualDuration minus the children's, per the gate source line 4421.",
           "The re-capture of this fixture should settle it; until then treat the",
-          "App entry on this row as 'present in the commit', not as 'rendered'."
+          "App entry on this row as 'present in the commit', not as 'rendered'.",
+          "",
+          "Settled by the v0.3 re-capture, whose collector records React's own render",
+          "evidence per fiber. In this row's commit (development, 4x) App carries",
+          "flags 0 - PerformedWork, bit 0, clear - with an alternate and not carried",
+          "over, so React cloned App and bailed out without calling it. Its 25.2ms",
+          "actualDuration is StateOwner's 25.2ms bubbled up, and App's self time is",
+          "zero. App belongs in componentsThatRender only as 'present in the commit'."
         ]
       },
       {
@@ -355,10 +362,11 @@
           "This row was written as a falsifiable prediction from the gate, before",
           "anything had been measured, and the corpus capture confirmed it: all",
           "six components render ~25ms each and only PropsChanged and",
-          "DeepEqualProps are named. LateMount re-renders for 25.2ms unnamed.",
-          "Recorded as having been predicted first, because that is what makes it",
+          "DeepEqualProps are named. LateMount re-renders unnamed, for 25.7ms in the",
+          "capture now in corpus/ (development, 4x). Recorded as having been",
+          "predicted first, because that is what makes it",
           "evidence the gate is understood rather than merely described.",
-          "Confirmed in two independent captures. The current one is named under",
+          "Confirmed in three independent captures. The current one is named under",
           "observedJank.$measured.runIds rather than quoted here, so that a",
           "re-capture does not leave a stale id behind in a comment."
         ]
@@ -456,35 +464,35 @@
         "hook being primary, and it is why this fixture matters."
       ],
       "runIds": {
-        "development": "2026-11-15T02-26-32-027Z__spans__development",
-        "production": "2026-11-15T02-26-42-592Z__spans__production"
+        "development": "2026-11-15T05-36-49-764Z__spans__development",
+        "production": "2026-11-15T05-37-00-294Z__spans__production"
       },
       "development": {
         "initial-mount": {
-          "frameDurationMs": 180.9,
-          "loafScriptDurationMs": 155.1,
+          "frameDurationMs": 180.5,
+          "loafScriptDurationMs": 152,
           "componentSpans": {},
           "fiberActualDurationMs": {
-            "App": 140.7,
-            "PropsChanged": 26.2,
-            "ContextConsumer": 25.8,
-            "StateOwner": 26.2,
-            "DeepEqualProps": 25.6
+            "App": 139.5,
+            "PropsChanged": 26.1,
+            "ContextConsumer": 25.5,
+            "StateOwner": 26.5,
+            "DeepEqualProps": 25.7
           }
         },
         "bump": {
-          "frameDurationMs": 141.4,
+          "frameDurationMs": 156.6,
           "loafScriptDurationMs": 133,
           "componentSpans": {
-            "PropsChanged": 25.3,
-            "DeepEqualProps": 25.2
+            "PropsChanged": 25.2,
+            "DeepEqualProps": 25
           },
           "fiberActualDurationMs": {
-            "App": 127.7,
-            "PropsChanged": 25.3,
-            "ContextConsumer": 25.1,
-            "StateOwner": 25.1,
-            "DeepEqualProps": 25.2
+            "App": 127,
+            "PropsChanged": 25.2,
+            "ContextConsumer": 25.2,
+            "StateOwner": 25,
+            "DeepEqualProps": 25
           }
         },
         "state-owner-self": {
@@ -500,41 +508,41 @@
           }
         },
         "mount-toggle": {
-          "frameDurationMs": 155.4,
-          "loafScriptDurationMs": 153.5,
+          "frameDurationMs": 155.5,
+          "loafScriptDurationMs": 153.3,
           "componentSpans": {
-            "DeepEqualProps": 25
+            "DeepEqualProps": 25.2
           },
           "fiberActualDurationMs": {
-            "App": 151.7,
-            "PropsChanged": 25.3,
+            "App": 151.2,
+            "PropsChanged": 25.1,
             "ContextConsumer": 25.3,
             "StateOwner": 25.1,
-            "DeepEqualProps": 25,
+            "DeepEqualProps": 25.1,
             "LateMount": 25.4
           }
         },
         "bump-again": {
-          "frameDurationMs": 155.3,
-          "loafScriptDurationMs": 152.6,
+          "frameDurationMs": 155.2,
+          "loafScriptDurationMs": 153.6,
           "componentSpans": {
-            "PropsChanged": 25,
-            "DeepEqualProps": 25.5
+            "PropsChanged": 25.1,
+            "DeepEqualProps": 25.4
           },
           "fiberActualDurationMs": {
-            "App": 151.8,
-            "PropsChanged": 25,
-            "ContextConsumer": 25.5,
-            "StateOwner": 25.2,
-            "DeepEqualProps": 25.5,
-            "LateMount": 25
+            "App": 152.9,
+            "PropsChanged": 25.1,
+            "ContextConsumer": 25.4,
+            "StateOwner": 25.9,
+            "DeepEqualProps": 25.3,
+            "LateMount": 25.7
           }
         }
       },
       "production": {
         "initial-mount": {
-          "frameDurationMs": 168.3,
-          "loafScriptDurationMs": 140.8,
+          "frameDurationMs": 165.7,
+          "loafScriptDurationMs": 137.8,
           "componentSpans": {},
           "fiberActualDurationMs": {
             "b": null,
@@ -545,8 +553,8 @@
           }
         },
         "bump": {
-          "frameDurationMs": 135.5,
-          "loafScriptDurationMs": 127.8,
+          "frameDurationMs": 146.8,
+          "loafScriptDurationMs": 128.7,
           "componentSpans": {},
           "fiberActualDurationMs": {
             "b": null,
@@ -569,8 +577,8 @@
           }
         },
         "mount-toggle": {
-          "frameDurationMs": 154.1,
-          "loafScriptDurationMs": 152,
+          "frameDurationMs": 156.1,
+          "loafScriptDurationMs": 153.2,
           "componentSpans": {},
           "fiberActualDurationMs": {
             "b": null,
@@ -582,8 +590,8 @@
           }
         },
         "bump-again": {
-          "frameDurationMs": 154.2,
-          "loafScriptDurationMs": 151.8,
+          "frameDurationMs": 153.4,
+          "loafScriptDurationMs": 151.5,
           "componentSpans": {},
           "fiberActualDurationMs": {
             "b": null,

@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-26-32-027Z__spans__development",
+  "runId": "2026-11-15T05-36-49-764Z__spans__development",
   "fixture": "spans",
   "mode": "development",
   "buildMode": "development (vite dev server)",
@@ -9,42 +9,61 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:26:42.519Z",
+  "collectedAt": "2026-11-15T05:37:00.216Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709592719.5,
-    "driveStartedAt": 325.8999999985099,
-    "driveFinishedAt": 9079.60000000149
+    "timeOrigin": 1794721010447.3,
+    "driveStartedAt": 307.1000000014901,
+    "driveFinishedAt": 9075.699999999255
   },
   "note": "A window of the text each script actually served, around every position the signals attributed work to. This is the middle link of findings.md's resolution chain, which the v0.1 dumps could not reproduce because they stored each script's length but not its text.",
   "byResource": {
-    "http://localhost:5186/": 1,
-    "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c": 36,
-    "http://localhost:5186/src/main.tsx": 1,
+    "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c": 37,
     "http://localhost:5186/src/burn.ts": 1,
     "http://localhost:5186/src/App.tsx": 1,
-    "http://localhost:5186/src/causes.tsx": 5
+    "http://localhost:5186/src/causes.tsx": 5,
+    "http://localhost:5186/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=48c9835c": 1
   },
   "unresolved": [],
   "windows": [
     {
       "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/",
-      "label": "(anonymous)",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "scheduleTaskForRootDuringMicrotask",
       "reported": {
-        "line": 4,
-        "column": 27
+        "line": 9780,
+        "column": 46
       },
       "resolved": {
-        "line": 4,
-        "column": 26,
-        "charPosition": 68
+        "line": 9780,
+        "column": 45,
+        "charPosition": 597417
       },
-      "servedLine": "    <script type=\"module\">import { injectIntoGlobalHook } from \"/@react-refresh\";",
+      "servedLine": "\t\tfunction scheduleTaskForRootDuringMicrotask(root, currentTime) {",
       "servedText": {
-        "startCharPosition": 0,
-        "caretOffset": 68,
-        "text": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">import { injectIntoGlobalHook } from \"/@react-refresh\";\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () => {};\nwindow.$RefreshSig$ = () => (type) => type;</script>\n\n    <script type=\"module\" src=\"/@vite/client\"></script>\n\n    <!--\n      The do"
+        "startCharPosition": 597167,
+        "caretOffset": 250,
+        "text": "NO_PENDING_EFFECTS && pendingEffectsStatus !== PENDING_PASSIVE_PHASE || flushSyncWorkAcrossRoots_impl(syncTransitionLanes, !1);\n\t\t\t0 !== currentEventTransitionLane && (currentEventTransitionLane = 0);\n\t\t}\n\t\tfunction scheduleTaskForRootDuringMicrotask(root, currentTime) {\n\t\t\tfor (var suspendedLanes = root.suspendedLanes, pingedLanes = root.pingedLanes, expirationTimes = root.expirationTimes, lanes = root.pendingLanes & -62914561; 0 < lanes;) {\n\t\t\t\tvar index = 31 - clz32(lanes), lane = 1 << index,"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "processRootScheduleInMicrotask",
+      "reported": {
+        "line": 9767,
+        "column": 42
+      },
+      "resolved": {
+        "line": 9767,
+        "column": 41,
+        "charPosition": 596426
+      },
+      "servedLine": "\t\tfunction processRootScheduleInMicrotask() {",
+      "servedText": {
+        "startCharPosition": 596176,
+        "caretOffset": 250,
+        "text": "ot.next;\n\t\t\t\t\t}\n\t\t\t\t} while (didPerformSomeWork);\n\t\t\t\tisFlushingWork = !1;\n\t\t\t}\n\t\t}\n\t\tfunction processRootScheduleInImmediateTask() {\n\t\t\tschedulerEvent = window.event;\n\t\t\tprocessRootScheduleInMicrotask();\n\t\t}\n\t\tfunction processRootScheduleInMicrotask() {\n\t\t\tmightHavePendingSyncWork = didScheduleMicrotask_act = didScheduleMicrotask = !1;\n\t\t\tvar syncTransitionLanes = 0;\n\t\t\t0 !== currentEventTransitionLane && shouldAttemptEagerTransition() && (syncTransitionLanes = currentEventTransitionLane);\n\t\t\tf"
       }
     },
     {
@@ -52,99 +71,19 @@
       "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
       "label": "(anonymous)",
       "reported": {
-        "line": 15725,
-        "column": 84
+        "line": 9849,
+        "column": 30
       },
       "resolved": {
-        "line": 15725,
-        "column": 83,
-        "charPosition": 902620
+        "line": 9849,
+        "column": 29,
+        "charPosition": 601603
       },
-      "servedLine": "\t\tReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render = function(children) {",
+      "servedLine": "\t\t\tscheduleMicrotask(function() {",
       "servedText": {
-        "startCharPosition": 902370,
+        "startCharPosition": 601353,
         "caretOffset": 250,
-        "text": "rop compositionend compositionstart keydown keypress keyup input textInput copy cut paste click change contextmenu reset\".split(\" \"), lastScheduledReplayQueue = null;\n\t\tReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render = function(children) {\n\t\t\tvar root = this._internalRoot;\n\t\t\tif (null === root) throw Error(\"Cannot update an unmounted root.\");\n\t\t\tvar args = arguments;\n\t\t\t\"function\" === typeof args[1] ? console.error(\"does not support the second callback argument. To execute"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/src/main.tsx",
-      "label": "(anonymous)",
-      "reported": {
-        "line": 1,
-        "column": 1
-      },
-      "resolved": {
-        "line": 1,
-        "column": 0,
-        "charPosition": 0
-      },
-      "servedLine": "const createRoot = __vite__cjsImport0_reactDom_client[\"createRoot\"];const _jsxDEV = __vite__cjsImport2_react_jsxDevRuntime[\"jsxDEV\"];import __vite__cjsImport0_reactDom_client from \"/node_modules/.vite/deps/react-dom_client.js?v=48c9835c\";",
-      "servedText": {
-        "startCharPosition": 0,
-        "caretOffset": 0,
-        "text": "const createRoot = __vite__cjsImport0_reactDom_client[\"createRoot\"];const _jsxDEV = __vite__cjsImport2_react_jsxDevRuntime[\"jsxDEV\"];import __vite__cjsImport0_reactDom_client from \"/node_modules/.vite/deps/react-dom_client.js?v=48c9835c\";\nimport { Ap"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "flushPendingEffects",
-      "reported": {
-        "line": 9536,
-        "column": 31
-      },
-      "resolved": {
-        "line": 9536,
-        "column": 30,
-        "charPosition": 580419
-      },
-      "servedLine": "\t\tfunction flushPendingEffects() {",
-      "servedText": {
-        "startCharPosition": 580169,
-        "caretOffset": 250,
-        "text": "seRootPooledCache(root, remainingLanes) {\n\t\t\t0 === (root.pooledCacheLanes &= remainingLanes) && (remainingLanes = root.pooledCache, null != remainingLanes && (root.pooledCache = null, releaseCache(remainingLanes)));\n\t\t}\n\t\tfunction flushPendingEffects() {\n\t\t\tnull !== pendingViewTransition && (pendingViewTransition.skipTransition(), didWarnAboutInterruptedViewTransitions || (didWarnAboutInterruptedViewTransitions = !0, console.warn(\"A flushSync update cancelled a View Transition because it was cal"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "performWorkOnRootViaSchedulerTask",
-      "reported": {
-        "line": 9821,
-        "column": 45
-      },
-      "resolved": {
-        "line": 9821,
-        "column": 44,
-        "charPosition": 599849
-      },
-      "servedLine": "\t\tfunction performWorkOnRootViaSchedulerTask(root, didTimeout) {",
-      "servedText": {
-        "startCharPosition": 599599,
-        "caretOffset": 250,
-        "text": "ime;\n\t\t\t\troot.callbackNode = suspendedLanes;\n\t\t\t\treturn currentTime;\n\t\t\t}\n\t\t\tnull !== pingedLanes && cancelCallback(pingedLanes);\n\t\t\troot.callbackPriority = 2;\n\t\t\troot.callbackNode = null;\n\t\t\treturn 2;\n\t\t}\n\t\tfunction performWorkOnRootViaSchedulerTask(root, didTimeout) {\n\t\t\tnestedUpdateScheduled = currentUpdateIsNested = !1;\n\t\t\tschedulerEvent = window.event;\n\t\t\tif (pendingEffectsStatus !== NO_PENDING_EFFECTS && pendingEffectsStatus !== PENDING_PASSIVE_PHASE) return root.callbackNode = null, root."
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "performWorkUntilDeadline",
-      "reported": {
-        "line": 15,
-        "column": 36
-      },
-      "resolved": {
-        "line": 15,
-        "column": 35,
-        "charPosition": 673
-      },
-      "servedLine": "\t\tfunction performWorkUntilDeadline() {",
-      "servedText": {
-        "startCharPosition": 423,
-        "caretOffset": 250,
-        "text": "urce code is licensed under the MIT license found in the\n* LICENSE file in the root directory of this source tree.\n*/\nvar require_scheduler_development = /* @__PURE__ */ __commonJSMin(((exports) => {\n\t(function() {\n\t\tfunction performWorkUntilDeadline() {\n\t\t\tneedsPaint = !1;\n\t\t\tif (isMessageLoopRunning) {\n\t\t\t\tvar currentTime = exports.unstable_now();\n\t\t\t\tstartTime = currentTime;\n\t\t\t\tvar hasMoreWork = !0;\n\t\t\t\ttry {\n\t\t\t\t\ta: {\n\t\t\t\t\t\tisHostCallbackScheduled = !1;\n\t\t\t\t\t\tisHostTimeoutScheduled && (isHo"
+        "text": "llbackNode);\n\t\t}\n\t\tfunction scheduleImmediateRootScheduleTask() {\n\t\t\tnull !== ReactSharedInternals.actQueue && ReactSharedInternals.actQueue.push(function() {\n\t\t\t\tprocessRootScheduleInMicrotask();\n\t\t\t\treturn null;\n\t\t\t});\n\t\t\tscheduleMicrotask(function() {\n\t\t\t\t(executionContext & (RenderContext | CommitContext)) !== NoContext ? scheduleCallback$3(ImmediatePriority, processRootScheduleInImmediateTask) : processRootScheduleInMicrotask();\n\t\t\t});\n\t\t}\n\t\tfunction requestTransitionLane() {\n\t\t\tif (0 === c"
       }
     },
     {
@@ -369,6 +308,86 @@
     },
     {
       "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "performWorkOnRootViaSchedulerTask",
+      "reported": {
+        "line": 9821,
+        "column": 45
+      },
+      "resolved": {
+        "line": 9821,
+        "column": 44,
+        "charPosition": 599849
+      },
+      "servedLine": "\t\tfunction performWorkOnRootViaSchedulerTask(root, didTimeout) {",
+      "servedText": {
+        "startCharPosition": 599599,
+        "caretOffset": 250,
+        "text": "ime;\n\t\t\t\troot.callbackNode = suspendedLanes;\n\t\t\t\treturn currentTime;\n\t\t\t}\n\t\t\tnull !== pingedLanes && cancelCallback(pingedLanes);\n\t\t\troot.callbackPriority = 2;\n\t\t\troot.callbackNode = null;\n\t\t\treturn 2;\n\t\t}\n\t\tfunction performWorkOnRootViaSchedulerTask(root, didTimeout) {\n\t\t\tnestedUpdateScheduled = currentUpdateIsNested = !1;\n\t\t\tschedulerEvent = window.event;\n\t\t\tif (pendingEffectsStatus !== NO_PENDING_EFFECTS && pendingEffectsStatus !== PENDING_PASSIVE_PHASE) return root.callbackNode = null, root."
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "performWorkUntilDeadline",
+      "reported": {
+        "line": 15,
+        "column": 36
+      },
+      "resolved": {
+        "line": 15,
+        "column": 35,
+        "charPosition": 673
+      },
+      "servedLine": "\t\tfunction performWorkUntilDeadline() {",
+      "servedText": {
+        "startCharPosition": 423,
+        "caretOffset": 250,
+        "text": "urce code is licensed under the MIT license found in the\n* LICENSE file in the root directory of this source tree.\n*/\nvar require_scheduler_development = /* @__PURE__ */ __commonJSMin(((exports) => {\n\t(function() {\n\t\tfunction performWorkUntilDeadline() {\n\t\t\tneedsPaint = !1;\n\t\t\tif (isMessageLoopRunning) {\n\t\t\t\tvar currentTime = exports.unstable_now();\n\t\t\t\tstartTime = currentTime;\n\t\t\t\tvar hasMoreWork = !0;\n\t\t\t\ttry {\n\t\t\t\t\ta: {\n\t\t\t\t\t\tisHostCallbackScheduled = !1;\n\t\t\t\t\t\tisHostTimeoutScheduled && (isHo"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "completeWork",
+      "reported": {
+        "line": 6531,
+        "column": 24
+      },
+      "resolved": {
+        "line": 6531,
+        "column": 23,
+        "charPosition": 378863
+      },
+      "servedLine": "\t\tfunction completeWork(current, workInProgress, renderLanes) {",
+      "servedText": {
+        "startCharPosition": 378613,
+        "caretOffset": 250,
+        "text": "BaseDuration.flags, _treeBaseDuration.return = completedWork, _treeBaseDuration = _treeBaseDuration.sibling;\n\t\t\tcompletedWork.subtreeFlags |= subtreeFlags;\n\t\t\tcompletedWork.childLanes = newChildLanes;\n\t\t\treturn didBailout;\n\t\t}\n\t\tfunction completeWork(current, workInProgress, renderLanes) {\n\t\t\tvar newProps = workInProgress.pendingProps;\n\t\t\tpopTreeContext(workInProgress);\n\t\t\tswitch (workInProgress.tag) {\n\t\t\t\tcase 16:\n\t\t\t\tcase 15:\n\t\t\t\tcase 0:\n\t\t\t\tcase 11:\n\t\t\t\tcase 7:\n\t\t\t\tcase 8:\n\t\t\t\tcase 12:\n\t\t\t\tca"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "completeUnitOfWork",
+      "reported": {
+        "line": 9201,
+        "column": 30
+      },
+      "resolved": {
+        "line": 9201,
+        "column": 29,
+        "charPosition": 558623
+      },
+      "servedLine": "\t\tfunction completeUnitOfWork(unitOfWork) {",
+      "servedText": {
+        "startCharPosition": 558373,
+        "caretOffset": 250,
+        "text": "ason = suspenseHandlerStackCursor.current, null !== suspendedReason && 13 === suspendedReason.tag && (suspendedReason.flags |= 16384);\n\t\t\t\tunwindUnitOfWork(unitOfWork, root);\n\t\t\t} else completeUnitOfWork(unitOfWork);\n\t\t}\n\t\tfunction completeUnitOfWork(unitOfWork) {\n\t\t\tvar completedWork = unitOfWork;\n\t\t\tdo {\n\t\t\t\tif (0 !== (completedWork.flags & 32768)) {\n\t\t\t\t\tunwindUnitOfWork(completedWork, workInProgressRootDidSkipSuspendedSiblings);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tvar current = completedWork.alternate;\n\t"
+      }
+    },
+    {
+      "origin": "profiler-frame",
       "resourceUrl": "http://localhost:5186/src/causes.tsx",
       "label": "PropsChanged",
       "reported": {
@@ -385,6 +404,26 @@
         "startCharPosition": 695,
         "caretOffset": 250,
         "text": "time.js?v=48c9835c\";\nvar _s = $RefreshSig$(), _s2 = $RefreshSig$();\n/**\n* Re-renders because its props changed: the one case React's span gate admits,\n* and the case a span-keyed tool would mistake for the whole story.\n*/\nexport function PropsChanged({ n }) {\n\tburn(BURN_MS);\n\treturn /* @__PURE__ */ _jsxDEV(\"p\", { children: [\"props \", n] }, void 0, true, {\n\t\tfileName: _jsxFileName,\n\t\tlineNumber: 91,\n\t\tcolumnNumber: 10\n\t}, this);\n}\n_c = PropsChanged;\n/**\n* Re-renders because a context it consumes "
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=48c9835c",
+      "label": "(anonymous)",
+      "reported": {
+        "line": 191,
+        "column": 28
+      },
+      "resolved": {
+        "line": 191,
+        "column": 27,
+        "charPosition": 9992
+      },
+      "servedLine": "\t\texports.jsxDEV = function(type, config, maybeKey, isStaticChildren) {",
+      "servedText": {
+        "startCharPosition": 9742,
+        "caretOffset": 250,
+        "text": "OwnerDebugStack = React.react_stack_bottom_frame.bind(React, UnknownOwner)();\n\t\tvar unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));\n\t\tvar didWarnAboutKeySpread = {};\n\t\texports.Fragment = REACT_FRAGMENT_TYPE;\n\t\texports.jsxDEV = function(type, config, maybeKey, isStaticChildren) {\n\t\t\tvar trackActualOwner = 1e4 > ReactSharedInternals.recentlyCreatedOwnerStacks++;\n\t\t\tif (trackActualOwner) {\n\t\t\t\tvar previousStackTraceLimit = Error.stackTraceLimit;\n\t\t\t\tError.stackTraceLimit = 10;\n\t\t\t\tva"
       }
     },
     {
@@ -450,41 +489,81 @@
     {
       "origin": "profiler-frame",
       "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "flushPassiveEffects",
+      "label": "commitRoot",
       "reported": {
-        "line": 9543,
-        "column": 31
+        "line": 9299,
+        "column": 22
       },
       "resolved": {
-        "line": 9543,
-        "column": 30,
-        "charPosition": 581115
+        "line": 9299,
+        "column": 21,
+        "charPosition": 564403
       },
-      "servedLine": "\t\tfunction flushPassiveEffects() {",
+      "servedLine": "\t\tfunction commitRoot(root, finishedWork, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, suspendedState, suspendedCommitReason, completedRenderEndTime) {",
       "servedText": {
-        "startCharPosition": 580865,
+        "startCharPosition": 564153,
         "caretOffset": 250,
-        "text": " interfere.\")), pendingViewTransition = null, pendingDelayedCommitReason = ABORTED_VIEW_TRANSITION_COMMIT);\n\t\t\tflushMutationEffects();\n\t\t\tflushLayoutEffects();\n\t\t\tflushSpawnedWork();\n\t\t\treturn flushPassiveEffects();\n\t\t}\n\t\tfunction flushPassiveEffects() {\n\t\t\tif (pendingEffectsStatus !== PENDING_PASSIVE_PHASE) return !1;\n\t\t\tvar root = pendingEffectsRoot, remainingLanes = pendingEffectsRemainingLanes;\n\t\t\tpendingEffectsRemainingLanes = 0;\n\t\t\tvar renderPriority = lanesToEventPriority(pendingEffectsLa"
+        "text": "MMEDIATE_COMMIT;\n\t\t\t\tpendingSuspendedViewTransitionReason = null;\n\t\t\t\tcommitRoot(root, finishedWork, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, suspendedState, suspendedCommitReason, completedRenderEndTime);\n\t\t\t}\n\t\t}\n\t\tfunction commitRoot(root, finishedWork, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, suspendedState, suspendedCommitReason, completedRenderEndTime) {\n\t\t\tvar remainingLanes = finishedWork.lanes | finishedWork.childLanes;\n\t\t\tpendingEffectsRemainingLanes = remai"
       }
     },
     {
       "origin": "profiler-frame",
       "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "(anonymous)",
+      "label": "completeRoot",
       "reported": {
-        "line": 9306,
-        "column": 234
+        "line": 9251,
+        "column": 24
       },
       "resolved": {
-        "line": 9306,
-        "column": 233,
-        "charPosition": 565253
+        "line": 9251,
+        "column": 23,
+        "charPosition": 560569
       },
-      "servedLine": "\t\t\t0 !== finishedWork.actualDuration || 0 !== (finishedWork.subtreeFlags & spawnedLane) || 0 !== (finishedWork.flags & spawnedLane) ? (root.callbackNode = null, root.callbackPriority = 0, scheduleCallback$1(NormalPriority$1, function() {",
+      "servedLine": "\t\tfunction completeRoot(root, finishedWork, lanes, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedState, suspendedCommitReason, completedRenderStartTime, completedRenderEndTime) {",
       "servedText": {
-        "startCharPosition": 565003,
+        "startCharPosition": 560319,
         "caretOffset": 250,
-        "text": "edLane = 10256);\n\t\t\t0 !== finishedWork.actualDuration || 0 !== (finishedWork.subtreeFlags & spawnedLane) || 0 !== (finishedWork.flags & spawnedLane) ? (root.callbackNode = null, root.callbackPriority = 0, scheduleCallback$1(NormalPriority$1, function() {\n\t\t\t\tschedulerEvent = window.event;\n\t\t\t\tpendingDelayedCommitReason === IMMEDIATE_COMMIT && (pendingDelayedCommitReason = DELAYED_PASSIVE_COMMIT);\n\t\t\t\tflushPassiveEffects();\n\t\t\t\treturn null;\n\t\t\t})) : (root.callbackNode = null, root.callbackPriorit"
+        "text": "OfWork)) {\n\t\t\t\t\tworkInProgress = unitOfWork;\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tworkInProgress = unitOfWork = next;\n\t\t\t} while (null !== unitOfWork);\n\t\t\tworkInProgressRootExitStatus = RootSuspendedAtTheShell;\n\t\t\tworkInProgress = null;\n\t\t}\n\t\tfunction completeRoot(root, finishedWork, lanes, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedState, suspendedCommitReason, completedRenderStartTime, completedR"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "completeRootWhenReady",
+      "reported": {
+        "line": 8777,
+        "column": 33
+      },
+      "resolved": {
+        "line": 8777,
+        "column": 32,
+        "charPosition": 529750
+      },
+      "servedLine": "\t\tfunction completeRootWhenReady(root, finishedWork, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedCommitReason, completedRenderStartTime, completedRenderEndTime) {",
+      "servedText": {
+        "startCharPosition": 529500,
+        "caretOffset": 250,
+        "text": "anes, workInProgressSuspendedRetryLanes, workInProgressRootDidSkipSuspendedSiblings, startTime, null, renderStartTime, yieldedFiber);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t} while (1);\n\t\t\tensureRootIsScheduled(root);\n\t\t}\n\t\tfunction completeRootWhenReady(root, finishedWork, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedCommitReason, completedRenderStartTime, completedRenderEndTime) {\n"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "SyntheticBaseEvent",
+      "reported": {
+        "line": 2197,
+        "column": 31
+      },
+      "resolved": {
+        "line": 2197,
+        "column": 30,
+        "charPosition": 107778
+      },
+      "servedLine": "\t\t\tfunction SyntheticBaseEvent(reactName, reactEventType, targetInst, nativeEvent, nativeEventTarget) {",
+      "servedText": {
+        "startCharPosition": 107528,
+        "caretOffset": 250,
+        "text": "<= nativeEvent || 13 === nativeEvent ? nativeEvent : 0;\n\t\t}\n\t\tfunction functionThatReturnsTrue() {\n\t\t\treturn !0;\n\t\t}\n\t\tfunction functionThatReturnsFalse() {\n\t\t\treturn !1;\n\t\t}\n\t\tfunction createSyntheticEvent(Interface) {\n\t\t\tfunction SyntheticBaseEvent(reactName, reactEventType, targetInst, nativeEvent, nativeEventTarget) {\n\t\t\t\tthis._reactName = reactName;\n\t\t\t\tthis._targetInst = targetInst;\n\t\t\t\tthis.type = reactEventType;\n\t\t\t\tthis.nativeEvent = nativeEvent;\n\t\t\t\tthis.target = nativeEventTarget;\n\t\t\t"
       }
     },
     {
@@ -629,246 +708,6 @@
     },
     {
       "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "processRootScheduleInMicrotask",
-      "reported": {
-        "line": 9767,
-        "column": 42
-      },
-      "resolved": {
-        "line": 9767,
-        "column": 41,
-        "charPosition": 596426
-      },
-      "servedLine": "\t\tfunction processRootScheduleInMicrotask() {",
-      "servedText": {
-        "startCharPosition": 596176,
-        "caretOffset": 250,
-        "text": "ot.next;\n\t\t\t\t\t}\n\t\t\t\t} while (didPerformSomeWork);\n\t\t\t\tisFlushingWork = !1;\n\t\t\t}\n\t\t}\n\t\tfunction processRootScheduleInImmediateTask() {\n\t\t\tschedulerEvent = window.event;\n\t\t\tprocessRootScheduleInMicrotask();\n\t\t}\n\t\tfunction processRootScheduleInMicrotask() {\n\t\t\tmightHavePendingSyncWork = didScheduleMicrotask_act = didScheduleMicrotask = !1;\n\t\t\tvar syncTransitionLanes = 0;\n\t\t\t0 !== currentEventTransitionLane && shouldAttemptEagerTransition() && (syncTransitionLanes = currentEventTransitionLane);\n\t\t\tf"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "(anonymous)",
-      "reported": {
-        "line": 9849,
-        "column": 30
-      },
-      "resolved": {
-        "line": 9849,
-        "column": 29,
-        "charPosition": 601603
-      },
-      "servedLine": "\t\t\tscheduleMicrotask(function() {",
-      "servedText": {
-        "startCharPosition": 601353,
-        "caretOffset": 250,
-        "text": "llbackNode);\n\t\t}\n\t\tfunction scheduleImmediateRootScheduleTask() {\n\t\t\tnull !== ReactSharedInternals.actQueue && ReactSharedInternals.actQueue.push(function() {\n\t\t\t\tprocessRootScheduleInMicrotask();\n\t\t\t\treturn null;\n\t\t\t});\n\t\t\tscheduleMicrotask(function() {\n\t\t\t\t(executionContext & (RenderContext | CommitContext)) !== NoContext ? scheduleCallback$3(ImmediatePriority, processRootScheduleInImmediateTask) : processRootScheduleInMicrotask();\n\t\t\t});\n\t\t}\n\t\tfunction requestTransitionLane() {\n\t\t\tif (0 === c"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "addObjectDiffToProperties",
-      "reported": {
-        "line": 2558,
-        "column": 37
-      },
-      "resolved": {
-        "line": 2558,
-        "column": 36,
-        "charPosition": 125913
-      },
-      "servedLine": "\t\tfunction addObjectDiffToProperties(prev, next, properties, indent) {",
-      "servedText": {
-        "startCharPosition": 125663,
-        "caretOffset": 250,
-        "text": "ned\";\n\t\t\t\t\tbreak;\n\t\t\t\tcase \"boolean\":\n\t\t\t\t\tvalue = value ? \"true\" : \"false\";\n\t\t\t\t\tbreak;\n\t\t\t\tdefault: value = String(value);\n\t\t\t}\n\t\t\tproperties.push([prefix + \"\\xA0\\xA0\".repeat(indent) + propertyName, value]);\n\t\t}\n\t\tfunction addObjectDiffToProperties(prev, next, properties, indent) {\n\t\t\tvar isDeeplyEqual = !0, prevPropertiesChecked = 0;\n\t\t\tfor (key in prev) {\n\t\t\t\tif (prevPropertiesChecked > OBJECT_WIDTH_LIMIT) {\n\t\t\t\t\tproperties.push([\"Previous object has more than \" + OBJECT_WIDTH_LIMIT + \" prop"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "logComponentRender",
-      "reported": {
-        "line": 2630,
-        "column": 30
-      },
-      "resolved": {
-        "line": 2630,
-        "column": 29,
-        "charPosition": 130231
-      },
-      "servedLine": "\t\tfunction logComponentRender(fiber, startTime, endTime, wasHydrated, committedLanes) {",
-      "servedText": {
-        "startCharPosition": 129981,
-        "caretOffset": 250,
-        "text": "ance.measure(trigger, reusableComponentOptions), performance.clearMeasures(trigger));\n\t\t}\n\t\tfunction logComponentReappeared(fiber, startTime, endTime) {\n\t\t\tlogComponentTrigger(fiber, startTime, endTime, \"Reconnect\");\n\t\t}\n\t\tfunction logComponentRender(fiber, startTime, endTime, wasHydrated, committedLanes) {\n\t\t\tvar name = getComponentNameFromFiber(fiber);\n\t\t\tif (null !== name && supportsUserTiming) {\n\t\t\t\tvar alternate = fiber.alternate, selfTime = fiber.actualDuration;\n\t\t\t\tif (null === alternate "
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "commitPassiveMountOnFiber",
-      "reported": {
-        "line": 8300,
-        "column": 37
-      },
-      "resolved": {
-        "line": 8300,
-        "column": 36,
-        "charPosition": 492679
-      },
-      "servedLine": "\t\tfunction commitPassiveMountOnFiber(finishedRoot, finishedWork, committedLanes, committedTransitions, endTime) {",
-      "servedText": {
-        "startCharPosition": 492429,
-        "caretOffset": 250,
-        "text": ", null !== isViewTransitionEligible ? isViewTransitionEligible.actualStartTime : endTime), parentFiber = isViewTransitionEligible;\n\t\t\telse isViewTransitionEligible && restoreNestedViewTransitions(parentFiber);\n\t\t}\n\t\tfunction commitPassiveMountOnFiber(finishedRoot, finishedWork, committedLanes, committedTransitions, endTime) {\n\t\t\tvar prevEffectStart = pushComponentEffectStart(), prevEffectDuration = pushComponentEffectDuration(), prevEffectErrors = pushComponentEffectErrors(), prevEffectDidSpawnU"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "recursivelyTraversePassiveMountEffects",
-      "reported": {
-        "line": 8295,
-        "column": 50
-      },
-      "resolved": {
-        "line": 8295,
-        "column": 49,
-        "charPosition": 491884
-      },
-      "servedLine": "\t\tfunction recursivelyTraversePassiveMountEffects(root, parentFiber, committedLanes, committedTransitions, endTime) {",
-      "servedText": {
-        "startCharPosition": 491634,
-        "caretOffset": 250,
-        "text": "nishedWork.alternate.memoizedState.cache);\n\t\t\tfinishedWork = finishedWork.memoizedState.cache;\n\t\t\tfinishedWork !== current && (retainCache(finishedWork), null != current && releaseCache(current));\n\t\t}\n\t\tfunction recursivelyTraversePassiveMountEffects(root, parentFiber, committedLanes, committedTransitions, endTime) {\n\t\t\tvar isViewTransitionEligible = (committedLanes & 335544064) === committedLanes;\n\t\t\tif (parentFiber.subtreeFlags & (isViewTransitionEligible ? 10262 : 10256) || 0 !== parentFiber."
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "flushSpawnedWork",
-      "reported": {
-        "line": 9453,
-        "column": 28
-      },
-      "resolved": {
-        "line": 9453,
-        "column": 27,
-        "charPosition": 574725
-      },
-      "servedLine": "\t\tfunction flushSpawnedWork() {",
-      "servedText": {
-        "startCharPosition": 574475,
-        "caretOffset": 250,
-        "text": "ewTransitionReason : commitStartTime, commitEndTime, commitErrors, pendingDelayedCommitReason === ABORTED_VIEW_TRANSITION_COMMIT, workInProgressUpdateTask);\n\t\t\t\tpendingEffectsStatus = PENDING_AFTER_MUTATION_PHASE;\n\t\t\t}\n\t\t}\n\t\tfunction flushSpawnedWork() {\n\t\t\tif (pendingEffectsStatus === PENDING_SPAWNED_WORK || pendingEffectsStatus === PENDING_AFTER_MUTATION_PHASE) {\n\t\t\t\tif (pendingEffectsStatus === PENDING_SPAWNED_WORK) {\n\t\t\t\t\tvar startViewTransitionStartTime = commitEndTime;\n\t\t\t\t\tcommitEndTime ="
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "commitRoot",
-      "reported": {
-        "line": 9299,
-        "column": 22
-      },
-      "resolved": {
-        "line": 9299,
-        "column": 21,
-        "charPosition": 564403
-      },
-      "servedLine": "\t\tfunction commitRoot(root, finishedWork, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, suspendedState, suspendedCommitReason, completedRenderEndTime) {",
-      "servedText": {
-        "startCharPosition": 564153,
-        "caretOffset": 250,
-        "text": "MMEDIATE_COMMIT;\n\t\t\t\tpendingSuspendedViewTransitionReason = null;\n\t\t\t\tcommitRoot(root, finishedWork, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, suspendedState, suspendedCommitReason, completedRenderEndTime);\n\t\t\t}\n\t\t}\n\t\tfunction commitRoot(root, finishedWork, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, suspendedState, suspendedCommitReason, completedRenderEndTime) {\n\t\t\tvar remainingLanes = finishedWork.lanes | finishedWork.childLanes;\n\t\t\tpendingEffectsRemainingLanes = remai"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "completeRoot",
-      "reported": {
-        "line": 9251,
-        "column": 24
-      },
-      "resolved": {
-        "line": 9251,
-        "column": 23,
-        "charPosition": 560569
-      },
-      "servedLine": "\t\tfunction completeRoot(root, finishedWork, lanes, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedState, suspendedCommitReason, completedRenderStartTime, completedRenderEndTime) {",
-      "servedText": {
-        "startCharPosition": 560319,
-        "caretOffset": 250,
-        "text": "OfWork)) {\n\t\t\t\t\tworkInProgress = unitOfWork;\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tworkInProgress = unitOfWork = next;\n\t\t\t} while (null !== unitOfWork);\n\t\t\tworkInProgressRootExitStatus = RootSuspendedAtTheShell;\n\t\t\tworkInProgress = null;\n\t\t}\n\t\tfunction completeRoot(root, finishedWork, lanes, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedState, suspendedCommitReason, completedRenderStartTime, completedR"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "completeRootWhenReady",
-      "reported": {
-        "line": 8777,
-        "column": 33
-      },
-      "resolved": {
-        "line": 8777,
-        "column": 32,
-        "charPosition": 529750
-      },
-      "servedLine": "\t\tfunction completeRootWhenReady(root, finishedWork, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedCommitReason, completedRenderStartTime, completedRenderEndTime) {",
-      "servedText": {
-        "startCharPosition": 529500,
-        "caretOffset": 250,
-        "text": "anes, workInProgressSuspendedRetryLanes, workInProgressRootDidSkipSuspendedSiblings, startTime, null, renderStartTime, yieldedFiber);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t} while (1);\n\t\t\tensureRootIsScheduled(root);\n\t\t}\n\t\tfunction completeRootWhenReady(root, finishedWork, recoverableErrors, transitions, didIncludeRenderPhaseUpdate, lanes, spawnedLane, updatedLanes, suspendedRetryLanes, didSkipSuspendedSiblings, exitStatus, suspendedCommitReason, completedRenderStartTime, completedRenderEndTime) {\n"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "pushHostContainer",
-      "reported": {
-        "line": 613,
-        "column": 29
-      },
-      "resolved": {
-        "line": 613,
-        "column": 28,
-        "charPosition": 25622
-      },
-      "servedLine": "\t\tfunction pushHostContainer(fiber, nextRootInstance) {",
-      "servedText": {
-        "startCharPosition": 25372,
-        "caretOffset": 250,
-        "text": "iber;\n\t\t\tcursor.current = value;\n\t\t}\n\t\tfunction requiredContext(c) {\n\t\t\tnull === c && console.error(\"Expected host context to exist. This error is likely caused by a bug in React. Please file an issue.\");\n\t\t\treturn c;\n\t\t}\n\t\tfunction pushHostContainer(fiber, nextRootInstance) {\n\t\t\tpush(rootInstanceStackCursor, nextRootInstance, fiber);\n\t\t\tpush(contextFiberStackCursor, fiber, fiber);\n\t\t\tpush(contextStackCursor, null, fiber);\n\t\t\tvar nextRootContext = nextRootInstance.nodeType;\n\t\t\tswitch (nextRootCo"
-      }
-    },
-    {
-      "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-      "label": "attemptEarlyBailoutIfNoScheduledUpdate",
-      "reported": {
-        "line": 6266,
-        "column": 50
-      },
-      "resolved": {
-        "line": 6266,
-        "column": 49,
-        "charPosition": 354634
-      },
-      "servedLine": "\t\tfunction attemptEarlyBailoutIfNoScheduledUpdate(current, workInProgress, renderLanes) {",
-      "servedText": {
-        "startCharPosition": 354384,
-        "caretOffset": 250,
-        "text": "eOrContext(current, renderLanes) {\n\t\t\tif (0 !== (current.lanes & renderLanes)) return !0;\n\t\t\tcurrent = current.dependencies;\n\t\t\treturn null !== current && checkIfContextChanged(current) ? !0 : !1;\n\t\t}\n\t\tfunction attemptEarlyBailoutIfNoScheduledUpdate(current, workInProgress, renderLanes) {\n\t\t\tswitch (workInProgress.tag) {\n\t\t\t\tcase 3:\n\t\t\t\t\tpushHostContainer(workInProgress, workInProgress.stateNode.containerInfo);\n\t\t\t\t\tpushProvider(workInProgress, CacheContext, current.memoizedState.cache);\n\t\t\t\t\tr"
-      }
-    },
-    {
-      "origin": "profiler-frame",
       "resourceUrl": "http://localhost:5186/src/causes.tsx",
       "label": "LateMount",
       "reported": {
@@ -885,6 +724,166 @@
         "startCharPosition": 2474,
         "caretOffset": 250,
         "text": "eY=\");\n_c3 = StateOwner;\n/**\n* Expensive on first mount only, which is the render that has no `alternate`\n* and therefore cannot pass the gate. Mounting is also when a real component\n* is most often at its most expensive.\n*/\nexport function LateMount() {\n\tburn(BURN_MS);\n\treturn /* @__PURE__ */ _jsxDEV(\"p\", { children: \"mounted\" }, void 0, false, {\n\t\tfileName: _jsxFileName,\n\t\tlineNumber: 137,\n\t\tcolumnNumber: 10\n\t}, this);\n}\n_c4 = LateMount;\n/**\n* Props are a fresh object on every render but deep-"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "isCustomElement",
+      "reported": {
+        "line": 1930,
+        "column": 27
+      },
+      "resolved": {
+        "line": 1930,
+        "column": 26,
+        "charPosition": 93628
+      },
+      "servedLine": "\t\tfunction isCustomElement(tagName) {",
+      "servedText": {
+        "startCharPosition": 93378,
+        "caretOffset": 250,
+        "text": "rStyle(node, _styleName, _key2), viewTransitionMutationContext = !0);\n\t\t\t} else for (expandedUpdates in styles) styles.hasOwnProperty(expandedUpdates) && setValueForStyle(node, expandedUpdates, styles[expandedUpdates]);\n\t\t}\n\t\tfunction isCustomElement(tagName) {\n\t\t\tif (-1 === tagName.indexOf(\"-\")) return !1;\n\t\t\tswitch (tagName) {\n\t\t\t\tcase \"annotation-xml\":\n\t\t\t\tcase \"color-profile\":\n\t\t\t\tcase \"font-face\":\n\t\t\t\tcase \"font-face-src\":\n\t\t\t\tcase \"font-face-uri\":\n\t\t\t\tcase \"font-face-format\":\n\t\t\t\tcase \"fon"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "validatePropertiesInDevelopment",
+      "reported": {
+        "line": 10238,
+        "column": 43
+      },
+      "resolved": {
+        "line": 10238,
+        "column": 42,
+        "charPosition": 623258
+      },
+      "servedLine": "\t\tfunction validatePropertiesInDevelopment(type, props) {",
+      "servedText": {
+        "startCharPosition": 623008,
+        "caretOffset": 250,
+        "text": " != stateNode && listeners.push(createDispatchListener(target, stateNode, alternate))));\n\t\t\t\ttarget = target.return;\n\t\t\t}\n\t\t\t0 !== listeners.length && dispatchQueue.push({\n\t\t\t\tevent,\n\t\t\t\tlisteners\n\t\t\t});\n\t\t}\n\t\tfunction validatePropertiesInDevelopment(type, props) {\n\t\t\tvalidateProperties$2(type, props);\n\t\t\t\"input\" !== type && \"textarea\" !== type && \"select\" !== type || null == props || null !== props.value || didWarnValueNull || (didWarnValueNull = !0, \"select\" === type && props.multiple ? consol"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "updateProperties",
+      "reported": {
+        "line": 10692,
+        "column": 28
+      },
+      "resolved": {
+        "line": 10692,
+        "column": 27,
+        "charPosition": 648658
+      },
+      "servedLine": "\t\tfunction updateProperties(domElement, tag, lastProps, nextProps) {",
+      "servedText": {
+        "startCharPosition": 648408,
+        "caretOffset": 250,
+        "text": "ops, void 0));\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\tfor (defaultValue in props) props.hasOwnProperty(defaultValue) && (hasSrc = props[defaultValue], null != hasSrc && setProp(domElement, tag, defaultValue, hasSrc, props, null));\n\t\t}\n\t\tfunction updateProperties(domElement, tag, lastProps, nextProps) {\n\t\t\tvalidatePropertiesInDevelopment(tag, nextProps);\n\t\t\tswitch (tag) {\n\t\t\t\tcase \"div\":\n\t\t\t\tcase \"span\":\n\t\t\t\tcase \"svg\":\n\t\t\t\tcase \"path\":\n\t\t\t\tcase \"a\":\n\t\t\t\tcase \"g\":\n\t\t\t\tcase \"p\":\n\t\t\t\tcase \"li\": break;\n\t\t\t\tcase"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "commitUpdate",
+      "reported": {
+        "line": 11374,
+        "column": 24
+      },
+      "resolved": {
+        "line": 11374,
+        "column": 23,
+        "charPosition": 682454
+      },
+      "servedLine": "\t\tfunction commitUpdate(domElement, type, oldProps, newProps) {",
+      "servedText": {
+        "startCharPosition": 682204,
+        "caretOffset": 250,
+        "text": "\t\t\t\tnewProps.autoFocus && domElement.focus();\n\t\t\t\t\tbreak;\n\t\t\t\tcase \"img\": newProps.src ? domElement.src = newProps.src : newProps.srcSet && (domElement.srcset = newProps.srcSet);\n\t\t\t}\n\t\t}\n\t\tfunction commitHydratedInstance() {}\n\t\tfunction commitUpdate(domElement, type, oldProps, newProps) {\n\t\t\tupdateProperties(domElement, type, oldProps, newProps);\n\t\t\tdomElement[internalPropsKey] = newProps;\n\t\t}\n\t\tfunction resetTextContent(domElement) {\n\t\t\tsetTextContent(domElement, \"\");\n\t\t}\n\t\tfunction commitText"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "commitHostUpdate",
+      "reported": {
+        "line": 7084,
+        "column": 28
+      },
+      "resolved": {
+        "line": 7084,
+        "column": 27,
+        "charPosition": 416192
+      },
+      "servedLine": "\t\tfunction commitHostUpdate(finishedWork, newProps, oldProps) {",
+      "servedText": {
+        "startCharPosition": 415942,
+        "caretOffset": 250,
+        "text": "= finishedWork.stateNode;\n\t\t\ttry {\n\t\t\t\trunWithFiberInDEV(finishedWork, commitMount, instance, type, props, finishedWork);\n\t\t\t} catch (error) {\n\t\t\t\tcaptureCommitPhaseError(finishedWork, finishedWork.return, error);\n\t\t\t}\n\t\t}\n\t\tfunction commitHostUpdate(finishedWork, newProps, oldProps) {\n\t\t\ttry {\n\t\t\t\trunWithFiberInDEV(finishedWork, commitUpdate, finishedWork.stateNode, finishedWork.type, oldProps, newProps, finishedWork);\n\t\t\t} catch (error) {\n\t\t\t\tcaptureCommitPhaseError(finishedWork, finishedWork."
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "commitMutationEffectsOnFiber",
+      "reported": {
+        "line": 7838,
+        "column": 40
+      },
+      "resolved": {
+        "line": 7838,
+        "column": 39,
+        "charPosition": 461905
+      },
+      "servedLine": "\t\tfunction commitMutationEffectsOnFiber(finishedWork, root, lanes) {",
+      "servedText": {
+        "startCharPosition": 461655,
+        "caretOffset": 250,
+        "text": "\t\t\t}\n\t\t\tif (parentFiber.subtreeFlags & 13886) for (parentFiber = parentFiber.child; null !== parentFiber;) commitMutationEffectsOnFiber(parentFiber, root$jscomp$0, lanes), parentFiber = parentFiber.sibling;\n\t\t}\n\t\tfunction commitMutationEffectsOnFiber(finishedWork, root, lanes) {\n\t\t\tvar prevEffectStart = pushComponentEffectStart(), prevEffectDuration = pushComponentEffectDuration(), prevEffectErrors = pushComponentEffectErrors(), prevEffectDidSpawnUpdate = pushComponentEffectDidSpawnUpdate(), cur"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "recursivelyTraverseMutationEffects",
+      "reported": {
+        "line": 7800,
+        "column": 46
+      },
+      "resolved": {
+        "line": 7800,
+        "column": 45,
+        "charPosition": 460113
+      },
+      "servedLine": "\t\tfunction recursivelyTraverseMutationEffects(root$jscomp$0, parentFiber, lanes) {",
+      "servedText": {
+        "startCharPosition": 459863,
+        "caretOffset": 250,
+        "text": "w Error(\"Expected finished root and lanes to be set. This is a bug in React.\");\n\t\t\t\t\tvar retry = resolveRetryWakeable.bind(null, finishedWork, wakeable);\n\t\t\t\t\twakeable.then(retry, retry);\n\t\t\t\t}\n\t\t\t});\n\t\t}\n\t\tfunction recursivelyTraverseMutationEffects(root$jscomp$0, parentFiber, lanes) {\n\t\t\tvar deletions = parentFiber.deletions;\n\t\t\tif (null !== deletions) for (var i = 0; i < deletions.length; i++) {\n\t\t\t\tvar root = root$jscomp$0, returnFiber = parentFiber, deletedFiber = deletions[i], prevEffectSt"
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
+      "label": "flushMutationEffects",
+      "reported": {
+        "line": 9357,
+        "column": 32
+      },
+      "resolved": {
+        "line": 9357,
+        "column": 31,
+        "charPosition": 568642
+      },
+      "servedLine": "\t\tfunction flushMutationEffects() {",
+      "servedText": {
+        "startCharPosition": 568392,
+        "caretOffset": 250,
+        "text": "ffectsStatus === PENDING_AFTER_MUTATION_PHASE && (pendingEffectsStatus = NO_PENDING_EFFECTS, commitAfterMutationEffectsOnFiber(pendingFinishedWork, pendingEffectsRoot), pendingEffectsStatus = PENDING_SPAWNED_WORK);\n\t\t}\n\t\tfunction flushMutationEffects() {\n\t\t\tif (pendingEffectsStatus === PENDING_MUTATION_PHASE) {\n\t\t\t\tpendingEffectsStatus = NO_PENDING_EFFECTS;\n\t\t\t\tvar root = pendingEffectsRoot, finishedWork = pendingFinishedWork, lanes = pendingEffectsLanes, rootMutationHasEffect = 0 !== (finishedW"
       }
     },
     {

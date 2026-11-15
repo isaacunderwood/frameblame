@@ -69,10 +69,10 @@ export interface InteractionWindow {
    *
    * May be 0, meaning "from the document's beginning". A claim about a page's
    * first mount needs that: React's mount commit lands while the navigation is
-   * still in progress, measured at 249.6ms against a first possible reading of
-   * 335.6ms, so a window that opened when the driver got control would find the
-   * frame, the samples and the commit all just outside it and conclude the
-   * mount produced nothing.
+   * still in progress — in `spans`' development run (4x), at 239.4ms against
+   * the driver's first page-clock reading at 307.1ms — so a window that opened
+   * when the driver got control would find the frame, the samples and the
+   * commit all just outside it and conclude the mount produced nothing.
    */
   readonly fromMs: number;
   readonly toMs: number;

@@ -203,7 +203,7 @@ requirement than measuring the whole frame.
 > and layout happen inside `[styleAndLayoutStart, paintTime]`, so adding them to
 > `paintTime − styleAndLayoutStart` charges them twice. It did not show on these frames because
 > both fields were 0 on all of them — only 3 of the corpus's 54 painted frames report either as
-> non-zero — but it is wrong on the three that do. The recipe's `paint-ish` term subtracts them,
+> non-zero (3 of 51 in the v0.3 re-capture) — but it is wrong on the three that do. The recipe's `paint-ish` term subtracts them,
 > which is the difference, and the engine builds the partition from boundary timestamps so that
 > the question cannot arise. The qualitative claim stands: on a script-dominated frame the
 > remainder is a couple of milliseconds of gap.
@@ -479,14 +479,18 @@ Re-measured from the corpus, the style range reproduces and the layout range doe
 style and 72.4–80.3ms layout on the four forced frames of `innerhtml-rebuild` in development, and
 23.6–24.8 / 71.1–80.6 in production (4× in both). So the quoted 71.8–90.6 overstates its upper
 bound by about 10ms against anything in this repo. Note also that the two halves do not sum to the
-combined figure exactly — they are each coarsened independently, deliberately, so that summing
-them cannot recover resolution the browser is withholding, and they differ by exactly one 100µs
-grid step on 6 of the corpus's 20 forced entries.
+combined figure exactly, and they differ by exactly one 100µs grid step on 11 of that capture's 20
+forced entries. *(This sentence said 6 of 20, and said the halves were coarsened independently by
+the spec's design. Re-derived during the v0.3 re-capture, the count was 11; and the spec defines
+the combined figure as exactly their sum, accumulating each half only from coarsened time, so the
+disagreement is Chrome 159's behaviour rather than the spec's — see "What the v0.3 re-capture
+found".)*
 
 Two things follow. A Chrome trace is not needed for the split, which removes the instrument
 question entirely. And the collector's hand-picked script projection is now both redundant and
 incomplete; fixing it is a collector change, so it waits for a reason to re-capture all eight runs
-rather than being made on its own.
+rather than being made on its own. *(Done: the v0.3 collector projects both, and in the re-capture
+they equal `toJSON`'s on all 77 script entries.)*
 
 ## What the corpus capture found
 
@@ -510,7 +514,9 @@ and no README may quote it as a fixture property.
 The aggregate line histogram is the stable quantity. Measured four times now — 73% when this
 document was written, then 76%, 83%, 69% and 93% — always with line 36 ranked first. That is
 what `pnpm test` asserts, at a floor of 60%. The spread is wide enough that the floor is doing
-real work rather than rubber-stamping; 69% is the lowest seen and the margin is thin.
+real work rather than rubber-stamping; 69% is the lowest seen and the margin is thin. *(Superseded
+in part by the v0.3 re-capture, below: counted in-frame, production fell to 3 samples with line 32
+first, and the suite now counts every sample taken during the replay instead.)*
 
 **Everything else reproduced, three of them more cleanly than before.**
 
@@ -542,3 +548,77 @@ real work rather than rubber-stamping; 69% is the lowest seen and the margin is 
 - *Presentation beyond `duration`.* 26–43ms across the vanilla fixtures, against 23–42ms.
 - *Production resolving better than development.* Reproduced: 83% of samples in the declared line
   range against 76% in development.
+
+## What the v0.3 re-capture found
+
+All eight runs re-captured in one pass on 2026-11-15 (`corpus/manifest.json`, 05:37 UTC, about
+three hours after the capture above), same machine, same Chromium 159.0.8154.6, 4× throttling, after
+a collector change that added fiber linkage, render evidence and the forced style/layout split to
+the record. The fixtures and the profiler request did not change. Every figure below was derived by
+script from `corpus/`, and the build mode is given where the two differ.
+
+**The line histogram is only stable over a population the threshold does not choose.** Production
+`derive-in-render` produced 3 long frames — LoAF reported a frame after 2 of the 24 presses, against
+5 of 24 before — so the samples inside long frames fell to 4 with a stack, 3 of them resolving into
+`OrderTable.tsx`: one on line 36 and two on line 32. Nothing about attribution had broken. The
+bundle was the same `index-FhbDr_RJ.js` with its source map captured, the profiler started before
+the drive as before, and 67 of the replay's 69 stacked samples resolved into `OrderTable.tsx`, 83.6%
+of them in the declared range with line 36 first. The in-frame floor the suite asserted was a
+long-frame count by another name, which "Already decided" in `handoff.md` forbids. The suite now
+counts every sample taken during the replay: 70.7% of 92 in development and 83.6% of 67 in
+production, against 60.8% of 102 and 86.3% of 80 for the same population in the capture before.
+Line 36 ranks first in all four, and 60.8% is the thinnest margin the 60% floor has seen. In-frame,
+development gave 71.4% of 56. The long-frame counts join the series above: 14 in development, 3 in
+production.
+
+**The sampling cadence moved, by the same amount in every run.** The median inter-sample delta was
+14.5ms over 16,459 samples (p25 10.8, p90 15.3, max 15.9), against 12.2ms over 17,250 before. The
+shift holds in all eight runs alike, the two vanilla fixtures with no React in them included, and
+the request was 5ms answered with 10 in both captures, so it is the machine's state rather than the
+collector. It is why every fixture has fewer samples than before. The practical consequence for
+point 1 above: budget 12–15ms per sample, not 12, and treat the cadence as a property of the session.
+
+**React's `Update` span is a coin-flip per interaction, and the capture shows which way it fell.**
+The capture before had an `Update` span naming `StateOwner` for its own `setState`; this one has
+none for that interaction and two naming `App`. React 19.3.1 emits the span only when the render
+started strictly after the update was scheduled on the coarsened page clock
+(`react-dom-client.development.js:18619`), so an update and a render inside one clock tick produce
+nothing. A test that required `StateOwner`'s span was asserting the coin-flip; it now asserts that
+any component an `Update` span names is one React gave no component span, which is the claim.
+
+**The forced split disagrees with its total by up to two grid steps, and the spec says it should
+not disagree at all.** `forcedStyleDuration + forcedLayoutDuration − forcedStyleAndLayoutDuration`
+was 0 on 11 of the 20 forced script entries, one 100µs step on 8, and two steps (−0.2ms) on 1:
+`innerhtml-rebuild`'s fifth development frame, 23.2 + 71.5 against 94.9. The spec defines the
+combined figure as exactly the sum and accumulates each half only from coarsened time, so this is
+Chrome 159's behaviour. Two steps is exactly `COARSENED_TIMING_TOLERANCE_MS`, and the comparison was
+reporting it only because `23.2 + 71.5 − 94.9` is −0.20000000000000284 in floating point; the
+check is now inclusive at the tolerance with a 1e-6ms float slack, and a third step still fails.
+The ranges: 22.4–24.2ms style and 71.5–79.6ms layout across both build modes.
+
+**The new collector fields landed, and settle one open question.** Every one of the 58 commits in
+`spans` and `derive-in-render` reads as linked, with `truncated` false. `carriedOver` is false on all
+150 fibers, which is what one root over flat siblings predicts. Each of the 3 fibers at 0ms
+`actualDuration` has `PerformedWork` clear and each of the 12 mounting fibers (6 per build mode)
+has it set, as React's
+`createWorkInProgress` and render paths require. And in `state-owner-self`'s commit (development)
+`App` carries flags 0: React cloned it and bailed out, so its 25.2ms `actualDuration` is
+`StateOwner`'s bubbled up and its self time is zero. That was the question `fixtures/spans`
+left for the re-capture. The walk costs 0–0.9ms per commit, against 0–0.7ms before it recorded
+the links.
+
+**Everything else reproduced.**
+
+- *The span gate.* Component spans name `PropsChanged` and `DeepEqualProps` only; `state-owner-self`
+  renders for 25.2ms with no span and no long frame; production emits no spans and null fiber
+  timings under the same minified names.
+- *Frame decomposition.* Unforced `innerHTML` frames are 88.9–90.3% unattributed, with 88.9–91.7%
+  of each frame's samples carrying no stack. One `offsetHeight` read moves LoAF from naming
+  9.7–11.1% of the frame to 83.1–85.7%, with 94.9–103.8ms of forced style and layout, and the
+  empty-stack share to 10–22%. `styleDuration` and `layoutDuration` stay 0 in both.
+- *The residual is work.* Listeners of 13.3–14.3ms are followed by 116.7–148.8ms waits for their
+  own `MessageChannel` message.
+- *Third-party attribution.* The same three offsets, 9092, 9268 and 9443, in both build modes, with
+  `vendor.js` named by none of them; 100.0–104.2ms of forced work nested in a 103.5–106.4ms script.
+- *Presentation beyond `duration`.* 23.8–42.5ms across every painted frame, 23.9–39.4ms on the
+  vanilla fixtures.

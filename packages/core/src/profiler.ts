@@ -21,9 +21,9 @@
  * **Clock.** Sample timestamps are `performance.now()` milliseconds on the
  * document's timeline, shared with LoAF and React. The spec says they are
  * relative to "the profiling session's time origin", which is not obviously the
- * document's; measured, it is — the first sample lands 0.0-0.7ms after the
+ * document's; measured, it is — the first sample lands 0.1-0.9ms after the
  * reading taken immediately before the profiler was constructed, across all
- * eight captures.
+ * eight captures of the v0.3 re-capture (0.0-0.7ms in the capture before).
  *
  * https://wicg.github.io/js-self-profiling/
  */
@@ -45,14 +45,21 @@ export const SAMPLE_INTERVAL_FLOOR_MS = 10;
 /**
  * What the cadence actually measures out at, which is not the floor.
  *
- * Measured over 17,250 samples across the corpus: a median inter-sample delta
- * of 12.2ms, p25 10.5, p90 ~12.9, with a long tail to 29.9ms. Budget ~12ms per
- * sample when reasoning about how many a frame can yield — a 64ms frame gives
- * five to seven — and expect duplicates: 50 pairs of samples in the corpus
- * share a timestamp exactly, every one of them the same stack sampled twice, so
- * a zero-width sample is a real thing to tolerate rather than a parse error.
+ * Measured over 16,459 samples across the corpus (v0.3 re-capture, 4x, both
+ * build modes): a median inter-sample delta of 14.5ms, p25 10.8, p90 15.3, max
+ * 15.9. The capture before it, on the same machine, browser and settings, gave
+ * 12.2ms, p25 10.6, p90 12.8 with a tail to 29.9ms over 17,250 samples. The
+ * shift is in all eight runs alike, the two vanilla fixtures with no React in
+ * them included, and nothing in the profiler's request changed (5ms asked, 10
+ * given), so it is the machine rather than the collector — which makes the
+ * cadence a property of the session, not a constant to rely on. Budget 12-15ms
+ * per sample when reasoning about how many a frame can yield — a 64ms frame
+ * gives four to six — and expect duplicates: 32 pairs of samples in the
+ * corpus share a timestamp exactly, 31 of them the same stack sampled twice
+ * (51 of 51 in the capture before), so a zero-width sample is a real thing to
+ * tolerate rather than a parse error.
  */
-export const OBSERVED_SAMPLE_CADENCE_MS = 12.2;
+export const OBSERVED_SAMPLE_CADENCE_MS = 14.5;
 
 /** A source map as it appears in JSON, narrowed to the fields this project reads. */
 export interface RawSourceMap {
@@ -106,7 +113,7 @@ export interface ScriptResource {
    * that a character offset belongs to the script it claims to.
    */
   readonly servedLength: number | null;
-  /** `null` when the script shipped no map — which is 7 of the corpus's 17 resources. */
+  /** `null` when the script shipped no map — which is 6 of the corpus's 16 resources. */
   readonly sourceMap: {
     readonly origin: SourceMapOrigin;
     readonly map: RawSourceMap;
@@ -118,7 +125,7 @@ export interface ScriptResource {
    * "This bundle shipped no source map" and "this bundle's source map could not
    * be fetched" both degrade to the same tier — a minified name with a warning
    * — but they are different warnings, and only one of them is the user's to
-   * fix. `null` on all 17 resources in the corpus.
+   * fix. `null` on all 16 resources in the corpus.
    */
   readonly fetchError: string | null;
 }
@@ -143,7 +150,7 @@ export interface ScriptResource {
 export interface ProfiledFrame {
   /**
    * The function's name, or `null` for an anonymous function or a module's top
-   * level. Chrome reports the empty string; 23 of the corpus's 156 frames are
+   * level. Chrome reports the empty string; 23 of the corpus's 136 frames are
    * anonymous, every one of them with a valid `resourceId`.
    */
   readonly name: string | null;
@@ -180,14 +187,15 @@ export interface ProfiledStack {
  * **The empty stack is the cross-check, not a shrug.** `stackId` is `null` when
  * no JavaScript was on the stack at that instant, which is not the same as the
  * thread being idle. It is the second, independent signal behind the
- * unattributed tier: the corpus's unforced `innerHTML` frames show an 89-92%
- * LoAF residual alongside 90-93% of in-frame samples carrying no stack, and
- * adding one `offsetHeight` read moves both together — the residual to ~15%,
- * the empty-stack share to 9-20%. Two signals agreeing that nothing was
- * attributable is a far better unattributed tier than subtraction alone.
+ * unattributed tier: the corpus's unforced `innerHTML` frames show an 89-90%
+ * LoAF residual alongside 89-92% of in-frame samples carrying no stack, and
+ * adding one `offsetHeight` read moves both together — the residual to 14-17%,
+ * the empty-stack share to 10-22% (per frame, 4x, both build modes). Two
+ * signals agreeing that nothing was attributable is a far better unattributed
+ * tier than subtraction alone.
  *
  * Note that the whole-run share is not that number: most of a run is the idle
- * gaps between interactions, so 68-99% of all samples in these captures have no
+ * gaps between interactions, so 75-99% of all samples in these captures have no
  * stack. The quantity that means anything is the share of samples *inside a
  * frame*.
  */
@@ -213,8 +221,8 @@ export interface ProfilerSampling {
  *
  * Note the two windows a consumer must not confuse: this trace's own
  * `startedAtMs`/`stoppedAtMs`, and the interaction windows in `signals.ts`. In
- * two of the eight captures the profiler was started in an init script at ~25ms
- * to catch the page's first mount, long before the drive began at ~300ms, so
+ * two of the eight captures the profiler was started in an init script at 22-26ms
+ * to catch the page's first mount, long before the drive began at 239-307ms, so
  * dozens of samples precede the first interaction. Anything that assumes
  * samples begin at the first interaction mis-bins them.
  */

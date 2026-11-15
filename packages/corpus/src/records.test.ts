@@ -26,12 +26,14 @@
 import {
   COARSENED_TIMING_TOLERANCE_MS,
   decomposeFrame,
+  exceedsCoarsenedTolerance,
   isWithinFrame,
   shareOfFrame,
 } from '@frameblame/core';
 import { describe, expect, it } from 'vitest';
 
-import { BUILD_MODES, type BuildMode, listFixtures } from './corpus.ts';
+import { BUILD_MODES, type BuildMode, listFixtures, loadCorpusRun } from './corpus.ts';
+import { arrayAt, get } from './json.ts';
 import { loadSignals } from './records.ts';
 
 const FIXTURES = listFixtures();
@@ -82,10 +84,11 @@ describe('the records', () => {
     /*
      * Three sentinels, all of them numbers or strings that arithmetic would
      * consume happily. Measured in the corpus: two script entries report
-     * `sourceCharPosition: -1` with an empty `sourceURL`, 36 of 80 report an
-     * empty `sourceFunctionName` because the listener is an anonymous arrow,
-     * and five frames report `firstUIEventTimestamp: 0` because nothing in them
-     * came from an input.
+     * `sourceCharPosition: -1` with an empty `sourceURL`, 54 of 77 report an
+     * empty `sourceFunctionName` — 52 because the listener is an anonymous
+     * arrow, and those same two because they name no function — and five frames
+     * report `firstUIEventTimestamp: 0` because nothing in them came from an
+     * input.
      */
     const derive = loadSignals('derive-in-render', 'development');
 
@@ -123,10 +126,11 @@ describe('the records', () => {
      * their sum, and Chrome 159 serialises all three. They are in all eight
      * captures.
      *
-     * Measured on `innerhtml-rebuild`'s forced frames (4x): 23.4-25.8ms style
-     * and 71.1-80.6ms layout in development and production together, against
-     * the 24.3-25.3 and 71.8-90.6 the document quotes from an instrument it
-     * could not name.
+     * Measured on `innerhtml-rebuild`'s forced frames (4x): 22.4-24.2ms style
+     * and 71.5-79.6ms layout in development and production together in the
+     * v0.3 re-capture, and 23.4-25.8 and 71.1-80.6 in the capture before it,
+     * against the 24.3-25.3 and 71.8-90.6 the document quotes from an
+     * instrument it could not name.
      */
     const forced = (['development', 'production'] as const).flatMap((mode) =>
       loadSignals('innerhtml-rebuild', mode)
@@ -144,23 +148,29 @@ describe('the records', () => {
       expect(style).toBeGreaterThan(20);
       expect(layout).toBeGreaterThan(60);
       /*
-       * The sum is approximate *by design*: the spec coarsens each half
-       * independently so that adding them cannot recover resolution the browser
-       * is withholding. Measured at exactly one grid step apart on 6 of the
-       * corpus's 20 forced entries.
+       * The sum is approximate in Chrome 159, though the spec defines the
+       * combined figure as exactly the sum: the three are reported as values
+       * that disagree on the 100us grid. Measured in the v0.3 re-capture (4x)
+       * at one grid step on 8 of the corpus's 20 forced entries and two steps
+       * on 1 — this fixture's development frame 5, 23.2 + 71.5 against 94.9.
+       * Two steps is the tolerance exactly, and the subtraction gives
+       * -0.20000000000000284, so the bound is checked with
+       * `exceedsCoarsenedTolerance`, which is inclusive at the tolerance plus
+       * a 1e-6ms float slack, rather than with a bare `<= 0.2`. Not loosened:
+       * a third grid step still fails.
        */
-      expect(Math.abs(style + layout - script.forcedStyleAndLayoutDurationMs)).toBeLessThanOrEqual(
-        COARSENED_TIMING_TOLERANCE_MS,
-      );
+      expect(
+        exceedsCoarsenedTolerance(style + layout - script.forcedStyleAndLayoutDurationMs),
+      ).toBe(false);
     }
   });
 
   it('models a frame that never painted as having no rendering update', () => {
     /*
-     * Two of the corpus's 56 frames, both the last of their run: a single
+     * Two of the corpus's 53 frames, both the last of their run: a single
      * `Promise.resolve` task with `renderStart` and `styleAndLayoutStart`
      * reporting the spec's 0 sentinel, and no `paintTime` or `presentationTime`
-     * at all. A frame starting at 60976.6ms whose `renderStart` is 0 is not a
+     * at all. A frame starting at 60943.7ms whose `renderStart` is 0 is not a
      * frame that rendered at time zero.
      */
     const unpainted = RUNS.flatMap(({ fixture, mode }) =>
@@ -202,12 +212,34 @@ describe('the records', () => {
       .map((span) => span.phase);
     expect(new Set(phases)).toEqual(new Set(['Update', 'Mount', 'Update Blocked']));
 
-    // An `Update` span names the component that scheduled the update — which is
-    // exactly the component the span gate declines to give a span to.
+    /*
+     * An `Update` span names the component that scheduled the update — which is
+     * exactly the component the span gate declines to give a span to. So every
+     * component an originator names is one with no component span.
+     *
+     * Which interactions get an `Update` span at all is not stable, so no
+     * particular originator is asserted. React 19.3.1 emits one only when the
+     * render started strictly after the update was scheduled, on the coarsened
+     * page clock (`debugTask > previousRenderStartTime &&` in
+     * `react-dom-client.development.js`, :18619); an update and a render inside
+     * the same clock tick produce nothing. The capture before v0.3 had one for
+     * `StateOwner`'s own `setState` and one for `App`; the re-capture has two
+     * for `App` and none for `StateOwner`. The v0.1 replay saw one on 5 of 24
+     * keypresses. A bonus, not a tier, exactly as `react.ts` says.
+     *
+     * The `Update Blocked` span at mount names no component at all — its rows
+     * are only `[["Method name","root.render()"]]` — which is what reading the
+     * rows by label rather than by index is for.
+     */
     const originators = dev.react.spans.flatMap((span) =>
       span.kind === 'phase' && span.originator !== null ? [span.originator] : [],
     );
-    expect(originators.map((originator) => originator.componentName)).toContain('StateOwner');
+    const named = originators.flatMap((originator) =>
+      originator.componentName === null ? [] : [originator.componentName],
+    );
+    expect(named.length).toBeGreaterThan(0);
+    for (const name of named) expect(componentSpans).not.toContain(name);
+    expect(originators).toContainEqual({ componentName: null, methodName: 'root.render()' });
 
     // Production: no spans at all, and every fiber timing null rather than
     // zero. The hook still fires on every commit, with minified names.
@@ -221,6 +253,70 @@ describe('the records', () => {
       }
       expect(commit.priorityLevel).toBeNull();
       expect(commit.postCommitAtMs).toBeNull();
+    }
+  });
+});
+
+describe('the v0.3 collector fields, as the re-capture recorded them', () => {
+  /*
+   * The collector change behind the v0.3 re-capture added a parent link and raw
+   * render evidence to every component fiber, a truncation flag to every
+   * commit, and the forced style and layout split to its own script
+   * projection. Step 3's self-time subtraction trusts the first two without
+   * looking, so they are asserted against the corpus rather than assumed from
+   * the collector's source. No assertion here counts frames.
+   */
+  const REACT_FIXTURES = ['spans', 'derive-in-render'] as const;
+
+  for (const fixture of REACT_FIXTURES) {
+    for (const mode of BUILD_MODES) {
+      it(`${fixture}/${mode}: every commit is linked throughout and was walked to the end`, () => {
+        const { commits } = loadSignals(fixture, mode).react;
+        expect(commits.length).toBeGreaterThan(0);
+
+        for (const [index, commit] of commits.entries()) {
+          const where = `${fixture}/${mode} commit ${String(index)}`;
+          expect(commit.truncated, where).toBe(false);
+          expect(commit.components.linkage, where).toBe('recorded');
+          if (commit.components.linkage !== 'recorded') continue;
+
+          for (const fiber of commit.components.fibers) {
+            const performedWork = (fiber.render.flags & 1) !== 0;
+            /*
+             * React's own evidence, checked against its own timing. A fiber
+             * cloned and bailed out has `actualDuration` reset to 0 and
+             * `PerformedWork` masked off by `createWorkInProgress`; a fiber
+             * with no alternate is mounting, and a mount runs its render.
+             * The converse of the first does not hold and is not asserted: a
+             * bailed-out parent's `actualDuration` is its subtree's, so `App`
+             * reads 25.2ms with the bit clear in `spans`' `state-owner-self`
+             * commit (development, 4x), all of it its child's.
+             */
+            if (fiber.actualDurationMs === 0) expect(performedWork, where).toBe(false);
+            if (!fiber.render.hasAlternate) expect(performedWork, where).toBe(true);
+          }
+        }
+      });
+    }
+  }
+
+  it('projects the forced split on every script, identically to Chrome’s own serialisation', () => {
+    for (const { fixture, mode } of RUNS) {
+      const run = loadCorpusRun(fixture, mode);
+      for (const [frameIndex, entry] of arrayAt(run.files.loaf, ['entries']).entries()) {
+        const serialised = arrayAt(entry, ['toJSON', 'scripts']);
+        const projected = arrayAt(entry, ['scripts']);
+        expect(projected.length).toBe(serialised.length);
+
+        for (const [index, script] of projected.entries()) {
+          const where = `${fixture}/${mode} frame ${String(frameIndex)} script ${String(index)}`;
+          for (const field of ['forcedStyleDuration', 'forcedLayoutDuration']) {
+            const value = get(script, [field]);
+            expect(typeof value, where).toBe('number');
+            expect(value, where).toBe(get(serialised[index], [field]));
+          }
+        }
+      }
     }
   });
 });
@@ -246,7 +342,7 @@ describe('the partition, against every frame in the corpus', () => {
          * The residual is zero by construction — the slices are the intervals
          * between boundaries the frame already reports — so this asserts the
          * construction rather than a property of Chrome. Measured at under
-         * 3e-9ms on all 56 frames; asserted at the coarsening tolerance,
+         * 2e-9ms on all 53 frames; asserted at the coarsening tolerance,
          * because a figure finer than the timing grid is not a figure.
          */
         expect(Math.abs(decomposition.unaccountedMs), where).toBeLessThan(
@@ -290,10 +386,11 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
         expect(share).not.toBeNull();
 
         /*
-         * Measured at 86-90% of the frame (4x): a ~15ms listener followed by
-         * 113-137ms in which no script was running. Asserted at 70% because the
-         * quantity is the fixture's own composition rather than a tuned
-         * threshold, and the margin is where the thermal variation lives.
+         * Measured at 88.9-90.3% of the frame (4x, both build modes): a 13-16ms
+         * listener followed by 110-131ms in which no script was running.
+         * Asserted at 70% because the quantity is the fixture's own composition
+         * rather than a tuned threshold, and the margin is where the thermal
+         * variation lives.
          *
          * Note which figure this is. It is not the arithmetic residual, which
          * is zero: the frame is fully *accounted for* and almost entirely
@@ -317,8 +414,9 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
        * The cross-check, and the reason the unattributed slice is a tier rather
        * than a shrug: a second, independent signal agrees that nothing was
        * attributable. If the residual were work LoAF merely failed to name, the
-       * profiler would have found JavaScript on the stack. Measured at 90-93%
-       * of in-frame samples carrying no stack at all; asserted at 40%, since
+       * profiler would have found JavaScript on the stack. Measured at 90.9% (40
+       * of 44, development) and 91.3% (42 of 46, production) of in-frame
+       * samples carrying no stack at all (4x); asserted at 40%, since
        * the quantity being tested is that the two signals move together rather
        * than its exact value.
        */
@@ -349,8 +447,8 @@ describe('innerhtml-rebuild: the frame the arithmetic can account for but not at
         const decomposition = decomposeFrame(frame);
 
         /*
-         * Measured at 94.6-105.5ms of forced style and layout per frame (4x,
-         * both modes), inside script entries of 108.8-120.4ms. Asserted
+         * Measured at 94.9-103.8ms of forced style and layout per frame (4x,
+         * both modes), inside script entries of 108.8-117.7ms. Asserted
          * loosely: the figure is the fixture's wall-clock burn plus however
          * long the browser takes to lay out 4,000 rows, and only the fact that
          * it is charged — once, to the script, as browser work rather than as
@@ -401,8 +499,8 @@ describe('vendor-listener: three slices, not one', () => {
         }
 
         // One of the three forces layout, and its forced work is charged inside
-        // its own slice: measured at 101.4-106.4ms (4x, both modes) nested in a
-        // script entry of 102.8-111.9ms.
+        // its own slice: measured at 100.0-104.2ms (4x, both modes) nested in a
+        // script entry of 103.5-106.4ms.
         const forcing = scripts.filter(
           (slice) => slice.interior.forcedStyleAndLayoutMs > 50,
         );

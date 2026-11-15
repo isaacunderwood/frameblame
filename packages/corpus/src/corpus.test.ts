@@ -220,6 +220,29 @@ function stepsOf(run: CorpusRun): JsonObject[] {
   );
 }
 
+/**
+ * The stack ids of samples taken inside any drive step, whether or not a long
+ * frame was reported around them.
+ *
+ * The population to use when the claim is about the interaction rather than
+ * about a frame LoAF happened to report: it does not depend on how many
+ * interactions cleared the 50ms threshold, which is the long-frame count no
+ * suite may assert on.
+ */
+function inStepSamples(run: CorpusRun): number[] {
+  const windows = stepsOf(run).map((step) => ({
+    from: asNumber(step.startedAtPageClock, ['startedAtPageClock']),
+    to: asNumber(step.endedAtPageClock, ['endedAtPageClock']),
+  }));
+
+  return traceOf(run).samples.flatMap((sample) => {
+    const timestamp = asNumber(sample.timestamp, ['timestamp']);
+    const stackId = sample.stackId;
+    const inStep = windows.some(({ from, to }) => timestamp >= from && timestamp <= to);
+    return inStep && typeof stackId === 'number' ? [stackId] : [];
+  });
+}
+
 // --- the corpus itself ------------------------------------------------------
 
 describe('the corpus', () => {
@@ -320,7 +343,21 @@ describe('derive-in-render: the profiler names the declared culprit', () => {
       const maps = sourceMapsOf(run);
       const histogram = new Map<number, number>();
 
-      for (const stackId of inFrameSamples(run).withStack) {
+      /*
+       * Every sample taken during the replay, not only those inside a long
+       * frame. This test counted in-frame samples until the v0.3 re-capture,
+       * where the run's own `sawNewFrame` says LoAF reported a frame after 2 of
+       * production's 24 presses (5 of 24 in the capture before), leaving 3
+       * in-frame samples that resolved into OrderTable.tsx. The source map, the
+       * bundle (the same `index-FhbDr_RJ.js` in both captures) and the profiler
+       * start (before the drive in both) were unchanged, and 67 of the replay's
+       * 69 stacked samples still resolved there — so what collapsed was the
+       * number of presses that cleared LoAF's 50ms threshold, and an in-frame
+       * floor was an assertion on the long-frame count by another name. The
+       * claim is about what each keystroke spent its time on, and the profiler
+       * sees that whether or not the trigger fired.
+       */
+      for (const stackId of inStepSamples(run)) {
         const line = deepestOriginalLine(trace, maps, stackId, (source) =>
           source.includes('OrderTable'),
         );
@@ -335,19 +372,27 @@ describe('derive-in-render: the profiler names the declared culprit', () => {
         .reduce((sum, [, count]) => sum + count, 0);
 
       /*
-       * Measured at 76% (development) and 83% (production) of OrderTable
-       * samples in the declared range 34-36, against 73% when `findings.md`
-       * was written. Asserted at 60% because the quantity is a sampling
-       * distribution over a ~12ms cadence, and the lines outside the range are
-       * real render work rather than error: line 32 is the component
-       * declaration, reached when a sample lands in the sort but not in the
-       * comparator, and line 49 is the row-rendering `.map`.
+       * Measured over the replay in the v0.3 re-capture (4x): 70.7% of 92
+       * OrderTable samples in the declared range 34-36 in development, and
+       * 83.6% of 67 in production. Over the capture before it the same
+       * population gave 60.8% of 102 and 86.3% of 80 — the development figure
+       * is the thinnest margin this floor has seen. In-frame only, which is
+       * what `findings.md` quotes, the two captures gave 68.9% of 61 then 71.4%
+       * of 56 in development, and 93.3% of 15 then 33.3% of 3 in production,
+       * where three samples is no distribution at all. Asserted at 60%
+       * because the quantity is a sampling distribution over a 12-15ms
+       * cadence, and the lines outside the range are real render work rather
+       * than error: line 32 is the component declaration, reached when a
+       * sample lands in the sort but not in the comparator, and line 49 is the
+       * row-rendering `.map`.
        */
       expect(inRange / total).toBeGreaterThan(0.6);
 
       // The single most-sampled line is the declared dominant cost. This is
-      // the claim the project exists to make, and unlike the frame count it
-      // has been stable across every run of both builds.
+      // the claim the project exists to make, and over the replay it held in
+      // both builds of both captures it was measured on. It is not stable
+      // in-frame at three samples: the re-capture's in-frame production top
+      // line was 32.
       const topLine = [...histogram.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
       expect(topLine).toBe(36);
     });
@@ -458,7 +503,8 @@ describe('innerhtml-rebuild: the frame the arithmetic cannot account for', () =>
       expect(asNumber(frame.styleDuration, ['styleDuration']), `frame ${String(index)}`).toBe(0);
       expect(asNumber(frame.layoutDuration, ['layoutDuration'])).toBe(0);
 
-      // Measured at 88-90% of the frame unaccounted for; asserted at 70%.
+      // Measured at 88.9-90.3% of the frame unaccounted for (4x); asserted at
+      // 70%.
       expect((duration - scriptTotal) / duration).toBeGreaterThan(0.7);
     }
 
@@ -467,9 +513,12 @@ describe('innerhtml-rebuild: the frame the arithmetic cannot account for', () =>
      * residual is corroborated by a second, independent signal. If most of the
      * frame were attributable work that LoAF merely failed to name, the
      * profiler would have found JavaScript on the stack. It did not — measured
-     * at 83-94% of in-frame samples with no stack at all. Two signals agreeing
-     * that nothing was attributable is what makes an honest unattributed slice
-     * possible; subtraction alone would not.
+     * at 88.9-91.7% of each unforced frame's samples with no stack at all (4x).
+     * The share asserted below pools every long frame in the run, the forced
+     * ones included, which is why it measures lower, at 56.0% (47 of 84), and
+     * why the floor is 40%. Two signals agreeing that nothing was attributable
+     * is what makes an honest unattributed slice possible; subtraction alone
+     * would not.
      */
     const samples = inFrameSamples(run);
     const unforcedShare = samples.emptyCount / samples.total;
@@ -484,7 +533,7 @@ describe('innerhtml-rebuild: the frame the arithmetic cannot account for', () =>
      * next animation frame fired. A 14ms listener followed by a 120ms wait for
      * a task it posted itself means the thread was occupied throughout.
      *
-     * Measured: listeners of 14-16ms, deliveries of 123-153ms.
+     * Measured (4x): listeners of 13.3-14.3ms, deliveries of 116.7-148.8ms.
      */
     const probe = arrayAt(run.files.loaf, ['fixtureProbe'])
       .map((record, index) => asRecord(record, ['fixtureProbe', index]))
@@ -519,7 +568,7 @@ describe('innerhtml-rebuild: the frame the arithmetic cannot account for', () =>
         0,
       );
 
-      // Measured at 101-126ms of forced style and layout per frame.
+      // Measured at 94.9-102.3ms of forced style and layout per frame (4x).
       expect(forced).toBeGreaterThan(50);
 
       /*

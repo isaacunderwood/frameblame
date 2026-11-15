@@ -30,21 +30,21 @@
  * frame's own boundaries can disagree, and it is where the coarsening shows up.
  *
  * `unaccountedMs` is the signed residual of all of it. It is zero to within
- * float noise on all 56 frames in the corpus, which is the arithmetic honesty
+ * float noise on all 53 frames in the corpus, which is the arithmetic honesty
  * check rather than a discovery: a non-zero value means the clamps absorbed a
  * real disagreement, and the notes say which.
  *
  * ## Named is not the same as attributed
  *
  * Every millisecond lands in a slice, and most of those slices name *when*
- * something happened without naming *what* it was. The 131ms between the last
- * script and `renderStart` on the corpus's `innerHTML` frames is a named slice
- * and an unattributed one: LoAF says no script was running, the profiler says
- * no JavaScript was on the stack, and the fixture's own probe says the thread
- * was busy throughout — a `MessageChannel` message it posted to itself took
- * 123-153ms to be delivered. So the honest answer is "we know when, not what",
- * and `charges` is the split that says so: JavaScript, browser rendering, and
- * unattributed.
+ * something happened without naming *what* it was. The 110-131ms between the
+ * last script and `renderStart` on the corpus's unforced `innerHTML` frames
+ * (4x, both build modes) is a named slice and an unattributed one: LoAF says no
+ * script was running, the profiler says no JavaScript was on the stack, and the
+ * fixture's own probe says the thread was busy throughout — a `MessageChannel`
+ * message it posted to itself took 116.7-148.8ms to be delivered. So the honest
+ * answer is "we know when, not what", and `charges` is the split that says so:
+ * JavaScript, browser rendering, and unattributed.
  *
  * Note what that is *not*: it is not the residual. A frame can be fully
  * accounted for and almost entirely unattributed, which is precisely the case
@@ -59,6 +59,7 @@
 
 import {
   COARSENED_TIMING_TOLERANCE_MS,
+  exceedsCoarsenedTolerance,
   frameEndMs,
   type FrameScript,
   type LongAnimationFrame,
@@ -93,7 +94,7 @@ export interface ScriptInterior {
    * `pausedMs` is **inside** this figure, not carved out of it. A script that
    * blocks the thread in a synchronous dialog is the cause of that delay, and
    * the unit here is frame time rather than CPU time, so the frame's time is
-   * charged to the script that stopped it. The field is 0 on all 80 script
+   * charged to the script that stopped it. The field is 0 on all 77 script
    * entries in the corpus, so this is a reasoned default rather than a measured
    * one.
    */
@@ -149,11 +150,11 @@ export type FrameSlice =
    * From the last script's end to `renderStart`.
    *
    * The slice that holds the frame's worst case. On the corpus's unforced
-   * `innerHTML` frames this is 113-137ms of a ~145ms frame: real main-thread
-   * work, which LoAF cannot name because style and layout performed while no
-   * script is running — before the rendering update — are not counted in
-   * `styleDuration` or `layoutDuration`. That is specified behaviour, not a
-   * Chrome bug.
+   * `innerHTML` frames this is 110-131ms of a 125-160ms frame (4x, both build
+   * modes): real main-thread work, which LoAF cannot name because style and
+   * layout performed while no script is running — before the rendering update —
+   * are not counted in `styleDuration` or `layoutDuration`. That is specified
+   * behaviour, not a Chrome bug.
    */
   | {
       readonly kind: 'script-to-render';
@@ -275,8 +276,8 @@ export type FrameDenominator =
    * changed.
    *
    * The honest denominator for "how much of what the user felt was this", and
-   * 24-42ms larger than `duration` in every frame measured: roughly 70% of
-   * `duration` is roughly 45% of this.
+   * 23.8-42.5ms larger than `duration` in every frame in the corpus (4x):
+   * roughly 70% of `duration` is roughly 45% of this.
    */
   | 'start-to-presentation';
 
@@ -308,11 +309,11 @@ function clampNonNegative(ms: number): number {
  *
  * The clamp order is forced work first, then JavaScript takes what is left.
  * `forcedStyleAndLayoutDuration` is supposed to be a subset of the script's own
- * duration and is on all 80 entries in the corpus — the worst case is 105.5ms
- * of forced work inside a 120.4ms script — and where it is not, the
- * boundary-derived figure wins, because that is the one the partition is built
- * from. The overshoot is reported as a note rather than quietly inflating the
- * frame.
+ * duration and is on all 77 entries in the corpus — the tightest is 101.9ms of
+ * forced work inside a 103.8ms script (`vendor-listener`, development, 4x) —
+ * and where it is not, the boundary-derived figure wins, because that is the
+ * one the partition is built from. The overshoot is reported as a note rather
+ * than quietly inflating the frame.
  */
 function scriptInterior(script: FrameScript, chargeableMs: number): ScriptInterior {
   const chargeable = clampNonNegative(chargeableMs);
@@ -372,7 +373,7 @@ export function chargesOfSlice(slice: FrameSlice): FrameCharges {
  * rule the degradation model runs on.
  *
  * Assumes the frame's scripts are in start order, which is how the API reports
- * them and how all 80 entries in the corpus arrive. Out-of-order scripts do not
+ * them and how all 77 entries in the corpus arrive. Out-of-order scripts do not
  * throw — they produce a `scripts-overlap` note and a partition that charges
  * the overlap once.
  *
@@ -426,18 +427,19 @@ export function decomposeFrame(frame: LongAnimationFrame): FrameDecomposition {
     }
 
     /*
-     * The spec defines `forcedStyleAndLayoutDuration` as the sum of the two
-     * halves, but coarsens each half independently so that summing them cannot
-     * recover resolution the browser is withholding. So they disagree by up to
-     * one grid step by design — measured at exactly +/-0.1ms on 6 of the
-     * corpus's 20 forced entries — and only a disagreement larger than that is
-     * worth reporting.
+     * The spec defines `forcedStyleAndLayoutDuration` as exactly the sum of the
+     * two halves, but Chrome 159 reports three values that disagree on the
+     * 100us grid: by one step on 8 of the corpus's 20 forced entries and by two
+     * on 1 (v0.3 re-capture, 4x). Only a disagreement larger than the
+     * coarsening is worth reporting, and two steps is exactly the tolerance,
+     * which `exceedsCoarsenedTolerance` treats as inside it — a bare `>` would
+     * report that entry, whose drift computes as -0.20000000000000284.
      */
     const { forcedStyleDurationMs: forcedStyle, forcedLayoutDurationMs: forcedLayout } =
       script;
     if (forcedStyle !== null && forcedLayout !== null) {
       const drift = forcedStyle + forcedLayout - script.forcedStyleAndLayoutDurationMs;
-      if (Math.abs(drift) > tolerance) {
+      if (exceedsCoarsenedTolerance(drift)) {
         notes.push({
           kind: 'forced-split-disagrees-with-total',
           scriptIndex,
@@ -550,7 +552,7 @@ export function decomposeFrame(frame: LongAnimationFrame): FrameDecomposition {
  * support it.
  *
  * `start-to-presentation` is `null` on a frame that never painted or whose
- * presentation time the browser did not report — two of the corpus's 56 frames.
+ * presentation time the browser did not report — two of the corpus's 53 frames.
  * Returning `null` rather than falling back to `duration` is the point: a share
  * silently quoted against a different denominator than the caller asked for is
  * exactly the kind of number this project exists not to print.

@@ -117,7 +117,7 @@ function readResources(profile: Json, path: JsonPath): ScriptResource[] {
           ? { origin, map: readSourceMap(map, ['resourceSources', url, 'sourceMap']) }
           : null,
       /*
-       * `null` on all 17 resources in the corpus, so the non-null shape is
+       * `null` on all 16 resources in the corpus, so the non-null shape is
        * unknown — hence the stringify rather than a narrowing. It is kept
        * because "this script shipped no source map" and "this script's source
        * map could not be fetched" degrade to the same tier but deserve
@@ -155,7 +155,7 @@ export function profileOf(run: CorpusRun): ProfileTrace | null {
     const frame = asRecord(entry, path);
     return {
       // Chrome reports an anonymous function and a module top level as the
-      // empty string. 23 of the corpus's 156 frames are anonymous, and all of
+      // empty string. 23 of the corpus's 136 frames are anonymous, and all of
       // them still carry a resource and a position.
       name: nonEmptyStringAt(frame, ['name']),
       resourceId: nullableNumberAt(frame, ['resourceId']),

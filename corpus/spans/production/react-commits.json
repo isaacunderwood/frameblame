@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-26-42-592Z__spans__production",
+  "runId": "2026-11-15T05-37-00-294Z__spans__production",
   "fixture": "spans",
   "mode": "production",
   "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
@@ -9,252 +9,392 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:26:52.542Z",
+  "collectedAt": "2026-11-15T05:37:10.229Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709603425.5,
-    "driveStartedAt": 260.69999999925494,
-    "driveFinishedAt": 9006.89999999851
+    "timeOrigin": 1794721021131.5,
+    "driveStartedAt": 239.40000000223517,
+    "driveFinishedAt": 8988.60000000149
   },
   "commits": [
     {
       "kind": "commit",
-      "committedAt": 198.59999999776483,
+      "committedAt": 175.80000000074506,
+      "collectionCost": 0.19999999925494194,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "id": 0,
+          "parentId": null,
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 134217729,
+          "hasAlternate": false,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 1,
+          "parentId": 0,
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": false,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 2,
+          "parentId": 0,
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1572865,
+          "hasAlternate": false,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 3,
+          "parentId": 0,
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": false,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 4,
+          "parentId": 0,
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": false,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "kind": "commit",
+      "committedAt": 1005.9000000022352,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "id": 0,
+          "parentId": null,
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 1,
+          "parentId": 0,
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 2,
+          "parentId": 0,
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1572865,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 3,
+          "parentId": 0,
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 4,
+          "parentId": 0,
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "kind": "commit",
+      "committedAt": 1715.1000000014901,
+      "collectionCost": 0,
+      "rendererId": 1,
+      "didError": false,
+      "priorityLevel": null,
+      "components": [
+        {
+          "id": 0,
+          "parentId": null,
+          "name": "b",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 0,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 1,
+          "parentId": 0,
+          "name": "m",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1310720,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 2,
+          "parentId": 0,
+          "name": "h",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1310720,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 3,
+          "parentId": 0,
+          "name": "g",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        },
+        {
+          "id": 4,
+          "parentId": 0,
+          "name": "v",
+          "tag": 0,
+          "lanes": 0,
+          "flags": 1310720,
+          "hasAlternate": true,
+          "carriedOver": false,
+          "actualDuration": null,
+          "selfBaseDuration": null
+        }
+      ],
+      "truncated": false
+    },
+    {
+      "kind": "commit",
+      "committedAt": 7510,
       "collectionCost": 0.10000000149011612,
       "rendererId": 1,
       "didError": false,
       "priorityLevel": null,
       "components": [
         {
+          "id": 0,
+          "parentId": null,
           "name": "b",
           "tag": 0,
           "lanes": 0,
+          "flags": 1,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 1,
+          "parentId": 0,
           "name": "m",
           "tag": 0,
           "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 2,
+          "parentId": 0,
           "name": "h",
           "tag": 0,
           "lanes": 0,
+          "flags": 1572865,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 3,
+          "parentId": 0,
           "name": "g",
           "tag": 0,
           "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 4,
+          "parentId": 0,
           "name": "v",
           "tag": 0,
           "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        }
-      ]
-    },
-    {
-      "kind": "commit",
-      "committedAt": 1026,
-      "collectionCost": 0,
-      "rendererId": 1,
-      "didError": false,
-      "priorityLevel": null,
-      "components": [
-        {
-          "name": "b",
-          "tag": 0,
-          "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
-          "name": "m",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "h",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "g",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "v",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        }
-      ]
-    },
-    {
-      "kind": "commit",
-      "committedAt": 1733.2999999970198,
-      "collectionCost": 0,
-      "rendererId": 1,
-      "didError": false,
-      "priorityLevel": null,
-      "components": [
-        {
-          "name": "b",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "m",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "h",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "g",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "v",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        }
-      ]
-    },
-    {
-      "kind": "commit",
-      "committedAt": 7525.599999997765,
-      "collectionCost": 0,
-      "rendererId": 1,
-      "didError": false,
-      "priorityLevel": null,
-      "components": [
-        {
-          "name": "b",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "m",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "h",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "g",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
-          "name": "v",
-          "tag": 0,
-          "lanes": 0,
-          "actualDuration": null,
-          "selfBaseDuration": null
-        },
-        {
+          "id": 5,
+          "parentId": 0,
           "name": "_",
           "tag": 0,
           "lanes": 0,
+          "flags": 134217729,
+          "hasAlternate": false,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         }
-      ]
+      ],
+      "truncated": false
     },
     {
       "kind": "commit",
-      "committedAt": 8359.5,
+      "committedAt": 8340.5,
       "collectionCost": 0,
       "rendererId": 1,
       "didError": false,
       "priorityLevel": null,
       "components": [
         {
+          "id": 0,
+          "parentId": null,
           "name": "b",
           "tag": 0,
           "lanes": 0,
+          "flags": 1,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 1,
+          "parentId": 0,
           "name": "m",
           "tag": 0,
           "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 2,
+          "parentId": 0,
           "name": "h",
           "tag": 0,
           "lanes": 0,
+          "flags": 1572865,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 3,
+          "parentId": 0,
           "name": "g",
           "tag": 0,
           "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 4,
+          "parentId": 0,
           "name": "v",
           "tag": 0,
           "lanes": 0,
+          "flags": 1048577,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         },
         {
+          "id": 5,
+          "parentId": 0,
           "name": "_",
           "tag": 0,
           "lanes": 0,
+          "flags": 1,
+          "hasAlternate": true,
+          "carriedOver": false,
           "actualDuration": null,
           "selfBaseDuration": null
         }
-      ]
+      ],
+      "truncated": false
     }
   ],
   "measures": []

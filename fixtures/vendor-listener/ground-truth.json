@@ -136,8 +136,9 @@
           "tier": "profiler",
           "why": "Sampled stacks carry a resource id per frame, so samples inside the vendor's hot loop name `vendor.js` and `vendorTrack` directly. LoAF cannot: it reports one registration site per listener and has no field for what that listener went on to call.",
           "$comment": [
-            "Note the sampling floor when asserting on this: ~10ms requested becomes a",
-            "~12ms median cadence in practice (findings.md, point 1), so a 12ms vendor",
+            "Note the sampling floor when asserting on this: 5ms requested becomes 10ms,",
+            "which measured out at a 12.2ms median cadence in one corpus capture and",
+            "14.5ms in the next (findings.md, point 1; 4x), so a 12ms vendor",
             "slice is about one sample. The share is only stable over a replay, and a",
             "per-frame percentage for this slice is not a fair assertion."
           ]
@@ -270,40 +271,40 @@
         "Adding it as a separate slice double-counts."
       ],
       "development": {
-        "runId": "2026-11-15T02-27-07-855Z__vendor-listener__development",
+        "runId": "2026-11-15T05-37-25-393Z__vendor-listener__development",
         "longFrames": 6,
         "framesWithThreeSlices": 6,
-        "frameDurationRangeMs": [137.1, 144.8],
+        "frameDurationRangeMs": [136.6, 155.6],
         "sliceDurationRangeMs": {
-          "first-party-compute": [18, 18.6],
-          "vendor-call": [12, 12.8],
-          "forced-layout": [103.8, 109]
+          "first-party-compute": [18, 18.5],
+          "vendor-call": [12, 12.4],
+          "forced-layout": [103.8, 106.3]
         },
-        "loafScriptDurationRangeMs": [134.5, 139.8],
-        "forcedStyleAndLayoutDurationRangeMs": [101.4, 105.6],
+        "loafScriptDurationRangeMs": [133.8, 136.9],
+        "forcedStyleAndLayoutDurationRangeMs": [100, 103.5],
         "styleDurationMs": 0,
         "layoutDurationMs": 0,
-        "presentationBeyondDurationRangeMs": [27, 36.3],
+        "presentationBeyondDurationRangeMs": [30.6, 36.5],
         "sourceCharPositions": [9092, 9268, 9443],
         "sourceFunctionNames": ["", "", ""],
         "invoker": "BUTTON.onclick",
         "sourceURLs": ["/app.js"]
       },
       "production": {
-        "runId": "2026-11-15T02-27-12-906Z__vendor-listener__production",
+        "runId": "2026-11-15T05-37-30-507Z__vendor-listener__production",
         "longFrames": 6,
         "framesWithThreeSlices": 6,
-        "frameDurationRangeMs": [137.4, 144.3],
+        "frameDurationRangeMs": [136, 153.6],
         "sliceDurationRangeMs": {
           "first-party-compute": [18, 18.4],
-          "vendor-call": [12, 12.5],
-          "forced-layout": [105.2, 108.6]
+          "vendor-call": [12, 12.3],
+          "forced-layout": [103.5, 106.4]
         },
-        "loafScriptDurationRangeMs": [135.2, 139.2],
-        "forcedStyleAndLayoutDurationRangeMs": [102.3, 106.4],
+        "loafScriptDurationRangeMs": [133.8, 136.7],
+        "forcedStyleAndLayoutDurationRangeMs": [100.7, 104.2],
         "styleDurationMs": 0,
         "layoutDurationMs": 0,
-        "presentationBeyondDurationRangeMs": [28.6, 36.6],
+        "presentationBeyondDurationRangeMs": [30.5, 39.4],
         "sourceCharPositions": [9092, 9268, 9443],
         "sourceFunctionNames": ["", "", ""],
         "invoker": "BUTTON.onclick",

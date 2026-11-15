@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-27-07-855Z__vendor-listener__development",
+  "runId": "2026-11-15T05-37-25-393Z__vendor-listener__development",
   "fixture": "vendor-listener",
   "mode": "development",
   "buildMode": "development (vite dev server)",
@@ -9,20 +9,20 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:27:12.844Z",
+  "collectedAt": "2026-11-15T05:37:30.444Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709628461.9,
-    "driveStartedAt": 157.19999999925494,
-    "driveFinishedAt": 4353.300000000745
+    "timeOrigin": 1794721046010.5,
+    "driveStartedAt": 124,
+    "driveFinishedAt": 4407.5
   },
   "summary": {
-    "runId": "2026-11-15T02-27-07-855Z__vendor-listener__development",
-    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T02-27-07-855Z__vendor-listener__development",
+    "runId": "2026-11-15T05-37-25-393Z__vendor-listener__development",
+    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T05-37-25-393Z__vendor-listener__development",
     "fixture": "vendor-listener",
     "mode": "development",
     "longFrames": 6,
-    "samples": 430,
+    "samples": 345,
     "commits": 0,
     "measures": 0,
     "sourceWindows": 9,
@@ -42,45 +42,45 @@
     {
       "label": "three-listeners",
       "kind": "click",
-      "startedAtPageClock": 158,
-      "endedAtPageClock": 4352.099999997765,
+      "startedAtPageClock": 124.80000000074506,
+      "endedAtPageClock": 4405.800000000745,
       "framesBefore": 0,
       "framesAfter": 6,
       "actions": [
         {
           "index": 0,
           "what": "click",
-          "atPageClock": 159.09999999776483,
+          "atPageClock": 126.59999999776483,
           "sawNewFrame": true
         },
         {
           "index": 1,
           "what": "click",
-          "atPageClock": 853.6999999992549,
+          "atPageClock": 842.0999999977648,
           "sawNewFrame": true
         },
         {
           "index": 2,
           "what": "click",
-          "atPageClock": 1553.699999999255,
+          "atPageClock": 1557.8999999985099,
           "sawNewFrame": true
         },
         {
           "index": 3,
           "what": "click",
-          "atPageClock": 2252.89999999851,
+          "atPageClock": 2259.800000000745,
           "sawNewFrame": true
         },
         {
           "index": 4,
           "what": "click",
-          "atPageClock": 2952.800000000745,
+          "atPageClock": 2976.199999999255,
           "sawNewFrame": true
         },
         {
           "index": 5,
           "what": "click",
-          "atPageClock": 3653.599999997765,
+          "atPageClock": 3691.39999999851,
           "sawNewFrame": true
         }
       ]
@@ -93,7 +93,7 @@
     "note": "Chrome clamps the sampling period upward to a compile-time floor of 10ms (16 on Windows) that no flag reads, so a request of 5 is answered with 10 and measures out at a ~12ms median cadence."
   },
   "profilerWindow": {
-    "startedAt": 155.80000000074506,
-    "stoppedAt": 4355.099999997765
+    "startedAt": 121.89999999850988,
+    "stoppedAt": 4410.300000000745
   }
 }

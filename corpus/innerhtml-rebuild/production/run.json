@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-27-00-159Z__innerhtml-rebuild__production",
+  "runId": "2026-11-15T05-37-17-748Z__innerhtml-rebuild__production",
   "fixture": "innerhtml-rebuild",
   "mode": "production",
   "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
@@ -9,20 +9,20 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:27:07.795Z",
+  "collectedAt": "2026-11-15T05:37:25.330Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709620982.4,
-    "driveStartedAt": 258.5999999977648,
-    "driveFinishedAt": 6784.099999997765
+    "timeOrigin": 1794721038592.8,
+    "driveStartedAt": 237.30000000074506,
+    "driveFinishedAt": 6710.60000000149
   },
   "summary": {
-    "runId": "2026-11-15T02-27-00-159Z__innerhtml-rebuild__production",
-    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T02-27-00-159Z__innerhtml-rebuild__production",
+    "runId": "2026-11-15T05-37-17-748Z__innerhtml-rebuild__production",
+    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T05-37-17-748Z__innerhtml-rebuild__production",
     "fixture": "innerhtml-rebuild",
     "mode": "production",
     "longFrames": 8,
-    "samples": 561,
+    "samples": 504,
     "commits": 0,
     "measures": 0,
     "sourceWindows": 5,
@@ -49,33 +49,33 @@
     {
       "label": "unforced",
       "kind": "click",
-      "startedAtPageClock": 259.29999999701977,
-      "endedAtPageClock": 3549.099999997765,
+      "startedAtPageClock": 237.89999999850988,
+      "endedAtPageClock": 3479.39999999851,
       "framesBefore": 0,
       "framesAfter": 4,
       "actions": [
         {
           "index": 0,
           "what": "click",
-          "atPageClock": 262.0999999977648,
+          "atPageClock": 239.80000000074506,
           "sawNewFrame": true
         },
         {
           "index": 1,
           "what": "click",
-          "atPageClock": 1099,
+          "atPageClock": 1062,
           "sawNewFrame": true
         },
         {
           "index": 2,
           "what": "click",
-          "atPageClock": 1898.699999999255,
+          "atPageClock": 1861.6000000014901,
           "sawNewFrame": true
         },
         {
           "index": 3,
           "what": "click",
-          "atPageClock": 2735,
+          "atPageClock": 2678.699999999255,
           "sawNewFrame": true
         }
       ]
@@ -83,33 +83,33 @@
     {
       "label": "forced",
       "kind": "click",
-      "startedAtPageClock": 3550.39999999851,
-      "endedAtPageClock": 6782.599999997765,
+      "startedAtPageClock": 3480.800000000745,
+      "endedAtPageClock": 6709.300000000745,
       "framesBefore": 4,
       "framesAfter": 8,
       "actions": [
         {
           "index": 0,
           "what": "click",
-          "atPageClock": 3552.2999999970198,
+          "atPageClock": 3483.39999999851,
           "sawNewFrame": true
         },
         {
           "index": 1,
           "what": "click",
-          "atPageClock": 4366.79999999702,
+          "atPageClock": 4294,
           "sawNewFrame": true
         },
         {
           "index": 2,
           "what": "click",
-          "atPageClock": 5165.199999999255,
+          "atPageClock": 5091.89999999851,
           "sawNewFrame": true
         },
         {
           "index": 3,
           "what": "click",
-          "atPageClock": 5984.099999997765,
+          "atPageClock": 5911.800000000745,
           "sawNewFrame": true
         }
       ]
@@ -122,7 +122,7 @@
     "note": "Chrome clamps the sampling period upward to a compile-time floor of 10ms (16 on Windows) that no flag reads, so a request of 5 is answered with 10 and measures out at a ~12ms median cadence."
   },
   "profilerWindow": {
-    "startedAt": 257.5999999977648,
-    "stoppedAt": 6786.39999999851
+    "startedAt": 236.10000000149012,
+    "stoppedAt": 6714
   }
 }

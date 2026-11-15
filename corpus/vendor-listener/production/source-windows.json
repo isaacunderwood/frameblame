@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-27-12-906Z__vendor-listener__production",
+  "runId": "2026-11-15T05-37-30-507Z__vendor-listener__production",
   "fixture": "vendor-listener",
   "mode": "production",
   "buildMode": "production (vite build, sourcemap: true, served by vite preview)",
@@ -9,12 +9,12 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:27:18.077Z",
+  "collectedAt": "2026-11-15T05:37:35.748Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709633675.5,
-    "driveStartedAt": 135.10000000149012,
-    "driveFinishedAt": 4374.400000002235
+    "timeOrigin": 1794721051296.3,
+    "driveStartedAt": 114,
+    "driveFinishedAt": 4423.20000000298
   },
   "note": "A window of the text each script actually served, around every position the signals attributed work to. This is the middle link of findings.md's resolution chain, which the v0.1 dumps could not reproduce because they stored each script's length but not its text.",
   "byResource": {
@@ -65,26 +65,6 @@
     },
     {
       "origin": "profiler-frame",
-      "resourceUrl": "http://localhost:5191/vendor.js",
-      "label": "vendorTrack",
-      "reported": {
-        "line": 42,
-        "column": 42
-      },
-      "resolved": {
-        "line": 42,
-        "column": 41,
-        "charPosition": 2146
-      },
-      "servedLine": "window.vendorTrack = function vendorTrack() {",
-      "servedText": {
-        "startCharPosition": 1896,
-        "caretOffset": 250,
-        "text": "me\n * can reach the LoAF record. It is, however, the name the JS Self-Profiling API\n * reports for the samples that land here, and that name is the only reason the\n * vendor's share is recoverable at all.\n */\nwindow.vendorTrack = function vendorTrack() {\n  const start = performance.now();\n  let acc = 0;\n  // Wall-clock bounded rather than iteration bounded, for the reason given on\n  // `computeTotals` in app.js: it keeps this slice the same size at any CPU\n  // throttle rate, so the frame's comp"
-      }
-    },
-    {
-      "origin": "profiler-frame",
       "resourceUrl": "http://localhost:5191/app.js",
       "label": "(anonymous)",
       "reported": {
@@ -101,6 +81,26 @@
         "startCharPosition": 9018,
         "caretOffset": 250,
         "text": "nd the\n * ground truth records both.\n */\nbutton.addEventListener('click', () => {\n  // slice 1 of 3: first-party compute, truly owned by computeTotals below\n  window.__fixtureResults.firstParty = computeTotals();\n});\nbutton.addEventListener('click', () => {\n  // slice 2 of 3: truly owned by vendor.js, which LoAF will not mention\n  window.__fixtureResults.vendor = window.vendorTrack();\n});\nbutton.addEventListener('click', () => {\n  // slice 3 of 3: forced layout, the dominant cost of the frame\n  "
+      }
+    },
+    {
+      "origin": "profiler-frame",
+      "resourceUrl": "http://localhost:5191/vendor.js",
+      "label": "vendorTrack",
+      "reported": {
+        "line": 42,
+        "column": 42
+      },
+      "resolved": {
+        "line": 42,
+        "column": 41,
+        "charPosition": 2146
+      },
+      "servedLine": "window.vendorTrack = function vendorTrack() {",
+      "servedText": {
+        "startCharPosition": 1896,
+        "caretOffset": 250,
+        "text": "me\n * can reach the LoAF record. It is, however, the name the JS Self-Profiling API\n * reports for the samples that land here, and that name is the only reason the\n * vendor's share is recoverable at all.\n */\nwindow.vendorTrack = function vendorTrack() {\n  const start = performance.now();\n  let acc = 0;\n  // Wall-clock bounded rather than iteration bounded, for the reason given on\n  // `computeTotals` in app.js: it keeps this slice the same size at any CPU\n  // throttle rate, so the frame's comp"
       }
     },
     {

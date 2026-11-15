@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-23-47-811Z__derive-in-render__development",
+  "runId": "2026-11-15T05-33-50-853Z__derive-in-render__development",
   "fixture": "derive-in-render",
   "mode": "development",
   "buildMode": "development (vite dev server)",
@@ -9,23 +9,23 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:24:50.327Z",
+  "collectedAt": "2026-11-15T05:34:53.256Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709428545,
-    "driveStartedAt": 314.80000000074506,
-    "driveFinishedAt": 60972.400000002235
+    "timeOrigin": 1794720831535.5,
+    "driveStartedAt": 271.30000000074506,
+    "driveFinishedAt": 60939.5
   },
   "summary": {
-    "runId": "2026-11-15T02-23-47-811Z__derive-in-render__development",
-    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T02-23-47-811Z__derive-in-render__development",
+    "runId": "2026-11-15T05-33-50-853Z__derive-in-render__development",
+    "runDir": "/Users/isaacunderwood/frontend_perf_mcp/spike/out/2026-11-15T05-33-50-853Z__derive-in-render__development",
     "fixture": "derive-in-render",
     "mode": "development",
     "longFrames": 14,
-    "samples": 5193,
+    "samples": 4645,
     "commits": 48,
-    "measures": 29,
-    "sourceWindows": 46,
+    "measures": 30,
+    "sourceWindows": 28,
     "unresolvedPositions": 0,
     "actionsWithoutFrame": 11
   },
@@ -45,153 +45,153 @@
     {
       "label": "replay",
       "kind": "press",
-      "startedAtPageClock": 315.5,
-      "endedAtPageClock": 60970.5,
+      "startedAtPageClock": 271.8999999985099,
+      "endedAtPageClock": 60938.60000000149,
       "framesBefore": 0,
       "framesAfter": 13,
       "actions": [
         {
           "index": 0,
           "what": "n",
-          "atPageClock": 318,
+          "atPageClock": 273.8999999985099,
           "sawNewFrame": true
         },
         {
           "index": 1,
           "what": "Backspace",
-          "atPageClock": 571.9000000022352,
+          "atPageClock": 541.6000000014901,
           "sawNewFrame": true
         },
         {
           "index": 2,
           "what": "n",
-          "atPageClock": 836.9000000022352,
+          "atPageClock": 809.1000000014901,
           "sawNewFrame": false
         },
         {
           "index": 3,
           "what": "Backspace",
-          "atPageClock": 6045.900000002235,
+          "atPageClock": 6017,
           "sawNewFrame": true
         },
         {
           "index": 4,
           "what": "n",
-          "atPageClock": 6304.300000000745,
+          "atPageClock": 6275,
           "sawNewFrame": false
         },
         {
           "index": 5,
           "what": "Backspace",
-          "atPageClock": 11510.10000000149,
+          "atPageClock": 11481.5,
           "sawNewFrame": true
         },
         {
           "index": 6,
           "what": "n",
-          "atPageClock": 11771.800000000745,
+          "atPageClock": 11744.60000000149,
           "sawNewFrame": false
         },
         {
           "index": 7,
           "what": "Backspace",
-          "atPageClock": 16979.300000000745,
+          "atPageClock": 16951.699999999255,
           "sawNewFrame": true
         },
         {
           "index": 8,
           "what": "n",
-          "atPageClock": 17236.900000002235,
+          "atPageClock": 17208,
           "sawNewFrame": false
         },
         {
           "index": 9,
           "what": "Backspace",
-          "atPageClock": 22447,
+          "atPageClock": 22415.10000000149,
           "sawNewFrame": true
         },
         {
           "index": 10,
           "what": "n",
-          "atPageClock": 22704.20000000298,
+          "atPageClock": 22673.300000000745,
           "sawNewFrame": false
         },
         {
           "index": 11,
           "what": "Backspace",
-          "atPageClock": 27910.70000000298,
+          "atPageClock": 27881.60000000149,
           "sawNewFrame": true
         },
         {
           "index": 12,
           "what": "n",
-          "atPageClock": 28170.70000000298,
+          "atPageClock": 28142,
           "sawNewFrame": false
         },
         {
           "index": 13,
           "what": "Backspace",
-          "atPageClock": 33378.900000002235,
+          "atPageClock": 33347.60000000149,
           "sawNewFrame": true
         },
         {
           "index": 14,
           "what": "n",
-          "atPageClock": 33637,
+          "atPageClock": 33608.800000000745,
           "sawNewFrame": false
         },
         {
           "index": 15,
           "what": "Backspace",
-          "atPageClock": 38846.300000000745,
+          "atPageClock": 38815.800000000745,
           "sawNewFrame": true
         },
         {
           "index": 16,
           "what": "n",
-          "atPageClock": 39104.400000002235,
+          "atPageClock": 39076.199999999255,
           "sawNewFrame": false
         },
         {
           "index": 17,
           "what": "Backspace",
-          "atPageClock": 44312.70000000298,
+          "atPageClock": 44282.699999999255,
           "sawNewFrame": true
         },
         {
           "index": 18,
           "what": "n",
-          "atPageClock": 44571.20000000298,
+          "atPageClock": 44543.300000000745,
           "sawNewFrame": false
         },
         {
           "index": 19,
           "what": "Backspace",
-          "atPageClock": 49777.900000002235,
+          "atPageClock": 49748.60000000149,
           "sawNewFrame": true
         },
         {
           "index": 20,
           "what": "n",
-          "atPageClock": 50037.300000000745,
+          "atPageClock": 50008.39999999851,
           "sawNewFrame": false
         },
         {
           "index": 21,
           "what": "Backspace",
-          "atPageClock": 55245.60000000149,
+          "atPageClock": 55215,
           "sawNewFrame": true
         },
         {
           "index": 22,
           "what": "n",
-          "atPageClock": 55504.400000002235,
+          "atPageClock": 55476.5,
           "sawNewFrame": false
         },
         {
           "index": 23,
           "what": "Backspace",
-          "atPageClock": 60712.400000002235,
+          "atPageClock": 60681,
           "sawNewFrame": true
         }
       ]
@@ -204,7 +204,7 @@
     "note": "Chrome clamps the sampling period upward to a compile-time floor of 10ms (16 on Windows) that no flag reads, so a request of 5 is answered with 10 and measures out at a ~12ms median cadence."
   },
   "profilerWindow": {
-    "startedAt": 313.70000000298023,
-    "stoppedAt": 60976.60000000149
+    "startedAt": 270.5,
+    "stoppedAt": 60943.699999999255
   }
 }

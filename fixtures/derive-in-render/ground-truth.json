@@ -125,6 +125,9 @@
           "Development gave 14, 14, 14, 23 and 14. Production gave 14, then 6 -",
           "so the 6 recorded above DID come back. The count is not wrong, it is",
           "unrepeatable, which is worse for a test and better as a finding.",
+          "The v0.3 re-capture, three hours later and after a collector change that",
+          "did not touch the profiler or the fixture, gave 14 in development and 3",
+          "in production - LoAF reported a frame after 2 of the 24 production presses.",
           "",
           "The fixture has not changed. Its frames sit a few milliseconds either",
           "side of LoAF's fixed 50ms threshold, so whether a given press clears it",
@@ -132,35 +135,48 @@
           "long-frame COUNT is not a property of this fixture and no suite may",
           "assert on it, because it measures where a distribution happens to sit",
           "relative to a constant.",
-          "The aggregate line histogram is the stable quantity and is what the",
-          "accuracy suite asserts, at a floor of 60%. Shares seen so far: 73% when",
-          "findings.md was written, then 76%, 83%, 69% and 93%, with line 36 ranked",
-          "first every time. 69% is the lowest; the floor is doing real work.",
+          "The aggregate line histogram is the stable quantity, and the v0.3",
+          "re-capture showed that it is only stable over a population the threshold",
+          "does not choose. In-frame shares seen: 73% when findings.md was written,",
+          "then 76%, 83%, 69% and 93%, then 71.4% in development and 33.3% in production",
+          "in the re-capture - the last from 3 samples, with line 32 ranked first, because",
+          "only 3 frames were long. Over every sample taken during the replay, the",
+          "population the corpus suite now asserts on at a floor of 60%, the two",
+          "captures in corpus/ history gave 60.8% then 70.7% in development and 86.3% then 83.6%",
+          "in production, with line 36 ranked first in all four. 60.8% is the",
+          "thinnest margin the floor has seen.",
           "",
           "The arrays below describe the capture currently in corpus/. Per-frame",
           "values live there; this file records the claim, not a transcription."
         ],
         "longFramesAcrossCaptures": {
-          "development": [14, 14, 14, 23, 14],
-          "production": [14, 6]
+          "development": [14, 14, 14, 23, 14, 14],
+          "production": [14, 6, 3]
         },
-        "shareInDeclaredRangeAcrossCaptures": [0.73, 0.76, 0.83, 0.69, 0.93],
+        "shareInDeclaredRangeAcrossCaptures": [
+          0.73, 0.76, 0.83, 0.69, 0.93, 0.714, 0.333
+        ],
         "inCorpusNow": {
           "development": {
-            "runId": "2026-11-15T02-23-47-811Z__derive-in-render__development",
+            "runId": "2026-11-15T05-33-50-853Z__derive-in-render__development",
             "longFrames": 14,
-            "frameDurationRangeMs": [59.8, 66.1],
-            "orderTableSamples": 61,
-            "shareInDeclaredRange": 0.689
+            "frameDurationRangeMs": [57.1, 66.7],
+            "orderTableSamples": 56,
+            "shareInDeclaredRange": 0.714,
+            "orderTableSamplesOverReplay": 92,
+            "shareInDeclaredRangeOverReplay": 0.707
           },
           "production": {
-            "runId": "2026-11-15T02-24-50-407Z__derive-in-render__production",
-            "longFrames": 6,
-            "frameDurationRangeMs": [50.4, 144.4],
-            "orderTableSamples": 15,
-            "shareInDeclaredRange": 0.933
+            "runId": "2026-11-15T05-34-53-319Z__derive-in-render__production",
+            "longFrames": 3,
+            "frameDurationRangeMs": [51.4, 132.6],
+            "orderTableSamples": 3,
+            "shareInDeclaredRange": 0.333,
+            "orderTableSamplesOverReplay": 67,
+            "shareInDeclaredRangeOverReplay": 0.836
           }
-        }
+        },
+        "$shareInDeclaredRangeAcrossCapturesComment": "In-frame, in capture order, modes interleaved as captured: v0.1 development, then development, production, development, production, then the v0.3 re-capture's development and production."
       }
     },
     "replayedLineHistogram": {
@@ -186,18 +202,36 @@
         "reached when a sample lands in the sort but not in the comparator; 49 is",
         "the row-rendering map callback, which is real render work rather than the",
         "bug.",
-        "Production resolves better than development, which is findings.md's",
-        "reversal 2 reproduced. Run ids are under thresholdSensitivity above."
+        "`development` and `production` count in-frame samples, as",
+        "replayedLineHistogram does. `overReplay` counts every sample taken during",
+        "the replay, which is what the corpus suite asserts on: in the v0.3",
+        "re-capture production had 3 long frames and 3 in-frame OrderTable samples, too",
+        "few to rank, while the replay as a whole still put 83.6% of 67 samples in the",
+        "declared range. Production resolving better than development over the",
+        "replay is findings.md's reversal 2 reproduced. Run ids are under",
+        "thresholdSensitivity above."
       ],
       "development": {
-        "32": 11,
+        "32": 9,
         "35": 1,
-        "36": 41,
-        "49": 8
+        "36": 39,
+        "49": 7
       },
       "production": {
-        "32": 1,
-        "36": 14
+        "32": 2,
+        "36": 1
+      },
+      "overReplay": {
+        "development": {
+          "32": 13,
+          "35": 3,
+          "36": 62,
+          "49": 14
+        },
+        "production": {
+          "32": 11,
+          "36": 56
+        }
       }
     },
     "loafScriptAttribution": {

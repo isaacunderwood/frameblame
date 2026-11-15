@@ -1,12 +1,16 @@
 /**
  * The fields the v0.3 collector change added, read from synthetic records.
  *
- * Synthetic because the corpus on disk predates the change: until it is
- * re-captured, no run carries a fiber's `id`, `parentId` and render evidence, a
- * commit's `truncated`, or the forced style and layout split in the
- * collector's own projection. These tests pin
- * what the readers do with both shapes, old and new, so that the re-capture
- * changes the data the suites read without changing what the readers mean.
+ * Synthetic because the readers accept two shapes and the corpus now holds
+ * only one. These tests were written before the v0.3 re-capture, when no run
+ * carried a fiber's `id`, `parentId` and render evidence, a commit's
+ * `truncated`, or the forced style and layout split in the collector's own
+ * projection; since it, every run carries all of them (asserted against the
+ * corpus in `records.test.ts`) and no run carries the old shape. These tests
+ * pin what the readers do with both, so that an older capture still reads as
+ * what it is, and so that the shape-checking the corpus never exercises — a
+ * commit linked on some fibers and not others, ids that break the scheme — is
+ * exercised somewhere.
  *
  * The records are the smallest the readers accept, shaped like the
  * collector's output and nothing more. No figure in them is a measurement.

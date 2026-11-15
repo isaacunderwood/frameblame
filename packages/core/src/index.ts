@@ -67,7 +67,12 @@ export type {
   SliceCharge,
 } from './frame-decomposition.ts';
 
-export { COARSENED_TIMING_TOLERANCE_MS, frameEndMs, isWithinFrame } from './loaf.ts';
+export {
+  COARSENED_TIMING_TOLERANCE_MS,
+  exceedsCoarsenedTolerance,
+  frameEndMs,
+  isWithinFrame,
+} from './loaf.ts';
 export type { FrameRenderingUpdate, FrameScript, LongAnimationFrame } from './loaf.ts';
 
 export {

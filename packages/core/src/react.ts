@@ -70,10 +70,11 @@ export interface RenderedFiber {
    * The **subtree's** render time, or `null` outside a development build.
    *
    * Not self time. Reading it as self time is the error that doubles a frame:
-   * in the corpus's `spans` development run, `App` reads 151.7ms over five
-   * children of ~25.2ms each, so summing the list naively gives 277.8ms for a
-   * commit that took 151.7ms, and reports `App` — which did not re-render at
-   * all, its child did — as 5.9x its real contribution.
+   * in the corpus's `spans` development run (4x), the `mount-toggle` commit's
+   * `App` reads 151.2ms over five children of 25.1-25.4ms each, so summing the
+   * list naively gives 277.2ms for a commit that took 151.2ms, and reports
+   * `App` — whose own share is 25.2ms — as 6.0x its real contribution. (The
+   * capture before the v0.3 re-capture gave 151.7ms, 277.8ms and 5.9x.)
    *
    * Self time is `actualDuration - sum(children.actualDuration)`, which is what
    * React itself computes, and the children it needs are the fibers whose
@@ -92,10 +93,12 @@ export interface RenderedFiber {
    * not a measurement of this commit at all.
    *
    * It measured 8% off the fiber's own render time on the one component the
-   * v0.1 spike compared, and the corpus shows worse: in a commit where four
-   * fibers bailed out with `actualDuration` 0, every one of them still reported
-   * 25.1-25.3ms here, carried over from a previous render. Reading it would
-   * attribute ~101ms of work to a commit that did 25.2ms.
+   * v0.1 spike compared, and the corpus shows worse: in `spans`'
+   * `state-owner-self` commit (development, 4x), four fibers bailed out —
+   * three with `actualDuration` 0, and `App`, whose 25.2ms is its child's —
+   * and every one of them still reported 25.0-25.7ms here, carried over from a
+   * previous render. Reading it would attribute 101.1ms of work to a commit
+   * that did 25.2ms.
    */
   readonly selfBaseDurationMs: number | null;
 }
@@ -184,8 +187,9 @@ export interface LinkedFiber extends RenderedFiber {
  * 2026-11-15; DevTools is not in this repo's dependencies.)
  *
  * The corpus's two React fixtures are one root over flat siblings, so case 3
- * may simply never occur in them. That is a property of the fixtures, not
- * evidence that it is rare.
+ * may simply never occur in them — and it does not: `carriedOver` is `false`
+ * on all 150 fibers of the v0.3 re-capture. That is a property of the
+ * fixtures, not evidence that it is rare.
  */
 export interface FiberRenderEvidence {
   /** React's raw effect bitmask at commit time. Bit 0 is `PerformedWork`. */
@@ -241,7 +245,8 @@ export interface ReactCommit {
    * `null` in a production build, where React never calls the hook's
    * `onPostCommitFiberRoot` at all — both production runs in the corpus have 24
    * and 5 commits and not one post-commit. In development the gap from
-   * `committedAtMs` ran to 50.6ms, so a post-commit is not safely inside the
+   * `committedAtMs` ran to 52.5ms (4x; 50.6ms in the capture before the v0.3
+   * re-capture), so a post-commit is not safely inside the
    * same frame as its commit.
    */
   readonly postCommitAtMs: number | null;
@@ -257,7 +262,9 @@ export interface ReactCommit {
    *
    * Recorded because the observer is inside the frame it is reporting on: a
    * collector that cost 10ms would be contaminating its own measurement.
-   * Measured at 0-0.7ms.
+   * Measured at 0-0.9ms in the v0.3 re-capture (4x, both build modes), whose
+   * walk also records each fiber's parent link and render evidence; 0-0.7ms in
+   * the capture before, which recorded neither.
    */
   readonly collectionCostMs: number;
   /**

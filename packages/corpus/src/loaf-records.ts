@@ -35,7 +35,7 @@ import {
  *
  * The capture writes each LoAF entry twice: whatever Chrome's own `toJSON()`
  * serialised, and a field-by-field projection the collector wrote by hand. They
- * agree on every shared field across all 80 entries in the corpus, and neither
+ * agree on every shared field across all 77 entries in the corpus, and neither
  * is complete:
  *
  * - In captures made before step 0.2 of the v0.3 run, only `toJSON` carries
@@ -92,7 +92,7 @@ function readScript(serialised: JsonObject, projected: Json | undefined): FrameS
  * `renderStart` is Chrome's flag as much as its timestamp: the spec says it and
  * `styleAndLayoutStart` return 0 when there was no rendering update, and the
  * two frames in the corpus that report 0 are both a bare `Promise.resolve` task
- * that never painted — one of them beginning at 60976.6ms, where a 0 could only
+ * that never painted — one of them beginning at 60943.7ms, where a 0 could only
  * be a sentinel.
  *
  * Throws on a frame that reports a rendering update with no `paintTime`. That

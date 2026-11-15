@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-26-32-027Z__spans__development",
+  "runId": "2026-11-15T05-36-49-764Z__spans__development",
   "fixture": "spans",
   "mode": "development",
   "buildMode": "development (vite dev server)",
@@ -9,2826 +9,2519 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:26:42.519Z",
+  "collectedAt": "2026-11-15T05:37:00.216Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709592719.5,
-    "driveStartedAt": 325.8999999985099,
-    "driveFinishedAt": 9079.60000000149
+    "timeOrigin": 1794721010447.3,
+    "driveStartedAt": 307.1000000014901,
+    "driveFinishedAt": 9075.699999999255
   },
   "profile": {
     "trace": {
       "frames": [
         {
-          "column": 27,
-          "line": 4,
-          "name": "",
+          "column": 46,
+          "line": 9780,
+          "name": "scheduleTaskForRootDuringMicrotask",
           "resourceId": 0
-        },
-        {
-          "column": 84,
-          "line": 15725,
-          "name": "",
-          "resourceId": 1
-        },
-        {
-          "column": 1,
-          "line": 1,
-          "name": "",
-          "resourceId": 2
-        },
-        {
-          "column": 31,
-          "line": 9536,
-          "name": "flushPendingEffects",
-          "resourceId": 1
-        },
-        {
-          "column": 45,
-          "line": 9821,
-          "name": "performWorkOnRootViaSchedulerTask",
-          "resourceId": 1
-        },
-        {
-          "column": 36,
-          "line": 15,
-          "name": "performWorkUntilDeadline",
-          "resourceId": 1
-        },
-        {
-          "column": 21,
-          "line": 53,
-          "name": "burn",
-          "resourceId": 3
-        },
-        {
-          "column": 20,
-          "line": 40,
-          "name": "App",
-          "resourceId": 4
-        },
-        {
-          "column": 90,
-          "line": 14135,
-          "name": "react_stack_bottom_frame",
-          "resourceId": 1
-        },
-        {
-          "column": 27,
-          "line": 4385,
-          "name": "renderWithHooks",
-          "resourceId": 1
-        },
-        {
-          "column": 35,
-          "line": 5764,
-          "name": "updateFunctionComponent",
-          "resourceId": 1
-        },
-        {
-          "column": 21,
-          "line": 6325,
-          "name": "beginWork",
-          "resourceId": 1
-        },
-        {
-          "column": 29,
-          "line": 937,
-          "name": "runWithFiberInDEV",
-          "resourceId": 1
-        },
-        {
-          "column": 29,
-          "line": 9143,
-          "name": "performUnitOfWork",
-          "resourceId": 1
-        },
-        {
-          "column": 24,
-          "line": 9040,
-          "name": "workLoopSync",
-          "resourceId": 1
-        },
-        {
-          "column": 26,
-          "line": 8984,
-          "name": "renderRootSync",
-          "resourceId": 1
-        },
-        {
-          "column": 29,
-          "line": 8658,
-          "name": "performWorkOnRoot",
-          "resourceId": 1
-        },
-        {
-          "column": 29,
-          "line": 11,
-          "name": "PropsChanged",
-          "resourceId": 5
-        },
-        {
-          "column": 32,
-          "line": 24,
-          "name": "ContextConsumer",
-          "resourceId": 5
-        },
-        {
-          "column": 27,
-          "line": 43,
-          "name": "StateOwner",
-          "resourceId": 5
-        },
-        {
-          "column": 31,
-          "line": 93,
-          "name": "DeepEqualProps",
-          "resourceId": 5
-        },
-        {
-          "column": 31,
-          "line": 9543,
-          "name": "flushPassiveEffects",
-          "resourceId": 1
-        },
-        {
-          "column": 234,
-          "line": 9306,
-          "name": "",
-          "resourceId": 1
-        },
-        {
-          "column": 29,
-          "line": 10002,
-          "name": "",
-          "resourceId": 1
-        },
-        {
-          "column": 28,
-          "line": 2138,
-          "name": "batchedUpdates$1",
-          "resourceId": 1
-        },
-        {
-          "column": 45,
-          "line": 9976,
-          "name": "dispatchEventForPluginEventSystem",
-          "resourceId": 1
-        },
-        {
-          "column": 25,
-          "line": 12507,
-          "name": "dispatchEvent",
-          "resourceId": 1
-        },
-        {
-          "column": 35,
-          "line": 12497,
-          "name": "dispatchContinuousEvent",
-          "resourceId": 1
-        },
-        {
-          "column": 33,
-          "line": 9835,
-          "name": "performSyncWorkOnRoot",
-          "resourceId": 1
-        },
-        {
-          "column": 41,
-          "line": 9740,
-          "name": "flushSyncWorkAcrossRoots_impl",
-          "resourceId": 1
         },
         {
           "column": 42,
           "line": 9767,
           "name": "processRootScheduleInMicrotask",
-          "resourceId": 1
+          "resourceId": 0
         },
         {
           "column": 30,
           "line": 9849,
           "name": "",
+          "resourceId": 0
+        },
+        {
+          "column": 21,
+          "line": 53,
+          "name": "burn",
           "resourceId": 1
         },
         {
-          "column": 37,
-          "line": 2558,
-          "name": "addObjectDiffToProperties",
-          "resourceId": 1
+          "column": 20,
+          "line": 40,
+          "name": "App",
+          "resourceId": 2
+        },
+        {
+          "column": 90,
+          "line": 14135,
+          "name": "react_stack_bottom_frame",
+          "resourceId": 0
+        },
+        {
+          "column": 27,
+          "line": 4385,
+          "name": "renderWithHooks",
+          "resourceId": 0
+        },
+        {
+          "column": 35,
+          "line": 5764,
+          "name": "updateFunctionComponent",
+          "resourceId": 0
+        },
+        {
+          "column": 21,
+          "line": 6325,
+          "name": "beginWork",
+          "resourceId": 0
+        },
+        {
+          "column": 29,
+          "line": 937,
+          "name": "runWithFiberInDEV",
+          "resourceId": 0
+        },
+        {
+          "column": 29,
+          "line": 9143,
+          "name": "performUnitOfWork",
+          "resourceId": 0
+        },
+        {
+          "column": 24,
+          "line": 9040,
+          "name": "workLoopSync",
+          "resourceId": 0
+        },
+        {
+          "column": 26,
+          "line": 8984,
+          "name": "renderRootSync",
+          "resourceId": 0
+        },
+        {
+          "column": 29,
+          "line": 8658,
+          "name": "performWorkOnRoot",
+          "resourceId": 0
+        },
+        {
+          "column": 45,
+          "line": 9821,
+          "name": "performWorkOnRootViaSchedulerTask",
+          "resourceId": 0
+        },
+        {
+          "column": 36,
+          "line": 15,
+          "name": "performWorkUntilDeadline",
+          "resourceId": 0
+        },
+        {
+          "column": 24,
+          "line": 6531,
+          "name": "completeWork",
+          "resourceId": 0
         },
         {
           "column": 30,
-          "line": 2630,
-          "name": "logComponentRender",
-          "resourceId": 1
+          "line": 9201,
+          "name": "completeUnitOfWork",
+          "resourceId": 0
         },
         {
-          "column": 37,
-          "line": 8300,
-          "name": "commitPassiveMountOnFiber",
-          "resourceId": 1
-        },
-        {
-          "column": 50,
-          "line": 8295,
-          "name": "recursivelyTraversePassiveMountEffects",
-          "resourceId": 1
+          "column": 29,
+          "line": 11,
+          "name": "PropsChanged",
+          "resourceId": 3
         },
         {
           "column": 28,
-          "line": 9453,
-          "name": "flushSpawnedWork",
-          "resourceId": 1
+          "line": 191,
+          "name": "",
+          "resourceId": 4
+        },
+        {
+          "column": 32,
+          "line": 24,
+          "name": "ContextConsumer",
+          "resourceId": 3
+        },
+        {
+          "column": 27,
+          "line": 43,
+          "name": "StateOwner",
+          "resourceId": 3
+        },
+        {
+          "column": 31,
+          "line": 93,
+          "name": "DeepEqualProps",
+          "resourceId": 3
         },
         {
           "column": 22,
           "line": 9299,
           "name": "commitRoot",
-          "resourceId": 1
+          "resourceId": 0
         },
         {
           "column": 24,
           "line": 9251,
           "name": "completeRoot",
-          "resourceId": 1
+          "resourceId": 0
         },
         {
           "column": 33,
           "line": 8777,
           "name": "completeRootWhenReady",
-          "resourceId": 1
+          "resourceId": 0
+        },
+        {
+          "column": 31,
+          "line": 2197,
+          "name": "SyntheticBaseEvent",
+          "resourceId": 0
         },
         {
           "column": 29,
-          "line": 613,
-          "name": "pushHostContainer",
-          "resourceId": 1
+          "line": 10002,
+          "name": "",
+          "resourceId": 0
         },
         {
-          "column": 50,
-          "line": 6266,
-          "name": "attemptEarlyBailoutIfNoScheduledUpdate",
-          "resourceId": 1
+          "column": 28,
+          "line": 2138,
+          "name": "batchedUpdates$1",
+          "resourceId": 0
+        },
+        {
+          "column": 45,
+          "line": 9976,
+          "name": "dispatchEventForPluginEventSystem",
+          "resourceId": 0
+        },
+        {
+          "column": 25,
+          "line": 12507,
+          "name": "dispatchEvent",
+          "resourceId": 0
+        },
+        {
+          "column": 35,
+          "line": 12497,
+          "name": "dispatchContinuousEvent",
+          "resourceId": 0
+        },
+        {
+          "column": 33,
+          "line": 9835,
+          "name": "performSyncWorkOnRoot",
+          "resourceId": 0
+        },
+        {
+          "column": 41,
+          "line": 9740,
+          "name": "flushSyncWorkAcrossRoots_impl",
+          "resourceId": 0
         },
         {
           "column": 26,
           "line": 76,
           "name": "LateMount",
-          "resourceId": 5
+          "resourceId": 3
+        },
+        {
+          "column": 27,
+          "line": 1930,
+          "name": "isCustomElement",
+          "resourceId": 0
+        },
+        {
+          "column": 43,
+          "line": 10238,
+          "name": "validatePropertiesInDevelopment",
+          "resourceId": 0
+        },
+        {
+          "column": 28,
+          "line": 10692,
+          "name": "updateProperties",
+          "resourceId": 0
+        },
+        {
+          "column": 24,
+          "line": 11374,
+          "name": "commitUpdate",
+          "resourceId": 0
+        },
+        {
+          "column": 28,
+          "line": 7084,
+          "name": "commitHostUpdate",
+          "resourceId": 0
+        },
+        {
+          "column": 40,
+          "line": 7838,
+          "name": "commitMutationEffectsOnFiber",
+          "resourceId": 0
+        },
+        {
+          "column": 46,
+          "line": 7800,
+          "name": "recursivelyTraverseMutationEffects",
+          "resourceId": 0
+        },
+        {
+          "column": 32,
+          "line": 9357,
+          "name": "flushMutationEffects",
+          "resourceId": 0
         }
       ],
       "resources": [
-        "http://localhost:5186/",
         "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c",
-        "http://localhost:5186/src/main.tsx",
         "http://localhost:5186/src/burn.ts",
         "http://localhost:5186/src/App.tsx",
-        "http://localhost:5186/src/causes.tsx"
+        "http://localhost:5186/src/causes.tsx",
+        "http://localhost:5186/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=48c9835c"
       ],
       "samples": [
         {
-          "timestamp": 27.100000001490116
+          "timestamp": 26.800000000745058
         },
         {
-          "timestamp": 39.899999998509884
+          "timestamp": 40.100000001490116
         },
         {
-          "timestamp": 50.30000000074506
+          "timestamp": 53.100000001490116
         },
         {
-          "stackId": 0,
-          "timestamp": 62.399999998509884
+          "timestamp": 63.69999999925494
         },
         {
-          "timestamp": 72.80000000074506
+          "timestamp": 74.19999999925494
         },
         {
           "stackId": 2,
-          "timestamp": 85.19999999925494
+          "timestamp": 86
         },
         {
-          "timestamp": 97.39999999850988
+          "stackId": 15,
+          "timestamp": 101.10000000149012
         },
         {
-          "stackId": 5,
-          "timestamp": 109.30000000074506
+          "stackId": 15,
+          "timestamp": 101.30000000074506
         },
         {
-          "stackId": 16,
-          "timestamp": 119.69999999925494
-        },
-        {
-          "stackId": 16,
-          "timestamp": 120.80000000074506
-        },
-        {
-          "stackId": 16,
-          "timestamp": 130
-        },
-        {
-          "stackId": 13,
-          "timestamp": 142.39999999850988
+          "stackId": 15,
+          "timestamp": 116.60000000149012
         },
         {
           "stackId": 18,
-          "timestamp": 153.19999999925494
-        },
-        {
-          "stackId": 18,
-          "timestamp": 164.89999999850988
-        },
-        {
-          "stackId": 18,
-          "timestamp": 176.5
+          "timestamp": 130.80000000074506
         },
         {
           "stackId": 20,
-          "timestamp": 186.69999999925494
+          "timestamp": 146.30000000074506
         },
         {
-          "stackId": 20,
-          "timestamp": 196.80000000074506
+          "stackId": 21,
+          "timestamp": 156.80000000074506
         },
         {
-          "stackId": 22,
-          "timestamp": 204.30000000074506
+          "stackId": 23,
+          "timestamp": 169.80000000074506
         },
         {
-          "stackId": 22,
-          "timestamp": 208.69999999925494
+          "stackId": 23,
+          "timestamp": 180.60000000149012
         },
         {
-          "stackId": 22,
-          "timestamp": 220.80000000074506
+          "stackId": 25,
+          "timestamp": 183.10000000149012
         },
         {
-          "stackId": 24,
-          "timestamp": 230.89999999850988
+          "stackId": 25,
+          "timestamp": 190.69999999925494
         },
         {
-          "stackId": 24,
-          "timestamp": 233.5
+          "stackId": 25,
+          "timestamp": 201
         },
         {
-          "stackId": 24,
-          "timestamp": 243.39999999850988
+          "stackId": 27,
+          "timestamp": 209
         },
         {
-          "stackId": 24,
-          "timestamp": 253.60000000149012
+          "stackId": 27,
+          "timestamp": 211.39999999850988
         },
         {
-          "timestamp": 264.30000000074506
+          "stackId": 27,
+          "timestamp": 221.39999999850988
         },
         {
-          "timestamp": 276.30000000074506
+          "stackId": 30,
+          "timestamp": 236.10000000149012
         },
         {
-          "timestamp": 286.69999999925494
+          "timestamp": 249.39999999850988
         },
         {
-          "timestamp": 299.1000000014901
+          "timestamp": 259.19999999925494
         },
         {
-          "stackId": 26,
-          "timestamp": 309.69999999925494
+          "timestamp": 269.19999999925494
         },
         {
-          "timestamp": 322.1000000014901
+          "timestamp": 279.80000000074506
         },
         {
-          "timestamp": 333.8999999985099
+          "timestamp": 289.8999999985099
         },
         {
-          "timestamp": 344.6000000014901
+          "timestamp": 303.30000000074506
         },
         {
-          "timestamp": 357
+          "timestamp": 318.30000000074506
         },
         {
-          "timestamp": 369.5
+          "timestamp": 332.8999999985099
         },
         {
-          "timestamp": 382
+          "timestamp": 347.80000000074506
         },
         {
-          "timestamp": 393.19999999925494
+          "timestamp": 362.5
         },
         {
-          "timestamp": 403.80000000074506
+          "timestamp": 378.30000000074506
         },
         {
-          "timestamp": 414.6000000014901
+          "timestamp": 392.6000000014901
         },
         {
-          "timestamp": 426.1000000014901
+          "timestamp": 407.6000000014901
         },
         {
-          "timestamp": 436.6000000014901
+          "timestamp": 422.5
         },
         {
-          "timestamp": 448.6000000014901
+          "timestamp": 437.80000000074506
         },
         {
-          "timestamp": 461.19999999925494
+          "timestamp": 452.5
         },
         {
-          "timestamp": 473.8999999985099
+          "timestamp": 467.6000000014901
         },
         {
-          "timestamp": 486.30000000074506
+          "timestamp": 482.5
         },
         {
-          "timestamp": 496.8999999985099
+          "timestamp": 497.80000000074506
         },
         {
-          "timestamp": 507.19999999925494
+          "timestamp": 512.5
         },
         {
-          "timestamp": 519.8000000007451
+          "timestamp": 523.8999999985099
         },
         {
-          "timestamp": 530
+          "timestamp": 536.1000000014901
         },
         {
-          "timestamp": 540.8000000007451
+          "timestamp": 546.3999999985099
         },
         {
-          "timestamp": 551.6000000014901
+          "timestamp": 558
         },
         {
-          "timestamp": 563.8999999985099
+          "timestamp": 570
         },
         {
-          "timestamp": 576.3999999985099
+          "timestamp": 584.1999999992549
         },
         {
-          "timestamp": 589.3000000007451
+          "timestamp": 599.3999999985099
         },
         {
-          "timestamp": 601.3000000007451
+          "timestamp": 614.6000000014901
         },
         {
-          "timestamp": 613.6999999992549
+          "timestamp": 629.3000000007451
         },
         {
-          "timestamp": 626.3000000007451
+          "timestamp": 644.5
         },
         {
-          "timestamp": 638.8000000007451
+          "timestamp": 659.6000000014901
         },
         {
-          "timestamp": 651.1999999992549
+          "timestamp": 674.3999999985099
         },
         {
-          "timestamp": 663.8999999985099
+          "timestamp": 689.5
         },
         {
-          "timestamp": 676.3999999985099
+          "timestamp": 704.8000000007451
         },
         {
-          "timestamp": 688.8999999985099
+          "timestamp": 719.8999999985099
         },
         {
-          "timestamp": 701.5
+          "timestamp": 734.3999999985099
         },
         {
-          "timestamp": 714.3000000007451
+          "timestamp": 749.3999999985099
         },
         {
-          "timestamp": 726.3000000007451
+          "timestamp": 764.6999999992549
         },
         {
-          "timestamp": 738.8000000007451
+          "timestamp": 779.3999999985099
         },
         {
-          "timestamp": 751.8000000007451
+          "timestamp": 795
         },
         {
-          "timestamp": 764.1999999992549
+          "timestamp": 809.5
         },
         {
-          "timestamp": 776.3999999985099
+          "timestamp": 824.3999999985099
         },
         {
-          "timestamp": 788.8999999985099
+          "timestamp": 839.6000000014901
         },
         {
-          "timestamp": 801.3999999985099
+          "timestamp": 854.3999999985099
         },
         {
-          "timestamp": 814.5
+          "timestamp": 866.1999999992549
         },
         {
-          "timestamp": 826.3999999985099
+          "timestamp": 879.8999999985099
         },
         {
-          "timestamp": 838.8999999985099
+          "timestamp": 895.6999999992549
         },
         {
-          "timestamp": 851.8999999985099
+          "timestamp": 910
         },
         {
-          "timestamp": 864.3999999985099
+          "timestamp": 920.1999999992549
         },
         {
-          "timestamp": 876.6000000014901
+          "timestamp": 931.3999999985099
         },
         {
-          "timestamp": 889.1999999992549
+          "timestamp": 941.1999999992549
         },
         {
-          "timestamp": 901.5
+          "stackId": 36,
+          "timestamp": 952.8000000007451
         },
         {
-          "timestamp": 914.3999999985099
+          "stackId": 49,
+          "timestamp": 967.8000000007451
         },
         {
-          "timestamp": 924.3999999985099
+          "stackId": 49,
+          "timestamp": 982.5
         },
         {
-          "timestamp": 934.5
+          "stackId": 51,
+          "timestamp": 998.1000000014901
         },
         {
-          "timestamp": 947.3999999985099
+          "stackId": 51,
+          "timestamp": 1012.8000000007451
         },
         {
-          "timestamp": 959.3999999985099
+          "stackId": 53,
+          "timestamp": 1027.699999999255
         },
         {
-          "stackId": 31,
-          "timestamp": 972.3999999985099
+          "stackId": 55,
+          "timestamp": 1042.699999999255
         },
         {
-          "stackId": 46,
-          "timestamp": 984.3999999985099
+          "stackId": 55,
+          "timestamp": 1054.8999999985099
         },
         {
-          "stackId": 46,
-          "timestamp": 997.1000000014901
+          "stackId": 57,
+          "timestamp": 1068
         },
         {
-          "stackId": 48,
-          "timestamp": 1009.8999999985099
+          "stackId": 57,
+          "timestamp": 1082.8999999985099
         },
         {
-          "stackId": 48,
-          "timestamp": 1022.1999999992549
+          "timestamp": 1093.6000000014901
         },
         {
-          "stackId": 50,
-          "timestamp": 1032.8999999985099
+          "timestamp": 1105.3999999985099
         },
         {
-          "stackId": 50,
-          "timestamp": 1044
+          "timestamp": 1120.5
         },
         {
-          "stackId": 50,
-          "timestamp": 1053.800000000745
+          "timestamp": 1130.3999999985099
         },
         {
-          "stackId": 52,
-          "timestamp": 1066.1000000014901
+          "timestamp": 1144.6000000014901
         },
         {
-          "stackId": 52,
-          "timestamp": 1076.8999999985099
+          "timestamp": 1160
         },
         {
-          "stackId": 54,
-          "timestamp": 1087
+          "timestamp": 1172.1000000014901
         },
         {
-          "stackId": 54,
-          "timestamp": 1097.800000000745
+          "timestamp": 1182.3999999985099
         },
         {
-          "stackId": 71,
-          "timestamp": 1110
+          "timestamp": 1197.1000000014901
         },
         {
-          "timestamp": 1121.800000000745
+          "timestamp": 1212.6000000014901
         },
         {
-          "timestamp": 1133.8999999985099
+          "timestamp": 1227
         },
         {
-          "timestamp": 1144.800000000745
+          "timestamp": 1242.199999999255
         },
         {
-          "timestamp": 1157.300000000745
+          "timestamp": 1254.6000000014901
         },
         {
-          "timestamp": 1170.300000000745
+          "timestamp": 1267
         },
         {
-          "timestamp": 1182.800000000745
+          "timestamp": 1277
         },
         {
-          "timestamp": 1194.800000000745
+          "timestamp": 1287.800000000745
         },
         {
-          "timestamp": 1207.300000000745
+          "timestamp": 1297.8999999985099
         },
         {
-          "timestamp": 1219.800000000745
+          "timestamp": 1312.800000000745
         },
         {
-          "timestamp": 1232.5
+          "timestamp": 1327.8999999985099
         },
         {
-          "timestamp": 1245.300000000745
+          "timestamp": 1342.699999999255
         },
         {
-          "timestamp": 1257.699999999255
+          "timestamp": 1354.800000000745
         },
         {
-          "timestamp": 1270.1000000014901
+          "timestamp": 1367.800000000745
         },
         {
-          "timestamp": 1282.699999999255
+          "timestamp": 1379.1000000014901
         },
         {
-          "timestamp": 1295.6000000014901
+          "timestamp": 1388.6000000014901
         },
         {
-          "timestamp": 1305.6000000014901
+          "timestamp": 1398.6000000014901
         },
         {
-          "timestamp": 1318
+          "timestamp": 1413.800000000745
         },
         {
-          "timestamp": 1327.699999999255
+          "timestamp": 1429.199999999255
         },
         {
-          "timestamp": 1340.300000000745
+          "timestamp": 1443.800000000745
         },
         {
-          "timestamp": 1352.6000000014901
+          "timestamp": 1454.5
         },
         {
-          "timestamp": 1364.300000000745
+          "timestamp": 1464.6000000014901
         },
         {
-          "timestamp": 1376
+          "timestamp": 1475.8999999985099
         },
         {
-          "timestamp": 1386.699999999255
+          "timestamp": 1486
         },
         {
-          "timestamp": 1399
+          "timestamp": 1496.1000000014901
         },
         {
-          "timestamp": 1409.199999999255
+          "timestamp": 1506.3999999985099
         },
         {
-          "timestamp": 1422.199999999255
+          "timestamp": 1521.699999999255
         },
         {
-          "timestamp": 1433.699999999255
+          "timestamp": 1536.3999999985099
         },
         {
-          "timestamp": 1446.199999999255
+          "timestamp": 1551.5
         },
         {
-          "timestamp": 1457.1000000014901
+          "timestamp": 1567.199999999255
         },
         {
-          "timestamp": 1467.6000000014901
+          "timestamp": 1576.5
         },
         {
-          "timestamp": 1477.800000000745
+          "timestamp": 1591.300000000745
         },
         {
-          "timestamp": 1490.3999999985099
+          "timestamp": 1606.8999999985099
         },
         {
-          "timestamp": 1502.8999999985099
+          "timestamp": 1621.8999999985099
         },
         {
-          "timestamp": 1515.199999999255
+          "timestamp": 1636.6000000014901
         },
         {
-          "timestamp": 1527.6000000014901
+          "timestamp": 1646.8999999985099
         },
         {
-          "timestamp": 1540.1000000014901
+          "timestamp": 1661.6000000014901
         },
         {
-          "timestamp": 1552.6000000014901
+          "timestamp": 1676.6000000014901
         },
         {
-          "timestamp": 1565.1000000014901
+          "timestamp": 1691.8999999985099
         },
         {
-          "timestamp": 1576.300000000745
+          "timestamp": 1706.800000000745
         },
         {
-          "timestamp": 1586.6000000014901
+          "timestamp": 1722.300000000745
         },
         {
-          "timestamp": 1597.300000000745
+          "timestamp": 1737.6000000014901
         },
         {
-          "timestamp": 1607.5
+          "timestamp": 1751.6000000014901
         },
         {
-          "timestamp": 1618
+          "timestamp": 1766.699999999255
         },
         {
-          "timestamp": 1628.300000000745
+          "stackId": 55,
+          "timestamp": 1782.3999999985099
         },
         {
-          "timestamp": 1638.5
+          "stackId": 55,
+          "timestamp": 1796.800000000745
         },
         {
-          "timestamp": 1649.300000000745
+          "timestamp": 1811.800000000745
         },
         {
-          "timestamp": 1659.6000000014901
+          "timestamp": 1826.699999999255
         },
         {
-          "timestamp": 1670.1000000014901
+          "timestamp": 1838.300000000745
         },
         {
-          "timestamp": 1680.3999999985099
+          "timestamp": 1848.3999999985099
         },
         {
-          "timestamp": 1691.199999999255
+          "timestamp": 1863.699999999255
         },
         {
-          "timestamp": 1702
+          "timestamp": 1877.699999999255
         },
         {
-          "timestamp": 1712.1000000014901
+          "timestamp": 1888.1000000014901
         },
         {
-          "timestamp": 1721.8999999985099
+          "timestamp": 1899.300000000745
         },
         {
-          "timestamp": 1732
+          "timestamp": 1909.8999999985099
         },
         {
-          "timestamp": 1742.6000000014901
+          "timestamp": 1922.1000000014901
         },
         {
-          "timestamp": 1753.5
+          "timestamp": 1933.6000000014901
         },
         {
-          "timestamp": 1766
+          "timestamp": 1944
         },
         {
-          "timestamp": 1776.1000000014901
+          "timestamp": 1955.6000000014901
         },
         {
-          "stackId": 52,
-          "timestamp": 1788.6000000014901
+          "timestamp": 1967.8999999985099
         },
         {
-          "stackId": 52,
-          "timestamp": 1801
+          "timestamp": 1982.8999999985099
         },
         {
-          "timestamp": 1811.8999999985099
+          "timestamp": 1997.8999999985099
         },
         {
-          "timestamp": 1823.199999999255
+          "timestamp": 2008.5
         },
         {
-          "timestamp": 1832.8999999985099
+          "timestamp": 2021.300000000745
         },
         {
-          "timestamp": 1843.199999999255
+          "timestamp": 2036.3999999985099
         },
         {
-          "timestamp": 1853.3999999985099
+          "timestamp": 2051.39999999851
         },
         {
-          "timestamp": 1863.800000000745
+          "timestamp": 2066.300000000745
         },
         {
-          "timestamp": 1874.699999999255
+          "timestamp": 2081.39999999851
         },
         {
-          "timestamp": 1887
+          "timestamp": 2096.699999999255
         },
         {
-          "timestamp": 1899.5
+          "timestamp": 2111.699999999255
         },
         {
-          "timestamp": 1910.1000000014901
+          "timestamp": 2126.89999999851
         },
         {
-          "timestamp": 1920.6000000014901
+          "timestamp": 2138.800000000745
         },
         {
-          "timestamp": 1931.800000000745
+          "timestamp": 2150.300000000745
         },
         {
-          "timestamp": 1943.1000000014901
+          "timestamp": 2162.800000000745
         },
         {
-          "timestamp": 1954.1000000014901
+          "timestamp": 2173.199999999255
         },
         {
-          "timestamp": 1964.8999999985099
+          "timestamp": 2186.39999999851
         },
         {
-          "timestamp": 1976.3999999985099
+          "timestamp": 2197.300000000745
         },
         {
-          "timestamp": 1988.800000000745
+          "timestamp": 2208.199999999255
         },
         {
-          "timestamp": 2001.300000000745
+          "timestamp": 2221.39999999851
         },
         {
-          "timestamp": 2014.1000000014901
+          "timestamp": 2231.5
         },
         {
-          "timestamp": 2026.1000000014901
+          "timestamp": 2242.39999999851
         },
         {
-          "timestamp": 2038.5
+          "timestamp": 2253.300000000745
         },
         {
-          "timestamp": 2051
+          "timestamp": 2267.89999999851
         },
         {
-          "timestamp": 2063.5
+          "timestamp": 2283.300000000745
         },
         {
-          "timestamp": 2076
+          "timestamp": 2298
         },
         {
-          "timestamp": 2088.5
+          "timestamp": 2313.10000000149
         },
         {
-          "timestamp": 2101
+          "timestamp": 2324
         },
         {
-          "timestamp": 2113.60000000149
+          "timestamp": 2338.10000000149
         },
         {
-          "timestamp": 2126.39999999851
+          "timestamp": 2350.10000000149
         },
         {
-          "timestamp": 2139
+          "timestamp": 2360.10000000149
         },
         {
-          "timestamp": 2151.199999999255
+          "timestamp": 2371.10000000149
         },
         {
-          "timestamp": 2163.699999999255
+          "timestamp": 2381.300000000745
         },
         {
-          "timestamp": 2175.800000000745
+          "timestamp": 2396.199999999255
         },
         {
-          "timestamp": 2205.699999999255
+          "timestamp": 2411.300000000745
         },
         {
-          "timestamp": 2214.5
+          "timestamp": 2426.300000000745
         },
         {
-          "timestamp": 2226.89999999851
+          "timestamp": 2436.800000000745
         },
         {
-          "timestamp": 2237.39999999851
+          "timestamp": 2451.800000000745
         },
         {
-          "timestamp": 2247.800000000745
+          "timestamp": 2466.89999999851
         },
         {
-          "timestamp": 2260.60000000149
+          "timestamp": 2481.800000000745
         },
         {
-          "timestamp": 2272.800000000745
+          "timestamp": 2497
         },
         {
-          "timestamp": 2285.39999999851
+          "timestamp": 2512.5
         },
         {
-          "timestamp": 2297.800000000745
+          "timestamp": 2526.89999999851
         },
         {
-          "timestamp": 2310.39999999851
+          "timestamp": 2542.39999999851
         },
         {
-          "timestamp": 2322.699999999255
+          "timestamp": 2553.89999999851
         },
         {
-          "timestamp": 2335.300000000745
+          "timestamp": 2563.800000000745
         },
         {
-          "timestamp": 2347.800000000745
+          "timestamp": 2579.39999999851
         },
         {
-          "timestamp": 2358.39999999851
+          "timestamp": 2593.800000000745
         },
         {
-          "timestamp": 2368.89999999851
+          "timestamp": 2604.5
         },
         {
-          "timestamp": 2380.60000000149
+          "timestamp": 2615.10000000149
         },
         {
-          "timestamp": 2390.89999999851
+          "timestamp": 2625.699999999255
         },
         {
-          "timestamp": 2401.800000000745
+          "timestamp": 2636.10000000149
         },
         {
-          "timestamp": 2412.199999999255
+          "timestamp": 2650.39999999851
         },
         {
-          "timestamp": 2423
+          "timestamp": 2661.800000000745
         },
         {
-          "timestamp": 2433.60000000149
+          "timestamp": 2671.89999999851
         },
         {
-          "timestamp": 2443.699999999255
+          "timestamp": 2685.5
         },
         {
-          "timestamp": 2456.10000000149
+          "timestamp": 2695.60000000149
         },
         {
-          "timestamp": 2468.89999999851
+          "timestamp": 2705.60000000149
         },
         {
-          "timestamp": 2481.5
+          "timestamp": 2720.89999999851
         },
         {
-          "timestamp": 2494.10000000149
+          "timestamp": 2735.199999999255
         },
         {
-          "timestamp": 2506.60000000149
+          "timestamp": 2750.300000000745
         },
         {
-          "timestamp": 2518.699999999255
+          "timestamp": 2765.199999999255
         },
         {
-          "timestamp": 2531.300000000745
+          "timestamp": 2781
         },
         {
-          "timestamp": 2544.199999999255
+          "timestamp": 2795.699999999255
         },
         {
-          "timestamp": 2554
+          "timestamp": 2810.39999999851
         },
         {
-          "timestamp": 2564.10000000149
+          "timestamp": 2821.300000000745
         },
         {
-          "timestamp": 2576.39999999851
+          "timestamp": 2836
         },
         {
-          "timestamp": 2589.10000000149
+          "timestamp": 2847.199999999255
         },
         {
-          "timestamp": 2601.5
+          "timestamp": 2857.60000000149
         },
         {
-          "timestamp": 2614.39999999851
+          "timestamp": 2870.89999999851
         },
         {
-          "timestamp": 2626.800000000745
+          "timestamp": 2882.199999999255
         },
         {
-          "timestamp": 2639.10000000149
+          "timestamp": 2897.699999999255
         },
         {
-          "timestamp": 2651.699999999255
+          "timestamp": 2912.800000000745
         },
         {
-          "timestamp": 2663.89999999851
+          "timestamp": 2923.699999999255
         },
         {
-          "timestamp": 2676.60000000149
+          "timestamp": 2939.300000000745
         },
         {
-          "timestamp": 2689.10000000149
+          "timestamp": 2949.199999999255
         },
         {
-          "timestamp": 2699.699999999255
+          "timestamp": 2959
         },
         {
-          "timestamp": 2712.199999999255
+          "timestamp": 2971.10000000149
         },
         {
-          "timestamp": 2724.89999999851
+          "timestamp": 2986.39999999851
         },
         {
-          "timestamp": 2737
+          "timestamp": 2997.5
         },
         {
-          "timestamp": 2749.60000000149
+          "timestamp": 3007.300000000745
         },
         {
-          "timestamp": 2762.10000000149
+          "timestamp": 3018
         },
         {
-          "timestamp": 2774.60000000149
+          "timestamp": 3028.60000000149
         },
         {
-          "timestamp": 2787.10000000149
-        },
-        {
-          "timestamp": 2799.60000000149
-        },
-        {
-          "timestamp": 2812.60000000149
-        },
-        {
-          "timestamp": 2824.60000000149
-        },
-        {
-          "timestamp": 2837.300000000745
-        },
-        {
-          "timestamp": 2849.89999999851
-        },
-        {
-          "timestamp": 2862.10000000149
-        },
-        {
-          "timestamp": 2872.39999999851
-        },
-        {
-          "timestamp": 2885.10000000149
-        },
-        {
-          "timestamp": 2897.800000000745
-        },
-        {
-          "timestamp": 2909.89999999851
-        },
-        {
-          "timestamp": 2922.699999999255
-        },
-        {
-          "timestamp": 2935
-        },
-        {
-          "timestamp": 2947.699999999255
-        },
-        {
-          "timestamp": 2957.89999999851
-        },
-        {
-          "timestamp": 2969.199999999255
-        },
-        {
-          "timestamp": 2979.199999999255
-        },
-        {
-          "timestamp": 2990
-        },
-        {
-          "timestamp": 3000.60000000149
-        },
-        {
-          "timestamp": 3012.199999999255
-        },
-        {
-          "timestamp": 3024.5
-        },
-        {
-          "timestamp": 3037.199999999255
+          "timestamp": 3038.89999999851
         },
         {
           "timestamp": 3049.60000000149
         },
         {
-          "timestamp": 3060
+          "timestamp": 3059.89999999851
         },
         {
-          "timestamp": 3072.60000000149
+          "timestamp": 3070.89999999851
         },
         {
-          "timestamp": 3084.800000000745
+          "timestamp": 3081.300000000745
         },
         {
-          "timestamp": 3097.89999999851
+          "timestamp": 3091.39999999851
         },
         {
-          "timestamp": 3110.10000000149
+          "timestamp": 3104.10000000149
         },
         {
-          "timestamp": 3120.60000000149
+          "timestamp": 3114.10000000149
         },
         {
-          "timestamp": 3132
+          "timestamp": 3125.89999999851
         },
         {
-          "timestamp": 3142.199999999255
+          "timestamp": 3136.39999999851
         },
         {
-          "timestamp": 3154.699999999255
+          "timestamp": 3147.10000000149
         },
         {
-          "timestamp": 3167.199999999255
+          "timestamp": 3157.39999999851
         },
         {
-          "timestamp": 3179.699999999255
+          "timestamp": 3169.699999999255
         },
         {
-          "timestamp": 3192.199999999255
+          "timestamp": 3184.60000000149
         },
         {
-          "timestamp": 3202.300000000745
+          "timestamp": 3199.60000000149
         },
         {
-          "timestamp": 3213.39999999851
+          "timestamp": 3214.699999999255
         },
         {
-          "timestamp": 3223.60000000149
+          "timestamp": 3230.199999999255
         },
         {
-          "timestamp": 3235.89999999851
+          "timestamp": 3245
         },
         {
-          "timestamp": 3248.39999999851
+          "timestamp": 3260
         },
         {
-          "timestamp": 3259.89999999851
+          "timestamp": 3271.300000000745
         },
         {
-          "timestamp": 3272.300000000745
+          "timestamp": 3286
         },
         {
-          "timestamp": 3284.89999999851
+          "timestamp": 3301.199999999255
         },
         {
-          "timestamp": 3297.60000000149
+          "timestamp": 3315.89999999851
         },
         {
-          "timestamp": 3309.89999999851
+          "timestamp": 3331.10000000149
         },
         {
-          "timestamp": 3322.39999999851
+          "timestamp": 3346.300000000745
         },
         {
-          "timestamp": 3334.800000000745
+          "timestamp": 3361.300000000745
         },
         {
-          "timestamp": 3347.60000000149
+          "timestamp": 3376
         },
         {
-          "timestamp": 3360.199999999255
+          "timestamp": 3391.199999999255
         },
         {
-          "timestamp": 3370.89999999851
+          "timestamp": 3406.10000000149
         },
         {
-          "timestamp": 3382.199999999255
+          "timestamp": 3421.300000000745
         },
         {
-          "timestamp": 3393.10000000149
+          "timestamp": 3436
         },
         {
-          "timestamp": 3405
+          "timestamp": 3446.199999999255
         },
         {
-          "timestamp": 3416
+          "timestamp": 3456.300000000745
         },
         {
-          "timestamp": 3426.800000000745
+          "timestamp": 3471.300000000745
         },
         {
-          "timestamp": 3436.199999999255
+          "timestamp": 3486.300000000745
         },
         {
-          "timestamp": 3448.699999999255
+          "timestamp": 3501.39999999851
         },
         {
-          "timestamp": 3461.39999999851
+          "timestamp": 3516.300000000745
         },
         {
-          "timestamp": 3474.199999999255
+          "timestamp": 3531.699999999255
         },
         {
-          "timestamp": 3486.5
+          "timestamp": 3546.300000000745
         },
         {
-          "timestamp": 3498.699999999255
+          "timestamp": 3561.39999999851
         },
         {
-          "timestamp": 3511.300000000745
+          "timestamp": 3576.5
         },
         {
-          "timestamp": 3524
+          "timestamp": 3591.39999999851
         },
         {
-          "timestamp": 3536.199999999255
+          "timestamp": 3606.60000000149
         },
         {
-          "timestamp": 3549.199999999255
+          "timestamp": 3621.800000000745
         },
         {
-          "timestamp": 3559.89999999851
+          "timestamp": 3636.5
         },
         {
-          "timestamp": 3570
+          "timestamp": 3651.39999999851
         },
         {
-          "timestamp": 3580.199999999255
+          "timestamp": 3666.300000000745
         },
         {
-          "timestamp": 3592.89999999851
+          "timestamp": 3681.300000000745
         },
         {
-          "timestamp": 3605.10000000149
+          "timestamp": 3696.39999999851
         },
         {
-          "timestamp": 3617.60000000149
+          "timestamp": 3711.60000000149
         },
         {
-          "timestamp": 3630.300000000745
+          "timestamp": 3726.300000000745
         },
         {
-          "timestamp": 3642.60000000149
+          "timestamp": 3741.300000000745
         },
         {
-          "timestamp": 3655.10000000149
+          "timestamp": 3757.199999999255
         },
         {
-          "timestamp": 3667.89999999851
+          "timestamp": 3771.89999999851
         },
         {
-          "timestamp": 3678.60000000149
+          "timestamp": 3786.5
         },
         {
-          "timestamp": 3688.800000000745
+          "timestamp": 3801.300000000745
         },
         {
-          "timestamp": 3701.10000000149
+          "timestamp": 3816.800000000745
         },
         {
-          "timestamp": 3713.89999999851
+          "timestamp": 3831.89999999851
         },
         {
-          "timestamp": 3725.60000000149
+          "timestamp": 3846.5
         },
         {
-          "timestamp": 3735.89999999851
+          "timestamp": 3861.39999999851
         },
         {
-          "timestamp": 3745.800000000745
+          "timestamp": 3876.39999999851
         },
         {
-          "timestamp": 3756.10000000149
+          "timestamp": 3888.60000000149
         },
         {
-          "timestamp": 3768.39999999851
+          "timestamp": 3898.89999999851
         },
         {
-          "timestamp": 3779.10000000149
+          "timestamp": 3913.800000000745
         },
         {
-          "timestamp": 3789.199999999255
+          "timestamp": 3929.39999999851
         },
         {
-          "timestamp": 3800.699999999255
+          "timestamp": 3939.199999999255
         },
         {
-          "timestamp": 3810.60000000149
+          "timestamp": 3950.699999999255
         },
         {
-          "timestamp": 3822.800000000745
+          "timestamp": 3961.10000000149
         },
         {
-          "timestamp": 3835.300000000745
+          "timestamp": 3975.5
         },
         {
-          "timestamp": 3848.300000000745
+          "timestamp": 3987.199999999255
         },
         {
-          "timestamp": 3859.199999999255
+          "timestamp": 3997.300000000745
         },
         {
-          "timestamp": 3869.89999999851
+          "timestamp": 4009.10000000149
         },
         {
-          "timestamp": 3880.5
+          "timestamp": 4019.39999999851
         },
         {
-          "timestamp": 3890.89999999851
+          "timestamp": 4030.5
         },
         {
-          "timestamp": 3901.800000000745
+          "timestamp": 4040.199999999255
         },
         {
-          "timestamp": 3912.60000000149
+          "timestamp": 4054.39999999851
         },
         {
-          "timestamp": 3924.10000000149
+          "timestamp": 4068.60000000149
         },
         {
-          "timestamp": 3934.5
+          "timestamp": 4083.699999999255
         },
         {
-          "timestamp": 3945
+          "timestamp": 4098.699999999255
         },
         {
-          "timestamp": 3957
+          "timestamp": 4113.60000000149
         },
         {
-          "timestamp": 3968.199999999255
+          "timestamp": 4129.10000000149
         },
         {
-          "timestamp": 3978.39999999851
+          "timestamp": 4143.699999999255
         },
         {
-          "timestamp": 3990.5
+          "timestamp": 4159.10000000149
         },
         {
-          "timestamp": 4003.300000000745
+          "timestamp": 4173.89999999851
         },
         {
-          "timestamp": 4016.10000000149
+          "timestamp": 4188.60000000149
         },
         {
-          "timestamp": 4027.39999999851
+          "timestamp": 4203.699999999255
         },
         {
-          "timestamp": 4037.300000000745
+          "timestamp": 4219
         },
         {
-          "timestamp": 4047
+          "timestamp": 4234
         },
         {
-          "timestamp": 4057.89999999851
+          "timestamp": 4249.199999999255
         },
         {
-          "timestamp": 4068.39999999851
+          "timestamp": 4263.699999999255
         },
         {
-          "timestamp": 4078.5
+          "timestamp": 4278.699999999255
         },
         {
-          "timestamp": 4088.699999999255
+          "timestamp": 4293.89999999851
         },
         {
-          "timestamp": 4101.199999999255
+          "timestamp": 4309.199999999255
         },
         {
-          "timestamp": 4113.5
+          "timestamp": 4323.800000000745
         },
         {
-          "timestamp": 4125.89999999851
+          "timestamp": 4339.10000000149
         },
         {
-          "timestamp": 4138.5
+          "timestamp": 4354.5
         },
         {
-          "timestamp": 4150.89999999851
+          "timestamp": 4368.89999999851
         },
         {
-          "timestamp": 4163.5
+          "timestamp": 4383.699999999255
         },
         {
-          "timestamp": 4176.10000000149
+          "timestamp": 4398.89999999851
         },
         {
-          "timestamp": 4186.5
+          "timestamp": 4413.699999999255
         },
         {
-          "timestamp": 4197.60000000149
+          "timestamp": 4428.89999999851
         },
         {
-          "timestamp": 4206.89999999851
+          "timestamp": 4443.89999999851
         },
         {
-          "timestamp": 4219.5
+          "timestamp": 4458.699999999255
         },
         {
-          "timestamp": 4232.39999999851
+          "timestamp": 4474
         },
         {
-          "timestamp": 4244.5
-        },
-        {
-          "timestamp": 4256.89999999851
-        },
-        {
-          "timestamp": 4269.60000000149
-        },
-        {
-          "timestamp": 4281.89999999851
-        },
-        {
-          "timestamp": 4295
-        },
-        {
-          "timestamp": 4307.39999999851
-        },
-        {
-          "timestamp": 4320
-        },
-        {
-          "timestamp": 4330.60000000149
-        },
-        {
-          "timestamp": 4340.60000000149
-        },
-        {
-          "timestamp": 4353
-        },
-        {
-          "timestamp": 4365.699999999255
-        },
-        {
-          "timestamp": 4378.199999999255
-        },
-        {
-          "timestamp": 4390.5
-        },
-        {
-          "timestamp": 4403.199999999255
-        },
-        {
-          "timestamp": 4415.60000000149
-        },
-        {
-          "timestamp": 4426.60000000149
-        },
-        {
-          "timestamp": 4439.10000000149
-        },
-        {
-          "timestamp": 4451.39999999851
-        },
-        {
-          "timestamp": 4461.800000000745
-        },
-        {
-          "timestamp": 4472.300000000745
-        },
-        {
-          "timestamp": 4482.10000000149
-        },
-        {
-          "timestamp": 4494.10000000149
+          "timestamp": 4488.699999999255
         },
         {
           "timestamp": 4504.300000000745
         },
         {
-          "timestamp": 4514.300000000745
+          "timestamp": 4518.699999999255
         },
         {
-          "timestamp": 4524.89999999851
+          "timestamp": 4533.699999999255
         },
         {
-          "timestamp": 4537.5
+          "timestamp": 4548.800000000745
         },
         {
-          "timestamp": 4549.800000000745
+          "timestamp": 4563.800000000745
         },
         {
-          "timestamp": 4561
+          "timestamp": 4578.699999999255
         },
         {
-          "timestamp": 4573.300000000745
+          "timestamp": 4594
         },
         {
-          "timestamp": 4586.10000000149
+          "timestamp": 4609
         },
         {
-          "timestamp": 4596.699999999255
+          "timestamp": 4624.300000000745
         },
         {
-          "timestamp": 4606.89999999851
+          "timestamp": 4639.300000000745
         },
         {
-          "timestamp": 4618.800000000745
+          "timestamp": 4653.699999999255
         },
         {
-          "timestamp": 4628.300000000745
+          "timestamp": 4669.10000000149
         },
         {
-          "timestamp": 4639.199999999255
+          "timestamp": 4683.800000000745
         },
         {
-          "timestamp": 4649.300000000745
+          "timestamp": 4699.10000000149
         },
         {
-          "timestamp": 4659.800000000745
+          "timestamp": 4713.89999999851
         },
         {
-          "timestamp": 4669.199999999255
+          "timestamp": 4728.800000000745
         },
         {
-          "timestamp": 4680.699999999255
+          "timestamp": 4743.800000000745
         },
         {
-          "timestamp": 4693.10000000149
+          "timestamp": 4758.89999999851
         },
         {
-          "timestamp": 4705.89999999851
+          "timestamp": 4773.800000000745
         },
         {
-          "timestamp": 4715.800000000745
+          "timestamp": 4788.800000000745
         },
         {
-          "timestamp": 4727.300000000745
+          "timestamp": 4804.60000000149
         },
         {
-          "timestamp": 4737
+          "timestamp": 4818.699999999255
         },
         {
-          "timestamp": 4747.89999999851
+          "timestamp": 4833.800000000745
         },
         {
-          "timestamp": 4758.5
+          "timestamp": 4844
         },
         {
-          "timestamp": 4771
+          "timestamp": 4859.199999999255
         },
         {
-          "timestamp": 4781
+          "timestamp": 4869
         },
         {
-          "timestamp": 4793
+          "timestamp": 4882.5
         },
         {
-          "timestamp": 4803.89999999851
+          "timestamp": 4896.800000000745
         },
         {
-          "timestamp": 4814.60000000149
+          "timestamp": 4911.60000000149
         },
         {
-          "timestamp": 4824.89999999851
+          "timestamp": 4926.60000000149
         },
         {
-          "timestamp": 4836.699999999255
+          "timestamp": 4937.89999999851
         },
         {
-          "timestamp": 4847.5
+          "timestamp": 4953
         },
         {
-          "timestamp": 4859.89999999851
+          "timestamp": 4967.800000000745
         },
         {
-          "timestamp": 4872.39999999851
+          "timestamp": 4982.699999999255
         },
         {
-          "timestamp": 4883.89999999851
+          "timestamp": 4993.10000000149
         },
         {
-          "timestamp": 4894.199999999255
+          "timestamp": 5004.60000000149
         },
         {
-          "timestamp": 4904.10000000149
+          "timestamp": 5014.39999999851
         },
         {
-          "timestamp": 4916.39999999851
+          "timestamp": 5026.60000000149
         },
         {
-          "timestamp": 4927.5
+          "timestamp": 5040
         },
         {
-          "timestamp": 4939.39999999851
+          "timestamp": 5050.10000000149
         },
         {
-          "timestamp": 4951.699999999255
+          "timestamp": 5063.300000000745
         },
         {
-          "timestamp": 4964.10000000149
+          "timestamp": 5073.199999999255
         },
         {
-          "timestamp": 4976.60000000149
+          "timestamp": 5086.199999999255
         },
         {
-          "timestamp": 4986.800000000745
+          "timestamp": 5101
         },
         {
-          "timestamp": 4998.5
+          "timestamp": 5116.39999999851
         },
         {
-          "timestamp": 5009.699999999255
+          "timestamp": 5131
         },
         {
-          "timestamp": 5020.699999999255
+          "timestamp": 5146.199999999255
         },
         {
-          "timestamp": 5030.699999999255
+          "timestamp": 5161
         },
         {
-          "timestamp": 5041.39999999851
+          "timestamp": 5176.699999999255
         },
         {
-          "timestamp": 5051.89999999851
+          "timestamp": 5190.39999999851
         },
         {
-          "timestamp": 5062
+          "timestamp": 5204.699999999255
         },
         {
-          "timestamp": 5073.39999999851
+          "timestamp": 5214.800000000745
         },
         {
-          "timestamp": 5085.89999999851
+          "timestamp": 5226.300000000745
         },
         {
-          "timestamp": 5097.800000000745
+          "timestamp": 5236.39999999851
         },
         {
-          "timestamp": 5109.699999999255
+          "timestamp": 5247.10000000149
         },
         {
-          "timestamp": 5120.10000000149
+          "timestamp": 5257.89999999851
         },
         {
-          "timestamp": 5132.39999999851
+          "timestamp": 5271.199999999255
         },
         {
-          "timestamp": 5142.5
+          "timestamp": 5281.39999999851
         },
         {
-          "timestamp": 5155.199999999255
+          "timestamp": 5291.800000000745
         },
         {
-          "timestamp": 5167.5
+          "timestamp": 5302.699999999255
         },
         {
-          "timestamp": 5180
+          "timestamp": 5313.60000000149
         },
         {
-          "timestamp": 5192.5
+          "timestamp": 5324.5
         },
         {
-          "timestamp": 5205
+          "timestamp": 5334.60000000149
         },
         {
-          "timestamp": 5218
+          "timestamp": 5344.5
         },
         {
-          "timestamp": 5230
+          "timestamp": 5355.300000000745
         },
         {
-          "timestamp": 5242.89999999851
+          "timestamp": 5367
         },
         {
-          "timestamp": 5252.89999999851
+          "timestamp": 5377.89999999851
         },
         {
-          "timestamp": 5263.300000000745
+          "timestamp": 5388.10000000149
         },
         {
-          "timestamp": 5273.800000000745
+          "timestamp": 5398.39999999851
         },
         {
-          "timestamp": 5285.199999999255
+          "timestamp": 5410.300000000745
         },
         {
-          "timestamp": 5295.199999999255
+          "timestamp": 5419.699999999255
         },
         {
-          "timestamp": 5307
+          "timestamp": 5435.10000000149
         },
         {
-          "timestamp": 5317.800000000745
+          "timestamp": 5450.10000000149
         },
         {
-          "timestamp": 5330.199999999255
+          "timestamp": 5464.89999999851
         },
         {
-          "timestamp": 5342.699999999255
+          "timestamp": 5474.800000000745
         },
         {
-          "timestamp": 5352.89999999851
+          "timestamp": 5486.800000000745
         },
         {
-          "timestamp": 5363.89999999851
+          "timestamp": 5501.60000000149
         },
         {
-          "timestamp": 5374.5
+          "timestamp": 5516.800000000745
         },
         {
-          "timestamp": 5384.300000000745
+          "timestamp": 5531.60000000149
         },
         {
-          "timestamp": 5395.89999999851
+          "timestamp": 5546.699999999255
         },
         {
-          "timestamp": 5405.800000000745
+          "timestamp": 5562.199999999255
         },
         {
-          "timestamp": 5416.60000000149
+          "timestamp": 5576.699999999255
         },
         {
-          "timestamp": 5427.60000000149
+          "timestamp": 5591.60000000149
         },
         {
-          "timestamp": 5438.199999999255
+          "timestamp": 5606.800000000745
         },
         {
-          "timestamp": 5449.60000000149
+          "timestamp": 5622.300000000745
         },
         {
-          "timestamp": 5460.300000000745
+          "timestamp": 5636.800000000745
         },
         {
-          "timestamp": 5470.300000000745
+          "timestamp": 5651.800000000745
         },
         {
-          "timestamp": 5482.800000000745
+          "timestamp": 5667
         },
         {
-          "timestamp": 5493.60000000149
+          "timestamp": 5677
         },
         {
-          "timestamp": 5503.699999999255
+          "timestamp": 5688.39999999851
         },
         {
-          "timestamp": 5514.10000000149
+          "timestamp": 5698.300000000745
         },
         {
-          "timestamp": 5524.60000000149
+          "timestamp": 5708.800000000745
         },
         {
-          "timestamp": 5535.300000000745
+          "timestamp": 5718.89999999851
         },
         {
-          "timestamp": 5548.10000000149
+          "timestamp": 5733.699999999255
         },
         {
-          "timestamp": 5559.5
+          "timestamp": 5748.60000000149
         },
         {
-          "timestamp": 5569.60000000149
+          "timestamp": 5761.10000000149
         },
         {
-          "timestamp": 5579.800000000745
+          "timestamp": 5776.39999999851
         },
         {
-          "timestamp": 5590.10000000149
+          "timestamp": 5788.199999999255
         },
         {
-          "timestamp": 5600.300000000745
+          "timestamp": 5803.300000000745
         },
         {
-          "timestamp": 5610.60000000149
+          "timestamp": 5813.199999999255
         },
         {
-          "timestamp": 5620.60000000149
+          "timestamp": 5828.699999999255
         },
         {
-          "timestamp": 5631.60000000149
+          "timestamp": 5840.199999999255
         },
         {
-          "timestamp": 5643.5
+          "timestamp": 5851.10000000149
         },
         {
-          "timestamp": 5654.10000000149
+          "timestamp": 5865.89999999851
         },
         {
-          "timestamp": 5664.300000000745
+          "timestamp": 5881.5
         },
         {
-          "timestamp": 5675.699999999255
+          "timestamp": 5895.89999999851
         },
         {
-          "timestamp": 5688.300000000745
+          "timestamp": 5910.89999999851
         },
         {
-          "timestamp": 5700.699999999255
+          "timestamp": 5926.300000000745
         },
         {
-          "timestamp": 5713.699999999255
+          "timestamp": 5940.199999999255
         },
         {
-          "timestamp": 5723.300000000745
+          "timestamp": 5954.699999999255
         },
         {
-          "timestamp": 5736
+          "timestamp": 5968.5
         },
         {
-          "timestamp": 5748.699999999255
+          "timestamp": 5983.39999999851
         },
         {
-          "timestamp": 5760
+          "timestamp": 5997.89999999851
         },
         {
-          "timestamp": 5772.5
+          "timestamp": 6013
         },
         {
-          "timestamp": 5784.699999999255
+          "timestamp": 6028.39999999851
         },
         {
-          "timestamp": 5797.300000000745
+          "timestamp": 6043.199999999255
         },
         {
-          "timestamp": 5809.300000000745
+          "timestamp": 6058.10000000149
         },
         {
-          "timestamp": 5819.300000000745
+          "timestamp": 6071.60000000149
         },
         {
-          "timestamp": 5830.60000000149
+          "timestamp": 6081.199999999255
         },
         {
-          "timestamp": 5843.300000000745
+          "timestamp": 6092.5
         },
         {
-          "timestamp": 5853.699999999255
+          "timestamp": 6104.699999999255
         },
         {
-          "timestamp": 5864.10000000149
+          "timestamp": 6115.39999999851
         },
         {
-          "timestamp": 5876.39999999851
+          "timestamp": 6125.699999999255
         },
         {
-          "timestamp": 5889.10000000149
+          "timestamp": 6136
         },
         {
-          "timestamp": 5899.199999999255
+          "timestamp": 6150.699999999255
         },
         {
-          "timestamp": 5909.89999999851
+          "timestamp": 6163.300000000745
         },
         {
-          "timestamp": 5920.39999999851
+          "timestamp": 6173.5
         },
         {
-          "timestamp": 5930.699999999255
+          "timestamp": 6186.699999999255
         },
         {
-          "timestamp": 5940.39999999851
+          "timestamp": 6201.5
         },
         {
-          "timestamp": 5953.10000000149
+          "timestamp": 6216.5
         },
         {
-          "timestamp": 5965.60000000149
+          "timestamp": 6231.5
         },
         {
-          "timestamp": 5977.89999999851
+          "timestamp": 6247.10000000149
         },
         {
-          "timestamp": 5990.800000000745
+          "timestamp": 6261.60000000149
         },
         {
-          "timestamp": 6003.199999999255
+          "timestamp": 6276.5
         },
         {
-          "timestamp": 6015.39999999851
+          "timestamp": 6291.39999999851
         },
         {
-          "timestamp": 6028.300000000745
+          "timestamp": 6306.699999999255
         },
         {
-          "timestamp": 6040.60000000149
+          "timestamp": 6321.699999999255
         },
         {
-          "timestamp": 6053.5
+          "timestamp": 6336.5
         },
         {
-          "timestamp": 6065.699999999255
+          "timestamp": 6348.199999999255
         },
         {
-          "timestamp": 6075.89999999851
+          "timestamp": 6358.60000000149
         },
         {
-          "timestamp": 6088.60000000149
+          "timestamp": 6369.699999999255
         },
         {
-          "timestamp": 6101.10000000149
+          "timestamp": 6380.10000000149
         },
         {
-          "timestamp": 6112.60000000149
+          "timestamp": 6394.89999999851
         },
         {
-          "timestamp": 6122.60000000149
+          "timestamp": 6410.5
         },
         {
-          "timestamp": 6133.39999999851
+          "timestamp": 6420.5
         },
         {
-          "timestamp": 6144.39999999851
+          "timestamp": 6430.60000000149
         },
         {
-          "timestamp": 6155.5
+          "timestamp": 6441.800000000745
         },
         {
-          "timestamp": 6164.89999999851
+          "timestamp": 6456.699999999255
         },
         {
-          "timestamp": 6176.300000000745
+          "timestamp": 6471.800000000745
         },
         {
-          "timestamp": 6189.199999999255
+          "timestamp": 6486.300000000745
         },
         {
-          "timestamp": 6201.60000000149
+          "timestamp": 6501.10000000149
         },
         {
-          "timestamp": 6214.39999999851
+          "timestamp": 6516.300000000745
         },
         {
-          "timestamp": 6226.699999999255
+          "timestamp": 6531.199999999255
         },
         {
-          "timestamp": 6239.10000000149
+          "timestamp": 6546.199999999255
         },
         {
-          "timestamp": 6250.60000000149
+          "timestamp": 6561.60000000149
         },
         {
-          "timestamp": 6261.699999999255
+          "timestamp": 6576.60000000149
         },
         {
-          "timestamp": 6272.39999999851
+          "timestamp": 6591.300000000745
         },
         {
-          "timestamp": 6283.800000000745
+          "timestamp": 6606.199999999255
         },
         {
-          "timestamp": 6296.39999999851
+          "timestamp": 6621.199999999255
         },
         {
-          "timestamp": 6309
+          "timestamp": 6636.10000000149
         },
         {
-          "timestamp": 6321.800000000745
+          "timestamp": 6651.10000000149
         },
         {
-          "timestamp": 6333.89999999851
+          "timestamp": 6666.199999999255
         },
         {
-          "timestamp": 6345.60000000149
+          "timestamp": 6681.199999999255
         },
         {
-          "timestamp": 6356.39999999851
+          "timestamp": 6696.39999999851
         },
         {
-          "timestamp": 6366.60000000149
+          "timestamp": 6711.699999999255
         },
         {
-          "timestamp": 6377.10000000149
+          "timestamp": 6726.699999999255
         },
         {
-          "timestamp": 6386.89999999851
+          "timestamp": 6737.10000000149
         },
         {
-          "timestamp": 6396.89999999851
+          "timestamp": 6747.10000000149
         },
         {
-          "timestamp": 6407.199999999255
+          "timestamp": 6758.300000000745
         },
         {
-          "timestamp": 6418.60000000149
+          "timestamp": 6769.89999999851
         },
         {
-          "timestamp": 6428.60000000149
+          "timestamp": 6784.89999999851
         },
         {
-          "timestamp": 6440.199999999255
+          "timestamp": 6800.199999999255
         },
         {
-          "timestamp": 6451.39999999851
+          "timestamp": 6815.10000000149
         },
         {
-          "timestamp": 6461.5
+          "timestamp": 6825.89999999851
         },
         {
-          "timestamp": 6473.60000000149
+          "timestamp": 6836.10000000149
         },
         {
-          "timestamp": 6486.199999999255
+          "timestamp": 6851.5
         },
         {
-          "timestamp": 6498.699999999255
+          "timestamp": 6866.300000000745
         },
         {
-          "timestamp": 6511.5
+          "timestamp": 6881.39999999851
         },
         {
-          "timestamp": 6524
+          "timestamp": 6896.199999999255
         },
         {
-          "timestamp": 6536.10000000149
+          "timestamp": 6911.199999999255
         },
         {
-          "timestamp": 6548.800000000745
+          "timestamp": 6926
         },
         {
-          "timestamp": 6561.300000000745
+          "timestamp": 6941.800000000745
         },
         {
-          "timestamp": 6573.60000000149
+          "timestamp": 6953.800000000745
         },
         {
-          "timestamp": 6586.10000000149
+          "timestamp": 6966.5
         },
         {
-          "timestamp": 6599.10000000149
+          "timestamp": 6978.89999999851
         },
         {
-          "timestamp": 6610.10000000149
+          "timestamp": 6989.89999999851
         },
         {
-          "timestamp": 6620.300000000745
+          "timestamp": 7004.300000000745
         },
         {
-          "timestamp": 6632.89999999851
+          "timestamp": 7019
         },
         {
-          "timestamp": 6645.10000000149
+          "timestamp": 7034.39999999851
         },
         {
-          "timestamp": 6657.39999999851
+          "timestamp": 7049.5
         },
         {
-          "timestamp": 6670.199999999255
+          "timestamp": 7064
         },
         {
-          "timestamp": 6682.89999999851
+          "timestamp": 7079
         },
         {
-          "timestamp": 6692.5
+          "timestamp": 7094.5
         },
         {
-          "timestamp": 6705
+          "timestamp": 7104.39999999851
         },
         {
-          "timestamp": 6717.89999999851
+          "timestamp": 7119.300000000745
         },
         {
-          "timestamp": 6730
+          "timestamp": 7130.60000000149
         },
         {
-          "timestamp": 6742.5
+          "timestamp": 7140.5
         },
         {
-          "timestamp": 6752.699999999255
+          "timestamp": 7154.300000000745
         },
         {
-          "timestamp": 6765.10000000149
+          "timestamp": 7164.5
         },
         {
-          "timestamp": 6776.5
+          "timestamp": 7174.699999999255
         },
         {
-          "timestamp": 6787
+          "timestamp": 7187.5
         },
         {
-          "timestamp": 6799.10000000149
+          "timestamp": 7202.5
         },
         {
-          "timestamp": 6809.39999999851
+          "timestamp": 7217.800000000745
         },
         {
-          "timestamp": 6819.699999999255
+          "timestamp": 7232.60000000149
         },
         {
-          "timestamp": 6830
+          "timestamp": 7247.5
         },
         {
-          "timestamp": 6842.199999999255
+          "timestamp": 7262.800000000745
         },
         {
-          "timestamp": 6855.10000000149
+          "timestamp": 7277.60000000149
         },
         {
-          "timestamp": 6867.300000000745
+          "timestamp": 7292.89999999851
         },
         {
-          "timestamp": 6879.89999999851
+          "timestamp": 7307.89999999851
         },
         {
-          "timestamp": 6892.39999999851
+          "timestamp": 7322.5
         },
         {
-          "timestamp": 6905.300000000745
+          "timestamp": 7333.300000000745
         },
         {
-          "timestamp": 6917.39999999851
+          "timestamp": 7343.300000000745
         },
         {
-          "timestamp": 6928
-        },
-        {
-          "timestamp": 6940.39999999851
-        },
-        {
-          "timestamp": 6953
-        },
-        {
-          "timestamp": 6965.5
-        },
-        {
-          "timestamp": 6978
-        },
-        {
-          "timestamp": 6990.60000000149
-        },
-        {
-          "timestamp": 7002.800000000745
-        },
-        {
-          "timestamp": 7015.5
-        },
-        {
-          "timestamp": 7028
-        },
-        {
-          "timestamp": 7040.39999999851
-        },
-        {
-          "timestamp": 7053.199999999255
-        },
-        {
-          "timestamp": 7065.5
-        },
-        {
-          "timestamp": 7077.800000000745
-        },
-        {
-          "timestamp": 7090.300000000745
-        },
-        {
-          "timestamp": 7103.199999999255
-        },
-        {
-          "timestamp": 7115.60000000149
-        },
-        {
-          "timestamp": 7128.39999999851
-        },
-        {
-          "timestamp": 7140.699999999255
-        },
-        {
-          "timestamp": 7153.199999999255
-        },
-        {
-          "timestamp": 7165.300000000745
-        },
-        {
-          "timestamp": 7178
-        },
-        {
-          "timestamp": 7190.39999999851
-        },
-        {
-          "timestamp": 7202.89999999851
-        },
-        {
-          "timestamp": 7215.39999999851
-        },
-        {
-          "timestamp": 7228
-        },
-        {
-          "timestamp": 7240.60000000149
-        },
-        {
-          "timestamp": 7253.10000000149
-        },
-        {
-          "timestamp": 7265.699999999255
-        },
-        {
-          "timestamp": 7278.199999999255
-        },
-        {
-          "timestamp": 7290.39999999851
-        },
-        {
-          "timestamp": 7303.199999999255
-        },
-        {
-          "timestamp": 7315.699999999255
-        },
-        {
-          "timestamp": 7327.89999999851
-        },
-        {
-          "timestamp": 7340.5
-        },
-        {
-          "timestamp": 7351.89999999851
-        },
-        {
-          "timestamp": 7362.199999999255
+          "timestamp": 7357.800000000745
         },
         {
           "timestamp": 7372.800000000745
         },
         {
-          "timestamp": 7385.60000000149
+          "timestamp": 7388.5
         },
         {
-          "timestamp": 7398.199999999255
+          "timestamp": 7403
         },
         {
-          "timestamp": 7410.60000000149
+          "timestamp": 7417.800000000745
         },
         {
-          "timestamp": 7422.89999999851
+          "timestamp": 7432.89999999851
         },
         {
-          "timestamp": 7435.89999999851
-        },
-        {
-          "stackId": 73,
+          "stackId": 49,
           "timestamp": 7447.800000000745
         },
         {
-          "stackId": 46,
-          "timestamp": 7458.60000000149
+          "stackId": 49,
+          "timestamp": 7463.10000000149
         },
         {
-          "stackId": 46,
-          "timestamp": 7471
+          "stackId": 51,
+          "timestamp": 7477.60000000149
         },
         {
-          "stackId": 48,
-          "timestamp": 7481.199999999255
+          "stackId": 51,
+          "timestamp": 7490
         },
         {
-          "stackId": 48,
-          "timestamp": 7493.39999999851
+          "stackId": 53,
+          "timestamp": 7504.39999999851
         },
         {
-          "stackId": 50,
-          "timestamp": 7506.199999999255
+          "stackId": 55,
+          "timestamp": 7519.699999999255
         },
         {
-          "stackId": 50,
-          "timestamp": 7518.39999999851
+          "stackId": 55,
+          "timestamp": 7534.39999999851
         },
         {
-          "stackId": 52,
-          "timestamp": 7531
+          "stackId": 57,
+          "timestamp": 7549.39999999851
         },
         {
-          "stackId": 52,
-          "timestamp": 7543.699999999255
+          "stackId": 57,
+          "timestamp": 7564.300000000745
         },
         {
-          "stackId": 54,
-          "timestamp": 7556.10000000149
+          "stackId": 59,
+          "timestamp": 7574.5
         },
         {
-          "stackId": 54,
-          "timestamp": 7568.5
+          "stackId": 59,
+          "timestamp": 7584.699999999255
         },
         {
-          "stackId": 75,
-          "timestamp": 7581.199999999255
+          "timestamp": 7595.800000000745
         },
         {
-          "stackId": 75,
-          "timestamp": 7593
+          "timestamp": 7605.60000000149
         },
         {
-          "timestamp": 7603.699999999255
+          "timestamp": 7616.39999999851
         },
         {
-          "timestamp": 7614.300000000745
+          "timestamp": 7626.39999999851
         },
         {
-          "timestamp": 7624.39999999851
+          "timestamp": 7637.5
         },
         {
-          "timestamp": 7634.699999999255
+          "timestamp": 7647.5
         },
         {
-          "timestamp": 7646.89999999851
+          "timestamp": 7657.800000000745
         },
         {
-          "timestamp": 7659.60000000149
+          "timestamp": 7669.60000000149
         },
         {
-          "timestamp": 7670.89999999851
+          "timestamp": 7684.10000000149
         },
         {
-          "timestamp": 7680.39999999851
+          "timestamp": 7694.699999999255
         },
         {
-          "timestamp": 7692.300000000745
+          "timestamp": 7709.60000000149
         },
         {
-          "timestamp": 7705.10000000149
+          "timestamp": 7721.300000000745
         },
         {
-          "timestamp": 7717.89999999851
+          "timestamp": 7735.699999999255
         },
         {
-          "timestamp": 7730
+          "timestamp": 7746.199999999255
         },
         {
-          "timestamp": 7742.5
+          "timestamp": 7756.89999999851
         },
         {
-          "timestamp": 7754.800000000745
+          "timestamp": 7767.800000000745
         },
         {
-          "timestamp": 7767.300000000745
+          "timestamp": 7778.60000000149
         },
         {
-          "timestamp": 7780
+          "timestamp": 7789.699999999255
         },
         {
-          "timestamp": 7790.39999999851
+          "timestamp": 7802.699999999255
         },
         {
-          "timestamp": 7801
+          "timestamp": 7817.39999999851
         },
         {
-          "timestamp": 7813.199999999255
+          "timestamp": 7832.199999999255
         },
         {
-          "timestamp": 7823.5
+          "timestamp": 7848
         },
         {
-          "timestamp": 7835
+          "timestamp": 7862.300000000745
         },
         {
-          "timestamp": 7845.300000000745
+          "timestamp": 7878
         },
         {
-          "timestamp": 7855.699999999255
+          "timestamp": 7889.800000000745
         },
         {
-          "timestamp": 7866.199999999255
+          "timestamp": 7904.5
         },
         {
-          "timestamp": 7877
+          "timestamp": 7919.199999999255
         },
         {
-          "timestamp": 7887.199999999255
+          "timestamp": 7929.800000000745
         },
         {
-          "timestamp": 7899.10000000149
+          "timestamp": 7941.5
         },
         {
-          "timestamp": 7909.199999999255
+          "timestamp": 7956.300000000745
         },
         {
-          "timestamp": 7920.39999999851
+          "timestamp": 7971.39999999851
         },
         {
-          "timestamp": 7930.60000000149
+          "timestamp": 7986.300000000745
         },
         {
-          "timestamp": 7940.89999999851
+          "timestamp": 8001.300000000745
         },
         {
-          "timestamp": 7953.10000000149
+          "timestamp": 8016.5
         },
         {
-          "timestamp": 7965.39999999851
+          "timestamp": 8031.300000000745
         },
         {
-          "timestamp": 7975.800000000745
+          "timestamp": 8046.300000000745
         },
         {
-          "timestamp": 7986.60000000149
+          "timestamp": 8061.60000000149
         },
         {
-          "timestamp": 7996.699999999255
+          "timestamp": 8076.199999999255
         },
         {
-          "timestamp": 8006.199999999255
+          "timestamp": 8091.199999999255
         },
         {
-          "timestamp": 8016.199999999255
+          "timestamp": 8106.39999999851
         },
         {
-          "timestamp": 8026.800000000745
+          "timestamp": 8121.300000000745
         },
         {
-          "timestamp": 8038.89999999851
+          "timestamp": 8136.60000000149
         },
         {
-          "timestamp": 8051.89999999851
+          "timestamp": 8151.300000000745
         },
         {
-          "timestamp": 8064.60000000149
+          "timestamp": 8167
         },
         {
-          "timestamp": 8076.5
+          "timestamp": 8181.39999999851
         },
         {
-          "timestamp": 8089.10000000149
+          "timestamp": 8197.199999999255
         },
         {
-          "timestamp": 8100.60000000149
+          "timestamp": 8207.5
         },
         {
-          "timestamp": 8111.800000000745
+          "timestamp": 8217.699999999255
         },
         {
-          "timestamp": 8121.39999999851
+          "timestamp": 8230.5
         },
         {
-          "timestamp": 8131.89999999851
+          "timestamp": 8241.300000000745
         },
         {
-          "timestamp": 8142.10000000149
+          "timestamp": 8251.60000000149
         },
         {
-          "timestamp": 8153.199999999255
+          "timestamp": 8266.5
         },
         {
-          "timestamp": 8165.39999999851
+          "stackId": 49,
+          "timestamp": 8281.699999999255
         },
         {
-          "timestamp": 8178.39999999851
+          "stackId": 49,
+          "timestamp": 8292.10000000149
         },
         {
-          "timestamp": 8190.60000000149
+          "stackId": 51,
+          "timestamp": 8302.699999999255
         },
         {
-          "timestamp": 8203.39999999851
+          "stackId": 51,
+          "timestamp": 8314.300000000745
         },
         {
-          "timestamp": 8215.39999999851
+          "stackId": 51,
+          "timestamp": 8324.199999999255
         },
         {
-          "timestamp": 8227.89999999851
+          "stackId": 53,
+          "timestamp": 8337.10000000149
         },
         {
-          "timestamp": 8240.89999999851
+          "stackId": 55,
+          "timestamp": 8351.5
         },
         {
-          "timestamp": 8250.699999999255
+          "stackId": 55,
+          "timestamp": 8367
         },
         {
-          "timestamp": 8263
+          "stackId": 57,
+          "timestamp": 8381.60000000149
         },
         {
-          "timestamp": 8275.800000000745
+          "stackId": 57,
+          "timestamp": 8396.5
         },
         {
-          "stackId": 46,
-          "timestamp": 8288
+          "stackId": 59,
+          "timestamp": 8406.800000000745
         },
         {
-          "stackId": 46,
-          "timestamp": 8300.699999999255
+          "stackId": 59,
+          "timestamp": 8416.60000000149
         },
         {
-          "stackId": 48,
-          "timestamp": 8313.10000000149
+          "stackId": 80,
+          "timestamp": 8427
         },
         {
-          "stackId": 48,
-          "timestamp": 8326
+          "timestamp": 8441.89999999851
         },
         {
-          "stackId": 50,
-          "timestamp": 8338.300000000745
+          "timestamp": 8451.89999999851
         },
         {
-          "stackId": 50,
-          "timestamp": 8350.800000000745
+          "timestamp": 8463.199999999255
         },
         {
-          "stackId": 52,
-          "timestamp": 8363.10000000149
+          "timestamp": 8474.199999999255
         },
         {
-          "stackId": 52,
-          "timestamp": 8376.10000000149
+          "timestamp": 8484.60000000149
         },
         {
-          "stackId": 54,
-          "timestamp": 8388.60000000149
+          "timestamp": 8495.89999999851
         },
         {
-          "stackId": 54,
-          "timestamp": 8400.89999999851
+          "timestamp": 8506.10000000149
         },
         {
-          "stackId": 75,
-          "timestamp": 8413.800000000745
+          "timestamp": 8516.60000000149
         },
         {
-          "stackId": 75,
-          "timestamp": 8425.89999999851
+          "timestamp": 8530
         },
         {
-          "timestamp": 8438.300000000745
+          "timestamp": 8545
         },
         {
-          "timestamp": 8450.60000000149
+          "timestamp": 8560.199999999255
         },
         {
-          "timestamp": 8463.10000000149
+          "timestamp": 8575.10000000149
         },
         {
-          "timestamp": 8476.199999999255
+          "timestamp": 8590.10000000149
         },
         {
-          "timestamp": 8488.699999999255
+          "timestamp": 8605.10000000149
         },
         {
-          "timestamp": 8500.699999999255
+          "timestamp": 8620
         },
         {
-          "timestamp": 8513.699999999255
+          "timestamp": 8635.5
         },
         {
-          "timestamp": 8526.10000000149
+          "timestamp": 8650
         },
         {
-          "timestamp": 8536.300000000745
+          "timestamp": 8665.10000000149
         },
         {
-          "timestamp": 8546.300000000745
+          "timestamp": 8680.39999999851
         },
         {
-          "timestamp": 8558.60000000149
+          "timestamp": 8695.10000000149
         },
         {
-          "timestamp": 8571.39999999851
+          "timestamp": 8710.199999999255
         },
         {
-          "timestamp": 8583.60000000149
+          "timestamp": 8725.300000000745
         },
         {
-          "timestamp": 8596.39999999851
+          "timestamp": 8740.10000000149
         },
         {
-          "timestamp": 8608.60000000149
+          "timestamp": 8755.89999999851
         },
         {
-          "timestamp": 8621.60000000149
+          "timestamp": 8768.699999999255
         },
         {
-          "timestamp": 8633.60000000149
+          "timestamp": 8779.199999999255
         },
         {
-          "timestamp": 8646.300000000745
+          "timestamp": 8793.699999999255
         },
         {
-          "timestamp": 8658.699999999255
+          "timestamp": 8808.800000000745
         },
         {
-          "timestamp": 8671.10000000149
+          "timestamp": 8823.60000000149
         },
         {
-          "timestamp": 8683.699999999255
+          "timestamp": 8839.300000000745
         },
         {
-          "timestamp": 8696.10000000149
+          "timestamp": 8854.10000000149
         },
         {
-          "timestamp": 8709
+          "timestamp": 8868.800000000745
         },
         {
-          "timestamp": 8721.39999999851
+          "timestamp": 8883.60000000149
         },
         {
-          "timestamp": 8733.60000000149
+          "timestamp": 8899.10000000149
         },
         {
-          "timestamp": 8746.199999999255
+          "timestamp": 8913.60000000149
         },
         {
-          "timestamp": 8758.800000000745
+          "timestamp": 8928.60000000149
         },
         {
-          "timestamp": 8771.199999999255
+          "timestamp": 8943.60000000149
         },
         {
-          "timestamp": 8783.699999999255
+          "timestamp": 8958.800000000745
         },
         {
-          "timestamp": 8796.800000000745
+          "timestamp": 8974
         },
         {
-          "timestamp": 8809
+          "timestamp": 8988.60000000149
         },
         {
-          "timestamp": 8819.199999999255
+          "timestamp": 9003.800000000745
         },
         {
-          "timestamp": 8829.39999999851
+          "timestamp": 9018.89999999851
         },
         {
-          "timestamp": 8839.5
+          "timestamp": 9034.10000000149
         },
         {
-          "timestamp": 8852
+          "timestamp": 9048.699999999255
         },
         {
-          "timestamp": 8864.199999999255
+          "timestamp": 9063.699999999255
         },
         {
-          "timestamp": 8877.199999999255
-        },
-        {
-          "timestamp": 8889.199999999255
-        },
-        {
-          "timestamp": 8901.699999999255
-        },
-        {
-          "timestamp": 8914.89999999851
-        },
-        {
-          "timestamp": 8927
-        },
-        {
-          "timestamp": 8938.89999999851
-        },
-        {
-          "timestamp": 8951.5
-        },
-        {
-          "timestamp": 8964.10000000149
-        },
-        {
-          "timestamp": 8976.39999999851
-        },
-        {
-          "timestamp": 8987.5
-        },
-        {
-          "timestamp": 8997.39999999851
-        },
-        {
-          "timestamp": 9008.10000000149
-        },
-        {
-          "timestamp": 9019.5
-        },
-        {
-          "timestamp": 9028.89999999851
-        },
-        {
-          "timestamp": 9039.5
-        },
-        {
-          "timestamp": 9050.300000000745
-        },
-        {
-          "timestamp": 9060.199999999255
-        },
-        {
-          "timestamp": 9071.39999999851
+          "timestamp": 9073.89999999851
         }
       ],
       "stacks": [
-        {
-          "frameId": 0
-        },
         {
           "frameId": 2
         },
         {
           "frameId": 1,
+          "parentId": 0
+        },
+        {
+          "frameId": 0,
           "parentId": 1
         },
         {
-          "frameId": 5
-        },
-        {
-          "frameId": 4,
-          "parentId": 3
-        },
-        {
-          "frameId": 3,
-          "parentId": 4
-        },
-        {
-          "frameId": 16,
-          "parentId": 4
-        },
-        {
-          "frameId": 15,
-          "parentId": 6
+          "frameId": 15
         },
         {
           "frameId": 14,
-          "parentId": 7
+          "parentId": 3
         },
         {
           "frameId": 13,
-          "parentId": 8
+          "parentId": 4
         },
         {
           "frameId": 12,
-          "parentId": 9
+          "parentId": 5
         },
         {
           "frameId": 11,
-          "parentId": 10
+          "parentId": 6
         },
         {
           "frameId": 10,
-          "parentId": 11
+          "parentId": 7
         },
         {
           "frameId": 9,
-          "parentId": 12
+          "parentId": 8
         },
         {
           "frameId": 8,
-          "parentId": 13
+          "parentId": 9
         },
         {
           "frameId": 7,
-          "parentId": 14
+          "parentId": 10
         },
         {
           "frameId": 6,
-          "parentId": 15
+          "parentId": 11
+        },
+        {
+          "frameId": 5,
+          "parentId": 12
+        },
+        {
+          "frameId": 4,
+          "parentId": 13
+        },
+        {
+          "frameId": 3,
+          "parentId": 14
         },
         {
           "frameId": 17,
-          "parentId": 14
+          "parentId": 8
         },
         {
-          "frameId": 6,
+          "frameId": 9,
+          "parentId": 16
+        },
+        {
+          "frameId": 16,
           "parentId": 17
         },
         {
           "frameId": 18,
-          "parentId": 14
+          "parentId": 13
         },
         {
-          "frameId": 6,
+          "frameId": 3,
           "parentId": 19
         },
         {
           "frameId": 19,
-          "parentId": 14
-        },
-        {
-          "frameId": 6,
-          "parentId": 21
+          "parentId": 19
         },
         {
           "frameId": 20,
-          "parentId": 14
+          "parentId": 13
         },
         {
-          "frameId": 6,
-          "parentId": 23
-        },
-        {
-          "frameId": 22,
-          "parentId": 3
+          "frameId": 3,
+          "parentId": 22
         },
         {
           "frameId": 21,
-          "parentId": 25
+          "parentId": 13
         },
         {
-          "frameId": 27
+          "frameId": 3,
+          "parentId": 24
         },
         {
-          "frameId": 26,
-          "parentId": 27
+          "frameId": 22,
+          "parentId": 13
+        },
+        {
+          "frameId": 3,
+          "parentId": 26
         },
         {
           "frameId": 25,
-          "parentId": 28
+          "parentId": 5
         },
         {
           "frameId": 24,
-          "parentId": 29
+          "parentId": 28
         },
         {
           "frameId": 23,
-          "parentId": 30
+          "parentId": 29
         },
         {
           "frameId": 31
         },
         {
           "frameId": 30,
-          "parentId": 32
+          "parentId": 31
         },
         {
           "frameId": 29,
-          "parentId": 33
+          "parentId": 32
         },
         {
           "frameId": 28,
+          "parentId": 33
+        },
+        {
+          "frameId": 27,
           "parentId": 34
         },
         {
-          "frameId": 16,
+          "frameId": 26,
           "parentId": 35
         },
         {
-          "frameId": 15,
-          "parentId": 36
+          "frameId": 33,
+          "parentId": 1
         },
         {
-          "frameId": 14,
+          "frameId": 32,
           "parentId": 37
         },
         {
@@ -2864,135 +2557,149 @@
           "parentId": 45
         },
         {
-          "frameId": 17,
-          "parentId": 44
+          "frameId": 5,
+          "parentId": 46
         },
         {
-          "frameId": 6,
+          "frameId": 4,
           "parentId": 47
         },
         {
+          "frameId": 3,
+          "parentId": 48
+        },
+        {
           "frameId": 18,
-          "parentId": 44
+          "parentId": 47
         },
         {
-          "frameId": 6,
-          "parentId": 49
-        },
-        {
-          "frameId": 19,
-          "parentId": 44
-        },
-        {
-          "frameId": 6,
-          "parentId": 51
+          "frameId": 3,
+          "parentId": 50
         },
         {
           "frameId": 20,
-          "parentId": 44
+          "parentId": 47
         },
         {
-          "frameId": 6,
-          "parentId": 53
+          "frameId": 3,
+          "parentId": 52
         },
         {
-          "frameId": 39,
-          "parentId": 36
+          "frameId": 21,
+          "parentId": 47
         },
         {
-          "frameId": 38,
-          "parentId": 55
+          "frameId": 3,
+          "parentId": 54
         },
         {
-          "frameId": 37,
+          "frameId": 22,
+          "parentId": 47
+        },
+        {
+          "frameId": 3,
           "parentId": 56
         },
         {
-          "frameId": 36,
-          "parentId": 57
+          "frameId": 34,
+          "parentId": 47
         },
         {
           "frameId": 3,
           "parentId": 58
         },
         {
-          "frameId": 21,
-          "parentId": 59
+          "frameId": 25,
+          "parentId": 39
         },
         {
-          "frameId": 34,
+          "frameId": 24,
           "parentId": 60
         },
         {
-          "frameId": 35,
+          "frameId": 23,
           "parentId": 61
         },
         {
-          "frameId": 34,
+          "frameId": 42,
           "parentId": 62
         },
         {
-          "frameId": 35,
+          "frameId": 40,
           "parentId": 63
         },
         {
-          "frameId": 34,
+          "frameId": 41,
           "parentId": 64
         },
         {
-          "frameId": 35,
+          "frameId": 40,
           "parentId": 65
         },
         {
-          "frameId": 34,
+          "frameId": 41,
           "parentId": 66
         },
         {
-          "frameId": 35,
+          "frameId": 40,
           "parentId": 67
         },
         {
-          "frameId": 34,
+          "frameId": 41,
           "parentId": 68
         },
         {
-          "frameId": 33,
+          "frameId": 40,
           "parentId": 69
         },
         {
-          "frameId": 32,
+          "frameId": 41,
           "parentId": 70
         },
         {
-          "frameId": 41,
-          "parentId": 41
+          "frameId": 40,
+          "parentId": 71
         },
         {
-          "frameId": 40,
+          "frameId": 41,
           "parentId": 72
         },
         {
-          "frameId": 42,
-          "parentId": 44
+          "frameId": 40,
+          "parentId": 73
         },
         {
-          "frameId": 6,
+          "frameId": 39,
           "parentId": 74
+        },
+        {
+          "frameId": 9,
+          "parentId": 75
+        },
+        {
+          "frameId": 38,
+          "parentId": 76
+        },
+        {
+          "frameId": 37,
+          "parentId": 77
+        },
+        {
+          "frameId": 36,
+          "parentId": 78
+        },
+        {
+          "frameId": 35,
+          "parentId": 79
         }
       ]
     },
     "requestedSampleInterval": 5,
     "effectiveSampleInterval": 10,
-    "startedAt": 27,
-    "stoppedAt": 9081.89999999851
+    "startedAt": 25.899999998509884,
+    "stoppedAt": 9078.89999999851
   },
   "resourceSources": {
-    "http://localhost:5186/": {
-      "length": 990,
-      "sourceMap": null,
-      "sourceMapFrom": null,
-      "error": null
-    },
     "http://localhost:5186/node_modules/.vite/deps/react-dom_client.js?v=48c9835c": {
       "length": 3132613,
       "sourceMap": {
@@ -3023,22 +2730,6 @@
           1,
           2,
           3
-        ]
-      },
-      "sourceMapFrom": "inline",
-      "error": null
-    },
-    "http://localhost:5186/src/main.tsx": {
-      "length": 3386,
-      "sourceMap": {
-        "mappings": "AAAA,SAAS,kBAAkB;AAE3B,SAAS,WAAW;;;;;;;;;;;;;;;;;;AAkBpB,MAAM,YAAY,SAAS,cAAc,OAAO;AAChD,IAAI,CAAC,WAAW,MAAM,IAAI,MAAM,6BAA6B;AAE7D,WAAW,SAAS,CAAC,CAAC,OAAO,wBAAC,KAAD,CAAM;;;;QAAC",
-        "names": [],
-        "sources": [
-          "main.tsx"
-        ],
-        "version": 3,
-        "sourcesContent": [
-          "import { createRoot } from 'react-dom/client';\n\nimport { App } from './App.tsx';\n\n/*\n * The fixture's entry point: mounts App and nothing else.\n *\n * It deliberately installs no instrumentation. Whatever observes this app —\n * the LoAF observer, the profiler, the DevTools hook shim — is injected from\n * outside the page, because an in-page observer would be script running inside\n * the very frames the fixture exists to produce.\n *\n * Deliberately no `StrictMode`. In development it invokes render bodies twice,\n * so each component would burn ~50ms and the initial mount would cost double\n * the 140ms the ground truth declares — figures that then describe no real\n * app. The span-gate verdicts themselves would survive the change, since a\n * double invocation does not alter `memoizedProps` identity across commits,\n * but the fixture has to be the app its own measurements describe.\n */\n\nconst container = document.querySelector('#root');\nif (!container) throw new Error('index.html is missing #root');\n\ncreateRoot(container).render(<App />);\n"
         ]
       },
       "sourceMapFrom": "inline",
@@ -3087,6 +2778,33 @@
         "version": 3,
         "sourcesContent": [
           "import { useContext, useState } from 'react';\n\nimport { BumpCountContext } from './bumpCountContext.ts';\nimport { BURN_MS, burn } from './burn.ts';\n\n/**\n * The five re-render causes, side by side.\n *\n * Every component in this file burns `BURN_MS` in its render body and does\n * nothing else. They are identical in cost and differ only in why React\n * re-rendered them: changed props, a changed context, their own `setState`,\n * a first mount, or a fresh-but-deep-equal props object. Keeping them in one\n * file is the point — the exhibit is the comparison, and a reader has to be\n * able to see all five conditions at once.\n *\n * What this module deliberately does not do: nothing here is memoised, keyed,\n * split, or otherwise optimised. `DeepEqualProps` is handed a brand new object\n * literal on every render on purpose. Every \"fix\" an editor or a lint rule\n * might suggest in this file destroys one of the five conditions.\n *\n * ---------------------------------------------------------------------------\n * Why these five, and what React does with them\n * ---------------------------------------------------------------------------\n *\n * React 19.3's development build reports render work twice, by two different\n * mechanisms with different coverage, and this fixture exists to pin down the\n * difference permanently:\n *\n * 1. Fiber `actualDuration`, readable from the DevTools global hook's\n *    `onCommitFiberRoot`. Populated for *every* component fiber in the\n *    development build.\n * 2. A `performance.measure` entry per component — a named, observable\n *    `PerformanceEntry` on the shared `performance.now()` timeline, which is\n *    why it is so tempting to key a tool on. It is emitted for only a *subset*\n *    of the components that rendered, and the rule is not cost.\n *\n * The rule is a props-identity gate. From `react-dom-client.development.js`\n * (19.3.1) at lines 4441-4443, a component gets a `performance.measure` only\n * if all of:\n *\n *     fiber.memoizedProps !== null\n *     fiber.alternate !== null                  // i.e. not a first mount\n *     alternate.memoizedProps !== fiber.memoizedProps\n *\n * and then, at :4451, only if the resulting props diff contains at least one\n * entry (`1 < child.length`, the array having been seeded with one header\n * row). Fail any of those and React calls `console.timeStamp` instead (:4479),\n * which produces no `PerformanceEntry` of any kind — so from the outside the\n * component looks like it did not render at all.\n *\n * Applied to the five cases here, that gate explains every row of the measured\n * table in `ground-truth.json`:\n *\n * - `PropsChanged` receives `n`, which changes, so the diff is non-empty and\n *   it gets a span. This is the easy case, and the only one most tools see.\n * - `ContextConsumer` has no props at all. `<ContextConsumer />` does produce\n *   a fresh empty props object each render, so the identity check passes, but\n *   the diff of `{}` against `{}` is empty — no span, however long it ran.\n * - `StateOwner` is in the same position: its own `setState` re-renders it\n *   without changing its props, so it gets no span. This is the case that\n *   matters most, because the component that owns the state an interaction\n *   updates is the single most common real culprit.\n * - `LateMount` has no `alternate` on the render that is expensive — a first\n *   mount is structurally invisible to the gate.\n * - `DeepEqualProps` gets a span, and the reason is worth knowing: the diff\n *   walker pushes an entry for `config` *before* it recurses into it (:4329),\n *   because the two objects are referentially unequal. The recursion then\n *   finds them deeply equal and only relabels that entry (:4337-4339). React\n *   does have a \"deeply equal props, consider memoization\" warning for this,\n *   but it is gated on `100 < fiber.actualDuration` (:4455), which 25ms never\n *   trips. So the span arrives looking exactly like a legitimate one.\n *\n * The conclusion the project draws from this, recorded in `findings.md` as the\n * most consequential error of the v0.1 spike's first draft: the spans are\n * corroboration, never the primary component signal. A tool keyed on them\n * reports \"nothing happened\" for a 50ms frame whose cause is a leaf's own\n * `setState`. The hook plus `actualDuration` is primary.\n */\n\nexport interface PropsChangedProps {\n  /** Incremented by App's bump button, so this prop genuinely changes. */\n  readonly n: number;\n}\n\n/**\n * Re-renders because its props changed: the one case React's span gate admits,\n * and the case a span-keyed tool would mistake for the whole story.\n */\nexport function PropsChanged({ n }: PropsChangedProps) {\n  burn(BURN_MS);\n  return <p>props {n}</p>;\n}\n\n/**\n * Re-renders because a context it consumes changed. Its props never change,\n * and it has none to change, so React gives it no span however long it runs.\n */\nexport function ContextConsumer() {\n  const value = useContext(BumpCountContext);\n  burn(BURN_MS);\n  return <p>context {value}</p>;\n}\n\n/**\n * Re-renders because of its own `setState`. Props never change.\n *\n * The regression this fixture guards against is a tool that reports nothing\n * for this component's frame, so its button is the single most important\n * trigger in the fixture.\n */\nexport function StateOwner() {\n  const [own, setOwn] = useState(0);\n  burn(BURN_MS);\n  return (\n    <p>\n      own {own}{' '}\n      <button\n        data-fixture=\"state-owner-self\"\n        onClick={() => {\n          setOwn((v) => v + 1);\n        }}\n        type=\"button\"\n      >\n        self\n      </button>\n    </p>\n  );\n}\n\n/**\n * Expensive on first mount only, which is the render that has no `alternate`\n * and therefore cannot pass the gate. Mounting is also when a real component\n * is most often at its most expensive.\n */\nexport function LateMount() {\n  burn(BURN_MS);\n  return <p>mounted</p>;\n}\n\nexport interface DeepEqualPropsProps {\n  /**\n   * Passed as a fresh object literal on every render of App, deliberately.\n   * Hoisting it to module scope, wrapping it in `useMemo`, or flattening it to\n   * a string all remove this fixture's fifth condition.\n   */\n  readonly config: { readonly k: string };\n}\n\n/**\n * Props are a fresh object on every render but deep-equal to the last.\n *\n * This is the inverse failure: it gets a span on every render — on some\n * interactions it is the *only* component given one — while having done\n * nothing a user would call a change. A tool that ranked by span presence\n * would rank this component above the one that actually caused the frame.\n */\nexport function DeepEqualProps({ config }: DeepEqualPropsProps) {\n  burn(BURN_MS);\n  return <p>deep {config.k}</p>;\n}\n"
+        ]
+      },
+      "sourceMapFrom": "inline",
+      "error": null
+    },
+    "http://localhost:5186/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=48c9835c": {
+      "length": 35885,
+      "sourceMap": {
+        "version": 3,
+        "file": "react_jsx-dev-runtime.js",
+        "names": [],
+        "sources": [
+          "../../../../../node_modules/.pnpm/react@19.3.1/node_modules/react/cjs/react-jsx-dev-runtime.development.js",
+          "../../../../../node_modules/.pnpm/react@19.3.1/node_modules/react/jsx-dev-runtime.js"
+        ],
+        "sourcesContent": [
+          "/**\n * @license React\n * react-jsx-dev-runtime.development.js\n *\n * Copyright (c) Meta Platforms, Inc. and affiliates.\n *\n * This source code is licensed under the MIT license found in the\n * LICENSE file in the root directory of this source tree.\n */\n\n\"use strict\";\n\"production\" !== process.env.NODE_ENV &&\n  (function () {\n    function getComponentNameFromType(type) {\n      if (null == type) return null;\n      if (\"function\" === typeof type)\n        return type.$$typeof === REACT_CLIENT_REFERENCE\n          ? null\n          : type.displayName || type.name || null;\n      if (\"string\" === typeof type) return type;\n      switch (type) {\n        case REACT_FRAGMENT_TYPE:\n          return \"Fragment\";\n        case REACT_PROFILER_TYPE:\n          return \"Profiler\";\n        case REACT_STRICT_MODE_TYPE:\n          return \"StrictMode\";\n        case REACT_SUSPENSE_TYPE:\n          return \"Suspense\";\n        case REACT_SUSPENSE_LIST_TYPE:\n          return \"SuspenseList\";\n        case REACT_ACTIVITY_TYPE:\n          return \"Activity\";\n        case REACT_VIEW_TRANSITION_TYPE:\n          return \"ViewTransition\";\n      }\n      if (\"object\" === typeof type)\n        switch (\n          (\"number\" === typeof type.tag &&\n            console.error(\n              \"Received an unexpected object in getComponentNameFromType(). This is likely a bug in React. Please file an issue.\"\n            ),\n          type.$$typeof)\n        ) {\n          case REACT_PORTAL_TYPE:\n            return \"Portal\";\n          case REACT_CONTEXT_TYPE:\n            return type.displayName || \"Context\";\n          case REACT_CONSUMER_TYPE:\n            return (type._context.displayName || \"Context\") + \".Consumer\";\n          case REACT_FORWARD_REF_TYPE:\n            var innerType = type.render;\n            type = type.displayName;\n            type ||\n              ((type = innerType.displayName || innerType.name || \"\"),\n              (type = \"\" !== type ? \"ForwardRef(\" + type + \")\" : \"ForwardRef\"));\n            return type;\n          case REACT_MEMO_TYPE:\n            return (\n              (innerType = type.displayName || null),\n              null !== innerType\n                ? innerType\n                : getComponentNameFromType(type.type) || \"Memo\"\n            );\n          case REACT_LAZY_TYPE:\n            innerType = type._payload;\n            type = type._init;\n            try {\n              return getComponentNameFromType(type(innerType));\n            } catch (x) {}\n        }\n      return null;\n    }\n    function testStringCoercion(value) {\n      return \"\" + value;\n    }\n    function checkKeyStringCoercion(value) {\n      try {\n        testStringCoercion(value);\n        var JSCompiler_inline_result = !1;\n      } catch (e) {\n        JSCompiler_inline_result = !0;\n      }\n      if (JSCompiler_inline_result) {\n        JSCompiler_inline_result = console;\n        var JSCompiler_temp_const = JSCompiler_inline_result.error;\n        var JSCompiler_inline_result$jscomp$0 =\n          (\"function\" === typeof Symbol &&\n            Symbol.toStringTag &&\n            value[Symbol.toStringTag]) ||\n          value.constructor.name ||\n          \"Object\";\n        JSCompiler_temp_const.call(\n          JSCompiler_inline_result,\n          \"The provided key is an unsupported type %s. This value must be coerced to a string before using it here.\",\n          JSCompiler_inline_result$jscomp$0\n        );\n        return testStringCoercion(value);\n      }\n    }\n    function getTaskName(type) {\n      if (type === REACT_FRAGMENT_TYPE) return \"<>\";\n      if (\n        \"object\" === typeof type &&\n        null !== type &&\n        type.$$typeof === REACT_LAZY_TYPE\n      )\n        return \"<...>\";\n      try {\n        var name = getComponentNameFromType(type);\n        return name ? \"<\" + name + \">\" : \"<...>\";\n      } catch (x) {\n        return \"<...>\";\n      }\n    }\n    function getOwner() {\n      var dispatcher = ReactSharedInternals.A;\n      return null === dispatcher ? null : dispatcher.getOwner();\n    }\n    function UnknownOwner() {\n      return Error(\"react-stack-top-frame\");\n    }\n    function hasValidKey(config) {\n      if (hasOwnProperty.call(config, \"key\")) {\n        var getter = Object.getOwnPropertyDescriptor(config, \"key\").get;\n        if (getter && getter.isReactWarning) return !1;\n      }\n      return void 0 !== config.key;\n    }\n    function defineKeyPropWarningGetter(props, displayName) {\n      function warnAboutAccessingKey() {\n        specialPropKeyWarningShown ||\n          ((specialPropKeyWarningShown = !0),\n          console.error(\n            \"%s: `key` is not a prop. Trying to access it will result in `undefined` being returned. If you need to access the same value within the child component, you should pass it as a different prop. (https://react.dev/link/special-props)\",\n            displayName\n          ));\n      }\n      warnAboutAccessingKey.isReactWarning = !0;\n      Object.defineProperty(props, \"key\", {\n        get: warnAboutAccessingKey,\n        configurable: !0\n      });\n    }\n    function elementRefGetterWithDeprecationWarning() {\n      var componentName = getComponentNameFromType(this.type);\n      didWarnAboutElementRef[componentName] ||\n        ((didWarnAboutElementRef[componentName] = !0),\n        console.error(\n          \"Accessing element.ref was removed in React 19. ref is now a regular prop. It will be removed from the JSX Element type in a future release.\"\n        ));\n      componentName = this.props.ref;\n      return void 0 !== componentName ? componentName : null;\n    }\n    function ReactElement(type, key, props, owner, debugStack, debugTask) {\n      var refProp = props.ref;\n      type = {\n        $$typeof: REACT_ELEMENT_TYPE,\n        type: type,\n        key: key,\n        props: props,\n        _owner: owner\n      };\n      null !== (void 0 !== refProp ? refProp : null)\n        ? Object.defineProperty(type, \"ref\", {\n            enumerable: !1,\n            get: elementRefGetterWithDeprecationWarning\n          })\n        : Object.defineProperty(type, \"ref\", { enumerable: !1, value: null });\n      type._store = {};\n      Object.defineProperty(type._store, \"validated\", {\n        configurable: !1,\n        enumerable: !1,\n        writable: !0,\n        value: 0\n      });\n      Object.defineProperty(type, \"_debugInfo\", {\n        configurable: !1,\n        enumerable: !1,\n        writable: !0,\n        value: null\n      });\n      Object.defineProperty(type, \"_debugStack\", {\n        configurable: !1,\n        enumerable: !1,\n        writable: !0,\n        value: debugStack\n      });\n      Object.defineProperty(type, \"_debugTask\", {\n        configurable: !1,\n        enumerable: !1,\n        writable: !0,\n        value: debugTask\n      });\n      Object.freeze && (Object.freeze(type.props), Object.freeze(type));\n      return type;\n    }\n    function jsxDEVImpl(\n      type,\n      config,\n      maybeKey,\n      isStaticChildren,\n      debugStack,\n      debugTask\n    ) {\n      var children = config.children;\n      if (void 0 !== children)\n        if (isStaticChildren)\n          if (isArrayImpl(children)) {\n            for (\n              isStaticChildren = 0;\n              isStaticChildren < children.length;\n              isStaticChildren++\n            )\n              validateChildKeys(children[isStaticChildren]);\n            Object.freeze && Object.freeze(children);\n          } else\n            console.error(\n              \"React.jsx: Static children should always be an array. You are likely explicitly calling React.jsxs or React.jsxDEV. Use the Babel transform instead.\"\n            );\n        else validateChildKeys(children);\n      if (hasOwnProperty.call(config, \"key\")) {\n        children = getComponentNameFromType(type);\n        var keys = Object.keys(config).filter(function (k) {\n          return \"key\" !== k;\n        });\n        isStaticChildren =\n          0 < keys.length\n            ? \"{key: someKey, \" + keys.join(\": ..., \") + \": ...}\"\n            : \"{key: someKey}\";\n        didWarnAboutKeySpread[children + isStaticChildren] ||\n          ((keys =\n            0 < keys.length ? \"{\" + keys.join(\": ..., \") + \": ...}\" : \"{}\"),\n          console.error(\n            'A props object containing a \"key\" prop is being spread into JSX:\\n  let props = %s;\\n  <%s {...props} />\\nReact keys must be passed directly to JSX without using spread:\\n  let props = %s;\\n  <%s key={someKey} {...props} />',\n            isStaticChildren,\n            children,\n            keys,\n            children\n          ),\n          (didWarnAboutKeySpread[children + isStaticChildren] = !0));\n      }\n      children = null;\n      void 0 !== maybeKey &&\n        (checkKeyStringCoercion(maybeKey), (children = \"\" + maybeKey));\n      hasValidKey(config) &&\n        (checkKeyStringCoercion(config.key), (children = \"\" + config.key));\n      if (\"key\" in config) {\n        maybeKey = {};\n        for (var propName in config)\n          \"key\" !== propName && (maybeKey[propName] = config[propName]);\n      } else maybeKey = config;\n      children &&\n        defineKeyPropWarningGetter(\n          maybeKey,\n          \"function\" === typeof type\n            ? type.displayName || type.name || \"Unknown\"\n            : type\n        );\n      return ReactElement(\n        type,\n        children,\n        maybeKey,\n        getOwner(),\n        debugStack,\n        debugTask\n      );\n    }\n    function validateChildKeys(node) {\n      isValidElement(node)\n        ? node._store && (node._store.validated = 1)\n        : \"object\" === typeof node &&\n          null !== node &&\n          node.$$typeof === REACT_LAZY_TYPE &&\n          (\"fulfilled\" === node._payload.status\n            ? isValidElement(node._payload.value) &&\n              node._payload.value._store &&\n              (node._payload.value._store.validated = 1)\n            : node._store && (node._store.validated = 1));\n    }\n    function isValidElement(object) {\n      return (\n        \"object\" === typeof object &&\n        null !== object &&\n        object.$$typeof === REACT_ELEMENT_TYPE\n      );\n    }\n    var React = require(\"react\"),\n      REACT_ELEMENT_TYPE = Symbol.for(\"react.transitional.element\"),\n      REACT_PORTAL_TYPE = Symbol.for(\"react.portal\"),\n      REACT_FRAGMENT_TYPE = Symbol.for(\"react.fragment\"),\n      REACT_STRICT_MODE_TYPE = Symbol.for(\"react.strict_mode\"),\n      REACT_PROFILER_TYPE = Symbol.for(\"react.profiler\"),\n      REACT_CONSUMER_TYPE = Symbol.for(\"react.consumer\"),\n      REACT_CONTEXT_TYPE = Symbol.for(\"react.context\"),\n      REACT_FORWARD_REF_TYPE = Symbol.for(\"react.forward_ref\"),\n      REACT_SUSPENSE_TYPE = Symbol.for(\"react.suspense\"),\n      REACT_SUSPENSE_LIST_TYPE = Symbol.for(\"react.suspense_list\"),\n      REACT_MEMO_TYPE = Symbol.for(\"react.memo\"),\n      REACT_LAZY_TYPE = Symbol.for(\"react.lazy\"),\n      REACT_ACTIVITY_TYPE = Symbol.for(\"react.activity\"),\n      REACT_VIEW_TRANSITION_TYPE = Symbol.for(\"react.view_transition\"),\n      REACT_CLIENT_REFERENCE = Symbol.for(\"react.client.reference\"),\n      ReactSharedInternals =\n        React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE,\n      hasOwnProperty = Object.prototype.hasOwnProperty,\n      isArrayImpl = Array.isArray,\n      createTask = console.createTask\n        ? console.createTask\n        : function () {\n            return null;\n          };\n    React = {\n      react_stack_bottom_frame: function (callStackForError) {\n        return callStackForError();\n      }\n    };\n    var specialPropKeyWarningShown;\n    var didWarnAboutElementRef = {};\n    var unknownOwnerDebugStack = React.react_stack_bottom_frame.bind(\n      React,\n      UnknownOwner\n    )();\n    var unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));\n    var didWarnAboutKeySpread = {};\n    exports.Fragment = REACT_FRAGMENT_TYPE;\n    exports.jsxDEV = function (type, config, maybeKey, isStaticChildren) {\n      var trackActualOwner =\n        1e4 > ReactSharedInternals.recentlyCreatedOwnerStacks++;\n      if (trackActualOwner) {\n        var previousStackTraceLimit = Error.stackTraceLimit;\n        Error.stackTraceLimit = 10;\n        var debugStackDEV = Error(\"react-stack-top-frame\");\n        Error.stackTraceLimit = previousStackTraceLimit;\n      } else debugStackDEV = unknownOwnerDebugStack;\n      return jsxDEVImpl(\n        type,\n        config,\n        maybeKey,\n        isStaticChildren,\n        debugStackDEV,\n        trackActualOwner ? createTask(getTaskName(type)) : unknownOwnerDebugTask\n      );\n    };\n  })();\n",
+          "'use strict';\n\nif (process.env.NODE_ENV === 'production') {\n  module.exports = require('./cjs/react-jsx-dev-runtime.production.js');\n} else {\n  module.exports = require('./cjs/react-jsx-dev-runtime.development.js');\n}\n"
+        ],
+        "ignoreList": [
+          0,
+          1
+        ],
+        "mappings": "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",
+        "x_google_ignoreList": [
+          0,
+          1
         ]
       },
       "sourceMapFrom": "inline",

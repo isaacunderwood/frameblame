@@ -4,7 +4,7 @@
  * These are the cases the captured corpus cannot provide: a frame with no
  * scripts, a frame whose reported figures contradict its own boundaries, a
  * rendering update that overflows. `packages/corpus` asserts the same
- * arithmetic against all 56 real frames, which is the part that says the model
+ * arithmetic against all 53 real frames, which is the part that says the model
  * fits the browser; this is the part that says it survives inputs the browser
  * has not happened to produce yet.
  *
@@ -93,7 +93,7 @@ describe('the partition', () => {
 
   it('accounts for a frame that reported no script at all', () => {
     /*
-     * Not in the corpus: every one of its 56 frames carries at least one script
+     * Not in the corpus: every one of its 53 frames carries at least one script
      * entry. It is reachable — a frame whose work was all browser-side, or all
      * in tasks under LoAF's 5ms attribution threshold — and the whole frame is
      * then unattributed, which is the honest answer rather than a failure.
@@ -108,11 +108,12 @@ describe('the partition', () => {
 
   it('accounts for a frame that never painted', () => {
     /*
-     * Two of the corpus's 56 frames are like this: a bare `Promise.resolve`
+     * Two of the corpus's 53 frames are like this: a bare `Promise.resolve`
      * task that ran for the whole frame, with `renderStart` and
      * `styleAndLayoutStart` reporting the spec's 0 sentinel and no `paintTime`
-     * or `presentationTime` at all. Measured at 66.1ms and 106.9ms
-     * (development and production respectively, 4x CPU throttle).
+     * or `presentationTime` at all. Measured at 57.1ms and 120.1ms
+     * (`derive-in-render` development and production respectively, 4x CPU
+     * throttle; 66.1ms and 106.9ms in the capture before the v0.3 re-capture).
      */
     const decomposition = decomposeFrame(
       frame({
@@ -156,10 +157,14 @@ describe('the partition', () => {
 describe('forced style and layout', () => {
   it('is charged to the script that forced it, inside the script, not beside it', () => {
     /*
-     * Measured on `innerhtml-rebuild`'s forced scenario (development, 4x): a
-     * 120.4ms script entry containing 105.5ms of forced style and layout, in a
-     * 140.3ms frame. Adding the forced figure as a sibling slice would make the
-     * frame 245.8ms long, which is the first mistake `findings.md` warns about.
+     * Measured on `innerhtml-rebuild`'s forced scenario (development, 4x), in
+     * the capture before the v0.3 re-capture: a 120.4ms script entry
+     * containing 105.5ms of forced style and layout, in a 140.3ms frame. Adding
+     * the forced figure as a sibling slice would make the frame 245.8ms long,
+     * which is the first mistake `findings.md` warns about. Kept as that
+     * capture's frame because the arithmetic is the point, not the figure; the
+     * re-capture's longest forced entry is 117.7ms containing 103.8ms, in a
+     * 137.3ms production frame.
      */
     const decomposition = decomposeFrame(
       frame({
@@ -195,11 +200,11 @@ describe('forced style and layout', () => {
 
   it('does not note a split that disagrees with its total by one grid step', () => {
     /*
-     * The spec defines the combined figure as the sum of the two halves but
-     * coarsens each half independently, specifically so that summing them
-     * cannot recover resolution. Measured: exactly +/-0.1ms on 6 of the
-     * corpus's 20 forced script entries. A note on each of those would train
-     * everyone to ignore the notes.
+     * The spec defines the combined figure as exactly the sum of the two
+     * halves, but Chrome 159 reports three values that disagree on the 100us
+     * grid. Measured: one step (+/-0.1ms) on 8 of the corpus's 20 forced
+     * script entries (v0.3 re-capture, 4x). A note on each of those would
+     * train everyone to ignore the notes.
      */
     const decomposition = decomposeFrame(
       frame({
@@ -217,6 +222,54 @@ describe('forced style and layout', () => {
     );
 
     expect(decomposition.notes).toEqual([]);
+  });
+
+  it('does not note a split two grid steps from its total, though the float says 0.2000…03', () => {
+    /*
+     * The corpus's one two-step disagreement, with its own figures:
+     * `innerhtml-rebuild` development, 4x, a 109ms script reporting 23.2ms of
+     * forced style and 71.5ms of forced layout against 94.9ms combined. Two
+     * steps is exactly the tolerance, and `23.2 + 71.5 - 94.9` is
+     * -0.20000000000000284 in floating point, which a bare `> 0.2` reported.
+     */
+    const decomposition = decomposeFrame(
+      frame({
+        durationMs: 120,
+        renderingUpdate: { kind: 'none' },
+        scripts: [
+          script({
+            startTimeMs: 100,
+            durationMs: 109,
+            forcedStyleAndLayoutDurationMs: 94.9,
+            forcedStyleDurationMs: 23.2,
+            forcedLayoutDurationMs: 71.5,
+          }),
+        ],
+      }),
+    );
+
+    expect(decomposition.notes).toEqual([]);
+  });
+
+  it('notes a split three grid steps from its total', () => {
+    const decomposition = decomposeFrame(
+      frame({
+        durationMs: 120,
+        renderingUpdate: { kind: 'none' },
+        scripts: [
+          script({
+            startTimeMs: 100,
+            durationMs: 109,
+            forcedStyleAndLayoutDurationMs: 95,
+            forcedStyleDurationMs: 23.2,
+            forcedLayoutDurationMs: 71.5,
+          }),
+        ],
+      }),
+    );
+
+    expect(decomposition.notes).toHaveLength(1);
+    expect(decomposition.notes[0]?.kind).toBe('forced-split-disagrees-with-total');
   });
 
   it('clamps forced work to the script that reported it, and says so', () => {
@@ -244,9 +297,11 @@ describe('forced style and layout', () => {
 describe('the rendering update', () => {
   it('carves style and layout out of its window and calls the rest paint', () => {
     /*
-     * Measured on the first frame of `spans` (development, 4x): styleDuration
-     * 0.6ms and layoutDuration 24.3ms inside a 180.9ms frame. Only three of the
-     * corpus's 54 painted frames report either as non-zero, because style and
+     * Measured on the first frame of `spans` (development, 4x) in the capture
+     * before the v0.3 re-capture: styleDuration 0.6ms and layoutDuration 24.3ms
+     * inside a 180.9ms frame (0.9ms and 26.2ms inside 180.5ms in the
+     * re-capture). Only three of the corpus's 51 painted frames report either
+     * as non-zero, because style and
      * layout performed while no script is running — before the rendering update
      * — are not counted in these fields at all.
      */
@@ -310,7 +365,7 @@ describe('contradictory inputs', () => {
     /*
      * The spec merges nested entry points — a new script is not started while
      * one is pending — so overlap should be impossible, and none of the
-     * corpus's 80 script entries overlaps. If it happens anyway the partition
+     * corpus's 77 script entries overlaps. If it happens anyway the partition
      * must not double-charge: a frame that is 120% script is a frame nobody
      * will believe the rest of.
      */
@@ -332,10 +387,11 @@ describe('contradictory inputs', () => {
 
   it('tolerates a script that overruns its frame by a float hair', () => {
     /*
-     * Two of the corpus's script entries end 1.5e-9 and 2.2e-9ms past the end
-     * of their frame's duration — float64 noise on a value that passed through
-     * a 100us coarsening grid. A strict comparison reports them as a broken
-     * capture.
+     * One of the corpus's script entries ends 1.5e-9ms past the end of its
+     * frame's duration (two, by 1.5e-9 and 2.2e-9ms, in the capture before the
+     * v0.3 re-capture, whose larger overshoot this test uses) — float64 noise
+     * on a value that passed through a 100us coarsening grid. A strict
+     * comparison reports it as a broken capture.
      */
     const decomposition = decomposeFrame(
       frame({
@@ -404,8 +460,8 @@ describe('charges and shares', () => {
 
   it('names the denominator it used, and refuses to invent one', () => {
     /*
-     * `presentationTime` sits 24-42ms past the end of `duration` in every frame
-     * measured across the corpus, so the same milliseconds are a materially
+     * `presentationTime` sits 23.8-42.5ms past the end of `duration` in every
+     * frame in the corpus (4x), so the same milliseconds are a materially
      * different share depending on which total they are quoted against:
      * roughly 70% of `duration` is roughly 45% of input-to-pixels. A share that
      * did not carry its denominator would be unquotable.

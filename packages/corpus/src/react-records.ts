@@ -181,8 +181,8 @@ export function reactOf(run: CorpusRun): ReactSignals {
       /*
        * Attached to the most recent commit that has none. A production build
        * never calls `onPostCommitFiberRoot`, so every commit in both production
-       * runs keeps `null` here — and in development the gap reached 50.6ms,
-       * which is long enough that a post-commit is not safely inside its
+       * runs keeps `null` here — and in development the gap reached 52.5ms
+       * (4x), which is long enough that a post-commit is not safely inside its
        * commit's frame.
        */
       const previous = commits.at(-1);

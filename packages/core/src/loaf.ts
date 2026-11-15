@@ -21,8 +21,9 @@
  * **Clock.** Every timestamp here is `performance.now()` milliseconds relative
  * to the document's `timeOrigin` — the same clock as the profiler's samples and
  * React's spans, which is what makes the join possible at all. Measured: the
- * profiler's first sample lands 0.0-0.7ms after the `performance.now()` reading
- * taken immediately before `new Profiler(...)`, so no reconciliation is needed.
+ * profiler's first sample lands 0.1-0.9ms after the `performance.now()` reading
+ * taken immediately before `new Profiler(...)` (0.0-0.7ms in the capture before
+ * the v0.3 re-capture), so no reconciliation is needed.
  *
  * **Absence.** Absence is spelled `null` throughout, never an omitted property.
  * Chrome reports several of these fields with a zero sentinel and omits others
@@ -45,14 +46,49 @@
  * out slightly negative.
  *
  * The spec coarsens deliberately and says so: the style and layout durations
- * are each computed from "coarsened shared current time", specifically to stop
- * a caller recovering higher resolution by summing them. So the sum identity
- * below is approximate *by design*, not by accident — measured, Chrome 159's
- * `forcedStyleDuration + forcedLayoutDuration` differs from
- * `forcedStyleAndLayoutDuration` by exactly one grid step (+/-0.1ms) on 6 of
- * the corpus's 20 forced script entries.
+ * are accumulated only from "coarsened shared current time", so that summing
+ * many short periods cannot expose more precision than a timestamp does. It
+ * also defines `forcedStyleAndLayoutDuration` as exactly the sum of the two
+ * halves — which Chrome 159 does not honour: it reports the three as values
+ * that disagree on the grid. Measured on the corpus's 20 forced script
+ * entries, `forcedStyleDuration + forcedLayoutDuration -
+ * forcedStyleAndLayoutDuration` was 0 on 11, one grid step (+/-0.1ms) on 8,
+ * and two steps (-0.2ms) on 1 (v0.3 re-capture, 4x, both build modes). The
+ * capture before it had 11 at one step and none at two; the "6 of 20" this
+ * comment quoted then was a miscount. Two steps is this tolerance exactly, so
+ * the boundary is inclusive — see `exceedsCoarsenedTolerance`.
+ *
+ * https://w3c.github.io/long-animation-frames/ ("accumulate style and layout
+ * time", and the `forcedStyleAndLayoutDuration` getter)
  */
 export const COARSENED_TIMING_TOLERANCE_MS = 0.2;
+
+/**
+ * Float slack on the tolerance, in milliseconds: five orders of magnitude below
+ * the 0.1ms grid, and well above the ~2e-9ms of float error page-clock values
+ * carry (see `isWithinFrame`).
+ *
+ * Needed because a disagreement of exactly two grid steps does not come out as
+ * exactly 0.2 in floating point. The corpus's one such forced entry computes
+ * `23.2 + 71.5 - 94.9` as `-0.20000000000000284`, and a bare `> 0.2` reports
+ * that as larger than the coarsening explains.
+ */
+const FLOAT_SLACK_MS = 1e-6;
+
+/**
+ * Whether `deltaMs`, a signed difference in milliseconds between coarsened
+ * LoAF figures, is larger than the coarsening alone can explain. Clock-free:
+ * it is a difference of durations or of page-clock timestamps, never a
+ * timestamp itself.
+ *
+ * Inclusive at the tolerance, plus the float slack above: a difference of two
+ * grid steps is inside the coarsening and must not be reported as a
+ * disagreement just because the subtraction that produced it rounded a hair
+ * past 0.2.
+ */
+export function exceedsCoarsenedTolerance(deltaMs: number): boolean {
+  return Math.abs(deltaMs) > COARSENED_TIMING_TOLERANCE_MS + FLOAT_SLACK_MS;
+}
 
 /**
  * One script attribution inside a frame: an entry point that ran for at least
@@ -72,7 +108,7 @@ export interface FrameScript {
   readonly durationMs: number;
   /**
    * When the script's code actually began running, as opposed to when the entry
-   * point was reached. Identical to `startTimeMs` on all 80 script entries in
+   * point was reached. Identical to `startTimeMs` on all 77 script entries in
    * the corpus; the gap would be compile time.
    */
   readonly executionStartMs: number;
@@ -92,8 +128,10 @@ export interface FrameScript {
    */
   readonly sourceUrl: string | null;
   /**
-   * `null` for an anonymous function — 36 of the corpus's 80 entries, because
-   * every listener in the two vanilla fixtures is an anonymous arrow. Chrome
+   * `null` for an anonymous function — 54 of the corpus's 77 entries, because
+   * every listener in the two vanilla fixtures is an anonymous arrow and the two
+   * `resolve-promise` entries name no function at all. (This read "36 of 80"
+   * until the v0.3 re-capture; the capture it described had 54 of 80.) Chrome
    * reports the empty string, and the distinction matters: when this is absent
    * the character offset below is doing all of the attribution work.
    */
@@ -115,7 +153,7 @@ export interface FrameScript {
    *
    * Specified, implemented in Chromium behind the
    * `LongAnimationFrameSourceLineColumn` Blink features, and off by default —
-   * `null` on all 80 entries in the corpus. Their absence is the entire reason
+   * `null` on all 77 entries in the corpus. Their absence is the entire reason
    * `sourceCharPosition` has to be resolved by hand, which is the one thing no
    * RUM vendor collecting this signal currently bothers to do.
    */
@@ -124,7 +162,7 @@ export interface FrameScript {
   /**
    * Time this script spent blocked in a synchronous dialog or request.
    *
-   * Inside `durationMs`, like the forced work below. `0` on all 80 entries in
+   * Inside `durationMs`, like the forced work below. `0` on all 77 entries in
    * the corpus, so nothing here is measured against a non-zero value.
    */
   readonly pauseDurationMs: number;
@@ -136,7 +174,9 @@ export interface FrameScript {
    * Nested, not adjacent. Adding this to a frame's decomposition as a sibling
    * slice is the single easiest way to produce a frame that sums past its own
    * duration, and `findings.md` names it as the first thing an engine must get
-   * right. Measured: a 120.4ms script entry containing 105.5ms of it.
+   * right. Measured: a 117.7ms script entry containing 103.8ms of it
+   * (`innerhtml-rebuild`, production, 4x; 120.4ms containing 105.5ms in the
+   * capture before the v0.3 re-capture).
    */
   readonly forcedStyleAndLayoutDurationMs: number;
   /**
@@ -165,7 +205,7 @@ export interface FrameScript {
   readonly forcedLayoutDurationMs: number | null;
   /**
    * Which window the script ran in, relative to the reporting one: `self`,
-   * `descendant`, `ancestor`, and so on. `self` on all 80 corpus entries, so
+   * `descendant`, `ancestor`, and so on. `self` on all 77 corpus entries, so
    * the cross-frame cases are entirely untested here.
    */
   readonly windowAttribution: string;
@@ -177,8 +217,8 @@ export interface FrameScript {
  * A union rather than a record of nullable fields, because Chrome reports the
  * "no rendering update" case with a zero sentinel in `renderStart` and
  * `styleAndLayoutStart` — and a `renderStart` of 0 on a frame that began at
- * 60976.6ms is not a timestamp, it is a flag that happens to be typed as a
- * number. Two of the corpus's 56 frames are like this, both a single
+ * 60943.7ms is not a timestamp, it is a flag that happens to be typed as a
+ * number. Two of the corpus's 53 frames are like this, both a single
  * `Promise.resolve` task with no paint, and arithmetic that treated the
  * sentinel as a boundary would compute a gap of minus sixty seconds.
  */
@@ -190,7 +230,7 @@ export type FrameRenderingUpdate =
       readonly kind: 'rendered';
       /** When the rendering update began: rAF callbacks, observers, then style and layout. */
       readonly renderStartMs: number;
-      /** When style and layout began, after the callbacks. `>= renderStartMs` in all 56 frames. */
+      /** When style and layout began, after the callbacks. `>= renderStartMs` in all 53 frames. */
       readonly styleAndLayoutStartMs: number;
       /**
        * Style recalculation performed as part of the rendering update — and
@@ -200,20 +240,22 @@ export type FrameRenderingUpdate =
        * rendering update, are not counted. That is specified behaviour, not a
        * Chrome bug, and it is why these two fields are `0` on the corpus's
        * `innerhtml-rebuild` frames, which are almost entirely style and layout:
-       * 50 of the 54 painted frames report 0 for both. The three that do not
-       * are all the first frame of their run.
+       * 48 of the 51 painted frames report 0 for both. The three that do not
+       * are all the first frame of their run. (This read "50 of the 54" until
+       * the v0.3 re-capture; the capture it described had 51 of 54.)
        */
       readonly styleDurationMs: number;
       readonly layoutDurationMs: number;
       /**
        * The end of `durationMs`, exactly: `startTimeMs + durationMs ===
-       * paintTimeMs` held bit-for-bit on all 54 painted frames in the corpus,
+       * paintTimeMs` held bit-for-bit on all 51 painted frames in the corpus,
        * as the spec requires.
        */
       readonly paintTimeMs: number;
       /**
        * When the frame was actually put on screen, which is **after** the end
-       * of `durationMs` — 24.2 to 42.5ms after it, in every frame measured.
+       * of `durationMs` — 23.8 to 42.5ms after it, in every frame in the corpus
+       * (4x, both build modes; 24.2 to 42.5ms in the capture before).
        *
        * So the denominator has to be named: roughly 70% of `durationMs` is
        * roughly 45% of input-to-pixels. `null` when the browser did not report
@@ -252,7 +294,7 @@ export interface LongAnimationFrame {
   readonly blockingDurationMs: number;
   /**
    * When the first UI event in this frame was created, or `null` if there was
-   * none — Chrome's zero sentinel, and `null` on 5 of the corpus's 56 frames.
+   * none — Chrome's zero sentinel, and `null` on 5 of the corpus's 53 frames.
    *
    * Absent, not zero: a frame with no UI event is not a frame whose UI event
    * happened at time zero, and the difference decides whether a frame is
@@ -291,8 +333,9 @@ export function frameEndMs(frame: LongAnimationFrame): number {
  * Whether `atMs`, a page-clock timestamp, falls inside the frame.
  *
  * Inclusive at both ends and tolerant by one coarsening step, because a script
- * entry's own end can land a float-rounding hair past its frame's: two of the
- * corpus's script entries overshoot by 2e-9ms, which a strict comparison
+ * entry's own end can land a float-rounding hair past its frame's: one of the
+ * corpus's script entries overshoots by 1.5e-9ms (two, by 1.5e-9 and 2.2e-9ms,
+ * in the capture before), which a strict comparison
  * rejects. The tolerance is the grid, not the float error, since anything
  * finer than the grid is meaningless anyway.
  */

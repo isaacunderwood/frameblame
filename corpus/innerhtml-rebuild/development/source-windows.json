@@ -1,5 +1,5 @@
 {
-  "runId": "2026-11-15T02-26-52-628Z__innerhtml-rebuild__development",
+  "runId": "2026-11-15T05-37-10-297Z__innerhtml-rebuild__development",
   "fixture": "innerhtml-rebuild",
   "mode": "development",
   "buildMode": "development (vite dev server)",
@@ -9,12 +9,12 @@
   "browser": "chromium 159.0.8154.6",
   "sourceLineColumnFeaturesEnabled": false,
   "reactDevToolsHookInstalled": true,
-  "collectedAt": "2026-11-15T02:27:00.094Z",
+  "collectedAt": "2026-11-15T05:37:17.698Z",
   "clock": {
     "note": "All page-side timestamps are performance.now() milliseconds relative to timeOrigin. The profiler samples share this clock: the first sample lands 0.1-1.3ms after the reading taken immediately before the Profiler was constructed, so no reconciliation is needed. See findings.md.",
-    "timeOrigin": 1794709613223.1,
-    "driveStartedAt": 300.1000000014901,
-    "driveFinishedAt": 6844
+    "timeOrigin": 1794721030904.9,
+    "driveStartedAt": 264.3999999985099,
+    "driveFinishedAt": 6765.599999997765
   },
   "note": "A window of the text each script actually served, around every position the signals attributed work to. This is the middle link of findings.md's resolution chain, which the v0.1 dumps could not reproduce because they stored each script's length but not its text.",
   "byResource": {

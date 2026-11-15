@@ -67,9 +67,16 @@ interest; its files are in `spike/out/`.
 One figure in here is a measurement of the threshold rather than of the fixture. `derive-in-render`
 sits close enough to LoAF's fixed 50ms reporting threshold that its long-frame *count* moves with
 how warm the machine is. From the same 24 presses, on one machine within one hour: 14, 14, 14, 23
-and 14 in development, and 14 then 6 in production. The aggregate line histogram is the stable
-quantity — 69% to 93% of samples in the declared line range, with line 36 ranked first every time
-— and it is what the suite asserts on, at a floor of 60%. **Never assert on a frame count.**
+and 14 in development, and 14 then 6 in production. The v0.3 re-capture, three hours later, gave 14
+and 3. **Never assert on a frame count.**
+
+The aggregate line histogram is the stable quantity, but only over a population the threshold does
+not choose. Counted over samples inside long frames it gave 69% to 93% of samples in the declared
+line range across the first captures, with line 36 ranked first every time — and then, in the v0.3
+re-capture's production run, 3 in-frame samples with line 32 first, because only 3 frames were
+long. Counted over every sample taken during the replay, the corpus now in this directory gives
+70.7% in development and 83.6% in production (4x), with line 36 first in both, and that is what
+the suite asserts on, at a floor of 60%.
 
 ## Recapturing
 
