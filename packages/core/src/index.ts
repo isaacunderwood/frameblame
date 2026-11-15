@@ -64,12 +64,14 @@ export {
   describeShortfall,
 } from './component-attribution.ts';
 export type {
+  AttributedInteraction,
   CommitAttribution,
   CommitAttributionBasis,
   CommitComponent,
   CommitSampleWindow,
   ComponentAttributionNote,
   InteractionComponents,
+  MergedComponents,
 } from './component-attribution.ts';
 
 export { commitRenderTimes, didRender, fiberParticipation } from './fiber-self-time.ts';

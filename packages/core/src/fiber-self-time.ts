@@ -9,10 +9,21 @@
  * ## Self time
  *
  * A fiber's `actualDuration` is its subtree's render time. Self time is
- * `actualDuration - sum(children's actualDuration)`, which is what React
- * itself computes (`react-dom-client.development.js:4421`, 19.3.1). The
- * children are the fibers whose `parentId` names this one, and the
- * subtraction runs only over fibers that took part in the commit. The two
+ * `actualDuration - sum(children's actualDuration)`. That is React's own
+ * formula (`react-dom-client.development.js:4419-4423`, 19.3.1), but React
+ * applies it over every direct child fiber, host fibers included, and only
+ * where the fiber's child list changed (`null === alternate ||
+ * alternate.child !== fiber.child`). The engine applies it over the recorded
+ * component fibers only: the children are the component fibers whose
+ * `parentId` names this one, which is the nearest component above them. Host
+ * fibers are not in the record, so their time, such as the DOM nodes created
+ * on a mount, stays in the self time of the nearest component above them.
+ * That is visible in `spans`' `initial-mount`: `App`, which mounts the
+ * fixture's host elements, reads 35.7ms of self time against 25.5-26.5ms for
+ * each of the four components mounted beneath it, though all five burn the
+ * same 25ms (development, 4x).
+ *
+ * The subtraction runs only over fibers that took part in the commit. The two
  * cases the collector's render evidence separates decide which those are (see
  * `FiberRenderEvidence` in `react.ts`):
  *
@@ -142,6 +153,28 @@ export function participationsOf(
   return byId;
 }
 
+/**
+ * One fiber's entry in a map `participationsOf` built for its commit.
+ *
+ * Throws when the fiber has none. `participationsOf` sets an entry for every
+ * fiber it is given, or throws itself, so reaching the throw means the map was
+ * built for a different commit. Thrown rather than defaulted, because a
+ * default would quietly relabel a fiber that rendered.
+ */
+export function participationIn(
+  participation: ReadonlyMap<FiberId, FiberParticipation>,
+  fiber: LinkedFiber,
+): FiberParticipation {
+  const entry = participation.get(fiber.id);
+  if (entry === undefined) {
+    throw new Error(
+      `fiber ${String(fiber.id)} (${fiber.name}) has no participation: the map was not built ` +
+        'by participationsOf over this commit',
+    );
+  }
+  return entry;
+}
+
 /** One in-commit fiber's share of the render. */
 export interface FiberSelfTime {
   readonly fiber: LinkedFiber;
@@ -242,14 +275,21 @@ export type CommitRenderTiming =
  * Assumes the record's ids and parent links follow the collector's scheme
  * (`id` is the fiber's index, `parentId` is null or an earlier id), which the
  * corpus reader checks. Throws if a parent link names no earlier fiber.
+ *
+ * `participation` is `participationsOf` over this commit's fibers, for a
+ * caller that has already built it; it is built here when omitted. Throws if
+ * it lacks an entry for one of the commit's fibers.
  */
-export function commitRenderTimes(commit: ReactCommit): CommitRenderTiming {
+export function commitRenderTimes(
+  commit: ReactCommit,
+  participation?: ReadonlyMap<FiberId, FiberParticipation>,
+): CommitRenderTiming {
   const components = commit.components;
   if (components.linkage === 'unrecorded') {
     return { kind: 'untimed', shortfall: 'fiber-linkage-unrecorded' };
   }
 
-  const participation = participationsOf(components.fibers);
+  const participationById = participation ?? participationsOf(components.fibers);
   const inCommit: {
     fiber: LinkedFiber;
     participation: Exclude<FiberParticipation, 'carried-over'>;
@@ -258,8 +298,8 @@ export function commitRenderTimes(commit: ReactCommit): CommitRenderTiming {
   let carriedOverFibers = 0;
 
   for (const fiber of components.fibers) {
-    const own = participation.get(fiber.id);
-    if (own === undefined || own === 'carried-over') {
+    const own = participationIn(participationById, fiber);
+    if (own === 'carried-over') {
       carriedOverFibers += 1;
       continue;
     }
@@ -306,18 +346,20 @@ export function commitRenderTimes(commit: ReactCommit): CommitRenderTiming {
     },
   );
 
-  const sumSelf = (rendered: boolean): number =>
-    fibers
-      .filter((entry) => didRender(entry.participation) === rendered)
-      .reduce((sum, entry) => sum + entry.selfMs, 0);
+  let renderedSelfMs = 0;
+  let bailedOutSelfMs = 0;
+  for (const entry of fibers) {
+    if (didRender(entry.participation)) renderedSelfMs += entry.selfMs;
+    else bailedOutSelfMs += entry.selfMs;
+  }
 
   return {
     kind: 'timed',
     times: {
       totalMs,
       fibers,
-      renderedSelfMs: sumSelf(true),
-      bailedOutSelfMs: sumSelf(false),
+      renderedSelfMs,
+      bailedOutSelfMs,
       carriedOverFibers,
       notes,
     },

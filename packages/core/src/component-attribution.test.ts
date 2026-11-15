@@ -23,6 +23,7 @@ import {
   attributeCommit,
   attributeInteractionComponents,
   describeCommitBasis,
+  describeComponentNote,
 } from './component-attribution.ts';
 import { commitRenderTimes, fiberParticipation } from './fiber-self-time.ts';
 import type { LongAnimationFrame } from './loaf.ts';
@@ -451,6 +452,13 @@ describe('attributeCommit at the fiber tier', () => {
     const attribution = attributeCommit(input, only, 900);
     expect(attribution.causes.totalWeight).toBeLessThanOrEqual(1);
     expect(attribution.notes.map((note) => note.kind)).toEqual(['negative-self-time']);
+
+    // Its milliseconds are quoted with the build mode and throttle behind them.
+    const [note] = attribution.notes;
+    if (note === undefined) throw new Error('no note');
+    expect(describeComponentNote(note, attribution.provenance)).toContain(
+      '10.0ms (development, 4x CPU throttle',
+    );
   });
 });
 
@@ -483,6 +491,8 @@ describe('attributeCommit without fiber timings', () => {
       tier: 'profiler-unmapped',
       shortfall: 'fiber-timings-absent',
       samplesInWindow: 4,
+      // The commit-phase sample, whose stack reaches no rendered component.
+      unchargedSamples: 1,
     });
     expect(describeCommitBasis(attribution.basis)).toContain(
       'fiber actualDuration is null',
@@ -530,6 +540,30 @@ describe('attributeCommit without fiber timings', () => {
       (cause) => cause.subject.kind === 'component' && cause.subject.name === 'g',
     );
     expect(g?.weight.fraction).toBe(0);
+  });
+
+  it('decides a shared name over the whole profile, not over one window', () => {
+    const input = signals({
+      commits: [production],
+      buildMode: 'production',
+      profile: trace(
+        [
+          { atMs: 950, stack: ['d', 'g', 'os'] },
+          // Outside the commit's window, and still proof that `g` is shared.
+          { atMs: 1050, stack: ['g', 'helper'] },
+        ],
+        { 'g@1050': 900 },
+      ),
+    });
+
+    const attribution = attributeCommit(input, production, 900);
+    expect(attribution.notes).toContainEqual({
+      kind: 'ambiguous-minified-name',
+      componentName: 'g',
+      definitionSites: 2,
+    });
+    expect(attribution.causes.totalWeight).toBe(0);
+    expect(attribution.basis).toMatchObject({ samplesInWindow: 1, unchargedSamples: 1 });
   });
 
   it('says when the window holds no samples instead of dividing by zero', () => {
@@ -587,6 +621,43 @@ describe('attributeInteractionComponents', () => {
     expect(table?.subject).toMatchObject({ name: 'Table' });
     expect(table?.weight.fraction).toBeCloseTo(80 / 100, 10);
     expect(app?.weight.fraction).toBeCloseTo(20 / 100, 10);
+  });
+
+  it('opens a commit’s window no earlier than the input that caused it', () => {
+    const base = signals({
+      commits: [commit([fiber(0, 'b', null, null)], 1000)],
+      buildMode: 'production',
+      profile: trace([
+        // Before the press: not this commit's render, whatever it was.
+        { atMs: 940, stack: ['d', 'b'] },
+        { atMs: 980, stack: ['d', 'b'] },
+      ]),
+    });
+    const input: CapturedSignals = {
+      ...base,
+      interactions: [
+        {
+          label: 'click',
+          kind: 'press',
+          fromMs: 900,
+          toMs: 1100,
+          actions: [
+            { index: 0, what: 'n', atMs: 960, sawLongFrame: false },
+            // After the commit, so it cannot have caused it.
+            { index: 1, what: 'n', atMs: 1050, sawLongFrame: false },
+          ],
+        },
+      ],
+    };
+
+    const result = attributeInteractionComponents(input, 'click');
+    if (result?.kind !== 'attributed')
+      throw new Error('expected an attributed interaction');
+    expect(result.commits[0].sampleWindow).toEqual({ fromMs: 960, toMs: 1000 });
+    expect(result.commits[0].basis).toMatchObject({
+      samplesInWindow: 1,
+      unchargedSamples: 0,
+    });
   });
 
   it('says why an interaction has no commit', () => {

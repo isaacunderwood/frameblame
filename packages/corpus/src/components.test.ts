@@ -24,18 +24,20 @@
  */
 
 import {
+  type AttributedInteraction,
   attributeInteractionComponents,
+  COARSENED_TIMING_TOLERANCE_MS,
   type CapturedSignals,
   type CommitAttribution,
   describeCommitBasis,
+  didRender,
   exceedsCoarsenedTolerance,
-  type InteractionComponents,
   type RankedCauses,
 } from '@frameblame/core';
 import { describe, expect, it } from 'vitest';
 
 import { loadGroundTruth } from './corpus.ts';
-import { arrayAt, asArray, asString, get, recordAt, stringAt } from './json.ts';
+import { arrayAt, asArray, asString, get, numberAt, recordAt, stringAt } from './json.ts';
 import { loadSignals } from './records.ts';
 
 /** One row of `spans`' `expected.sequence`, as the React tier reads it. */
@@ -67,11 +69,16 @@ function sequenceOf(): SequenceRow[] {
 
 const SEQUENCE = sequenceOf();
 
+/**
+ * What every `spans` component burns in its render body: `BURN_MS = 25` in
+ * `fixtures/spans/src/burn.ts`, declared in the ground truth as
+ * `bug.declaredBurnMsPerComponent`. Wall-clock time, so the same at any
+ * throttle rate.
+ */
+const BURN_MS = numberAt(loadGroundTruth('spans'), ['bug', 'declaredBurnMsPerComponent']);
+
 /** The interaction's attribution, which must exist and have commits. */
-function attributed(
-  signals: CapturedSignals,
-  label: string,
-): Extract<InteractionComponents, { kind: 'attributed' }> {
+function attributed(signals: CapturedSignals, label: string): AttributedInteraction {
   const result = attributeInteractionComponents(signals, label);
   if (result?.kind !== 'attributed') {
     throw new Error(`${label}: expected an attributed interaction, got ${String(result?.kind)}`);
@@ -80,9 +87,7 @@ function attributed(
 }
 
 /** The one commit an interaction in `spans` produces. */
-function onlyCommit(
-  result: Extract<InteractionComponents, { kind: 'attributed' }>,
-): CommitAttribution {
+function onlyCommit(result: AttributedInteraction): CommitAttribution {
   expect(result.commits).toHaveLength(1);
   return result.commits[0];
 }
@@ -140,6 +145,19 @@ describe('spans/development: the React tier names what rendered', () => {
       expect(naiveMs).toBeGreaterThan(times.totalMs * 1.5);
 
       /*
+       * The sum above is an identity: self times telescope to the total
+       * whatever the subtraction charged to whom. This is the independent
+       * oracle. Every component burns the same `BURN_MS`, so a rendered
+       * fiber whose self time came out below it has had some of its own
+       * render charged elsewhere. The smallest is 25.0ms, `StateOwner` in
+       * `bump` (development, 4x).
+       */
+      for (const entry of times.fibers) {
+        if (!didRender(entry.participation)) continue;
+        expect(entry.selfMs).toBeGreaterThanOrEqual(BURN_MS - COARSENED_TIMING_TOLERANCE_MS);
+      }
+
+      /*
        * Spans corroborate and never decide. The candidates carrying one are
        * exactly the ones the gate admits, and the weights are what they are
        * with the spans removed from the input entirely.
@@ -191,25 +209,32 @@ describe('spans/production: the profiler tier, named as such', () => {
   const production = loadSignals('spans', 'production');
 
   /**
-   * The production names of the components that rendered in development, by
-   * their position in the commit's fiber list. Both builds render the same
-   * tree in the same walk order, so a fiber index is the join between a dev
-   * name and its minified counterpart. That is a test-side check, not
-   * something the engine does.
+   * The production names of the components the ground truth says rendered,
+   * by their position in the commit's fiber list. Both builds render the same
+   * tree in the same walk order, so a development fiber's index is the join
+   * between a declared name and its minified counterpart. The expected names
+   * come from the ground truth's `rendered`, not from the engine's reading of
+   * the development commit, so an engine that misread participation in both
+   * builds the same way would still fail here. That join is a test-side
+   * check, not something the engine does.
    */
-  function productionNamesFor(label: string): Set<string> {
-    const dev = onlyCommit(attributed(development, label));
-    const prod = onlyCommit(attributed(production, label));
+  function productionNamesFor(row: SequenceRow): Set<string> {
+    const dev = onlyCommit(attributed(development, row.id)).commit.components.fibers;
+    const prod = onlyCommit(attributed(production, row.id)).commit.components.fibers;
     return new Set(
-      dev.components
-        .filter((component) => component.participation === 'mounted' || component.participation === 'updated')
-        .map((component) => {
-          const counterpart = prod.components[component.fiberIndex];
+      row.rendered.flatMap((name) => {
+        const indices = dev.flatMap((fiber, index) => (fiber.name === name ? [index] : []));
+        if (indices.length === 0) {
+          throw new Error(`${row.id}: no development fiber named ${name}`);
+        }
+        return indices.map((index) => {
+          const counterpart = prod[index];
           if (counterpart === undefined) {
-            throw new Error(`${label}: no production fiber at ${String(component.fiberIndex)}`);
+            throw new Error(`${row.id}: no production fiber at ${String(index)}`);
           }
           return counterpart.name;
-        }),
+        });
+      }),
     );
   }
 
@@ -239,13 +264,17 @@ describe('spans/production: the profiler tier, named as such', () => {
        * candidate, under its minified name, flagged as minified, weighted by
        * its share of the samples in the commit's window. 2 to 15 stacked
        * samples per window (production, 4x), so per-commit shares are coarse;
-       * the claim is the names and the tier, not the percentages.
+       * the claim is the names and the tier, not the percentages. Each
+       * weight must be above 0, though: a candidate the stack join matched
+       * no sample to would be a name from the hook alone, with no measurement
+       * behind it.
        */
       expect(commit.causes.causes.length).toBeGreaterThan(0);
-      expect(new Set(namesOf(commit.causes))).toEqual(productionNamesFor(row.id));
+      expect(new Set(namesOf(commit.causes))).toEqual(productionNamesFor(row));
       for (const cause of commit.causes.causes) {
         expect(cause.tier).toBe('profiler-unmapped');
         expect(cause.weight.basis).toBe('sample-share');
+        expect(cause.weight.fraction).toBeGreaterThan(0);
         expect(cause.subject).toMatchObject({ kind: 'component', nameIsMinified: true });
       }
       expect(commit.notes).toEqual([]);
@@ -260,7 +289,9 @@ describe('spans/production: the profiler tier, named as such', () => {
 
     // `g` in this bundle. Every stacked sample in the window lands in it: 2 of
     // 2 (production, 4x).
-    const [stateOwner] = productionNamesFor('state-owner-self');
+    const row = SEQUENCE.find((candidate) => candidate.id === 'state-owner-self');
+    if (row === undefined) throw new Error('no state-owner-self row in the ground truth');
+    const [stateOwner] = productionNamesFor(row);
     expect(namesOf(commit.causes)).toEqual([stateOwner]);
     expect(commit.causes.causes[0]?.weight.fraction).toBeGreaterThan(0.5);
   });

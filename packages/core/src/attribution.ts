@@ -39,8 +39,9 @@ import type { LineColumn } from './char-position.ts';
  *   The whole production story, and it resolves *better* than development: the
  *   component name comes back from the map's `names` array, with no hook, no
  *   development build and no build-time plugin.
- * - `profiler-unmapped` — sampled stacks with no map, so the names are whatever
- *   the bundle shipped. Still a real answer, and it must be reported with the
+ * - `profiler-unmapped` — sampled stacks not resolved through a source map,
+ *   because none shipped or none was resolved, so the names are whatever the
+ *   bundle shipped. Still a real answer, and it must be reported with the
  *   warning that the name is minified.
  * - `loaf-script-registration` — a script entry's `sourceCharPosition`,
  *   resolved. Precise for non-framework jank, and systematically wrong about
@@ -91,7 +92,7 @@ export function describeTier(tier: AttributionTier): string {
     case 'profiler-mapped':
       return 'sampled stacks resolved through the shipped source map';
     case 'profiler-unmapped':
-      return 'sampled stacks with no source map, so names are as the bundle shipped them';
+      return 'sampled stacks not resolved through a source map, so names are as the bundle shipped them';
     case 'loaf-script-registration':
       return "the long-frame script entry's own position, which is where the listener was registered";
     case 'loaf-timing-only':
@@ -238,14 +239,15 @@ export function confidenceWeight(fraction: number, basis: WeightBasis): Confiden
  * The window a sample count was taken over.
  *
  * Named because the denominator changes what a share means. `frame` is the
- * long frame's own extent, by `isWithinFrame`. `commit-render` is the stretch
- * of page clock that ends at a React commit and begins at the previous commit
- * or the interaction's start, whichever is later: the hook reports when a
- * commit finished but not when its render began, so the window is the
- * tightest bound the records support rather than the render itself, and it
- * can hold samples of whatever ran before the render started.
+ * long frame's own extent, by `isWithinFrame`. `since-previous-commit` is the
+ * stretch of page clock that ends at a React commit and begins at the latest
+ * of the interaction's start, the previous commit, and the last recorded
+ * input action at or before the commit. The hook reports when a commit
+ * finished but not when its render began, so the window bounds the render
+ * rather than being it, and it can hold samples of whatever ran between its
+ * start and the render's.
  */
-export type SampleWindowKind = 'frame' | 'commit-render';
+export type SampleWindowKind = 'frame' | 'since-previous-commit';
 
 /**
  * One piece of evidence behind a candidate cause.
@@ -343,7 +345,7 @@ export interface RankedCauses {
 
 /**
  * Sorts candidates by weight and checks that they do not claim more than the
- * whole frame.
+ * whole they are shares of: a frame, or a commit's render.
  *
  * Throws when the weights sum past 1 by more than a rounding hair, because
  * every way of producing that is a double count — the same milliseconds charged
@@ -365,7 +367,7 @@ export function rankCauses(causes: readonly CandidateCause[]): RankedCauses {
   // genuine double count, the smallest of which would be a whole slice.
   if (totalWeight > 1.001) {
     throw new Error(
-      `candidate causes claim ${totalWeight.toFixed(3)} of the frame, which is more than all of it`,
+      `candidate causes' weights sum to ${totalWeight.toFixed(3)}, which is more than all of it`,
     );
   }
 

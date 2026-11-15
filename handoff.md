@@ -13,10 +13,12 @@ They are history, not instructions.
 
 ## Where things stand
 
-`pnpm check` passes from the repo root: `format:check`, `lint`, `typecheck`, then `test` — 140
-tests across two packages after the overnight run's step 0 (114 before it). `pnpm build` passes.
+`pnpm check` passes from the repo root: `format:check`, `lint`, `typecheck`, then `test` — 180
+tests across two packages (89 core, 91 corpus) after the overnight run's step 3 fix pass; 140 after
+step 0, 114 before it. `pnpm build` passes.
 
-**Steps 1 and 2 are built and are the subject of a review point; step 3 has not started.**
+**Steps 1 and 2 are built and are the subject of a review point. Step 3 is built, reviewed and
+fixed; see the run log below.**
 `packages/core` now holds the record types (`loaf.ts`, `profiler.ts`, `react.ts`, `signals.ts`,
 `provenance.ts`), the frame partition (`frame-decomposition.ts`) and the answer's shape
 (`attribution.ts`) — no heuristics. `packages/corpus/src/records.ts` parses all eight runs into
@@ -457,8 +459,9 @@ sentence. Committed as `9007f0d` and pushed. Step 3 starts next.
 
 ### Step 3 — outcome
 
-Built in `packages/core/src/component-attribution.ts`, using `attribution.ts`'s vocabulary. Not
-committed. `pnpm check` is green at 178 tests (87 core, 91 corpus) and `pnpm build` passes.
+Built in `packages/core/src/component-attribution.ts`, using `attribution.ts`'s vocabulary.
+Committed as `8e5c39b`, with the refactor as `9194216`. `pnpm check` was green at 178 tests (87 core,
+91 corpus) and `pnpm build` passed; the fix pass below brings it to 180 (89 core, 91 corpus).
 
 - **The arithmetic.** `fiberParticipation` decides whether a fiber rendered the way React DevTools
   does: carried over first, then no alternate (a mount), then `PerformedWork`. Carried-over status is
@@ -548,6 +551,13 @@ corpus or derived from it, at 4×. Its fifteen findings, and what was done with 
     - name `MergedComponents` and `AttributedInteraction`.
 15. **Accepted.** Stale `handoff.md` lines are corrected, and `rankCauses`' error message no longer
     says "of the frame".
+
+### Step 3 — closed
+
+The fix pass applied every accepted finding. `pnpm check` is green at 180 tests (89 core, 91
+corpus). A before-and-after script over all 8 captures (18 interactions, 58 commits) found every
+weight, sample count, denominator, tier and note identical. Only two things changed: the evidence
+order, and `re` in `derive-in-render` production now carrying its `definedAt`. Step 4 starts next.
 
 ## Questions for the morning
 

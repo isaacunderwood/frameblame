@@ -34,7 +34,7 @@
  * A production build still calls the hook on every commit, and still sets
  * `PerformedWork`, so *which* components rendered is still known. But
  * `actualDuration` is null and the names are minified: `b`, `m`, `h`, `g`, `v`
- * in `spans`. An answer of "nothing" would be a lie of omission, so the commit
+ * and `_` in `spans`. An answer of "nothing" would be a lie of omission, so the commit
  * degrades to the profiler and says so. Samples inside the commit's window are
  * charged to the innermost stack frame whose name is one of the commit's
  * rendered component names, and the share of samples is the weight. This
@@ -79,6 +79,7 @@ import {
   commitRenderTimes,
   didRender,
   type FiberParticipation,
+  participationIn,
   participationsOf,
   type ReactTierShortfall,
   type RenderedParticipation,
@@ -94,8 +95,8 @@ import {
   type ProfileTrace,
   stackFrames,
 } from './profiler.ts';
-import type { CaptureProvenance } from './provenance.ts';
-import type { ReactCommit, ReactSpan } from './react.ts';
+import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
+import type { FiberId, ReactCommit, ReactSpan } from './react.ts';
 import {
   type CapturedSignals,
   framesOfInteraction,
@@ -121,7 +122,11 @@ export interface CommitComponent {
 
 /** The page-clock window samples and spans were matched against, in milliseconds. */
 export interface CommitSampleWindow {
-  /** Exclusive. The previous commit, or the interaction's start. */
+  /**
+   * Exclusive. The latest of the interaction's start, the previous commit, and
+   * the interaction's last input action at or before this commit. See
+   * `commitWindowStart`.
+   */
   readonly fromMs: number;
   /** Inclusive. The commit itself. */
   readonly toMs: number;
@@ -134,6 +139,14 @@ export interface CommitSampleWindow {
 export type CommitAttributionBasis =
   | {
       readonly tier: 'react-fiber-timings';
+      /**
+       * Carries `bailedOutSelfMs`, the self time of fibers React bailed out
+       * of, which is charged to no component. It is why a commit's ranked
+       * weights can sum to less than 1: the shortfall is its positive part
+       * over the denominator, and equals `bailedOutSelfMs` over it unless a
+       * bailed-out fiber's self time went negative, which a
+       * `negative-self-time` note reports.
+       */
       readonly times: CommitRenderTimes;
     }
   | {
@@ -146,6 +159,15 @@ export type CommitAttributionBasis =
       readonly shortfall: ReactTierShortfall;
       /** Samples with a stack inside the window, which is the denominator. */
       readonly samplesInWindow: number;
+      /**
+       * Of those, the samples charged to no candidate, which is why the ranked
+       * weights sum to `1 - unchargedSamples / samplesInWindow`. Mostly
+       * stacks that reach no rendered component's frame: React's own
+       * reconciliation and commit work, or whatever ran in the window before
+       * the render began. Also any whose innermost match was a name the
+       * `ambiguous-minified-name` note reports.
+       */
+      readonly unchargedSamples: number;
     }
   | {
       /** The hook named the components, and nothing measured their cost. */
@@ -159,11 +181,12 @@ export type ComponentAttributionNote =
   | CommitTimingNote
   | {
       /**
-       * A rendered component's name matched profiler frames at more than one
-       * definition site inside the window, so its samples were not charged to
-       * it. Minified names are reused across scopes, and at least one of those
-       * frames was some other function. The samples stay in the denominator,
-       * so the commit's ranked weights fall short of 1 by their share.
+       * A rendered component's name belongs to profiler frames at more than
+       * one definition site somewhere in the capture's profile, so no sample
+       * was charged to it. Minified names are reused across scopes, and at
+       * least one of those sites is some other function. The samples stay in
+       * the denominator, so the commit's ranked weights fall short of 1 by
+       * their share.
        */
       readonly kind: 'ambiguous-minified-name';
       readonly componentName: string;
@@ -181,6 +204,8 @@ export type ComponentAttributionNote =
 /** One commit's component attribution. */
 export interface CommitAttribution {
   readonly commit: ReactCommit;
+  /** Carried so that every millisecond figure here can be quoted with it. */
+  readonly provenance: CaptureProvenance;
   /**
    * The long animation frame the commit landed in, or `null`. `null` is a
    * finding, not missing data: it is what a render under LoAF's 50ms
@@ -200,12 +225,16 @@ export interface CommitAttribution {
   readonly notes: readonly ComponentAttributionNote[];
 }
 
+/** A non-empty list of evidence, as `CandidateCause` requires. */
+type Evidence = [CauseEvidence, ...CauseEvidence[]];
+
 /** One candidate's raw share before it becomes a weight, so commits can be merged. */
 interface Tally {
   readonly name: string;
   readonly subject: CauseSubject;
   numerator: number;
-  readonly evidence: CauseEvidence[];
+  /** Created with its first entry, so a candidate can never lack evidence. */
+  readonly evidence: Evidence;
 }
 
 /** A commit's tallies, with the denominator they are shares of. */
@@ -222,35 +251,48 @@ function weightBasisOf(tier: AttributionTier): WeightBasis {
   return tier === 'react-fiber-timings' ? 'fiber-self-time-share' : 'sample-share';
 }
 
-/** Every recorded fiber as a `CommitComponent`, with its participation where recorded. */
-function componentsOf(commit: ReactCommit): CommitComponent[] {
+/**
+ * Every recorded fiber as a `CommitComponent`, with its participation where
+ * recorded. `participation` is `participationsOf` over the commit's fibers, or
+ * `null` exactly when the commit's linkage is unrecorded.
+ */
+function componentsOf(
+  commit: ReactCommit,
+  participation: ReadonlyMap<FiberId, FiberParticipation> | null,
+): CommitComponent[] {
   const components = commit.components;
-  if (components.linkage === 'unrecorded') {
+  if (components.linkage === 'unrecorded' || participation === null) {
     return components.fibers.map((fiber, fiberIndex) => ({
       fiberIndex,
       name: fiber.name,
       participation: 'not-recorded',
     }));
   }
-  const participation = participationsOf(components.fibers);
   return components.fibers.map((fiber) => ({
     fiberIndex: fiber.id,
     name: fiber.name,
-    participation: participation.get(fiber.id) ?? 'carried-over',
+    participation: participationIn(participation, fiber),
   }));
 }
 
-/** The tally for `name`, created with `subject()` the first time the name is seen. */
-function getOrCreate(
+/**
+ * Adds `numerator` and `evidence` to the tally for `name`, creating it with
+ * `subject()` the first time the name is seen.
+ */
+function addToTally(
   tallies: Map<string, Tally>,
   name: string,
   subject: () => CauseSubject,
-): Tally {
+  numerator: number,
+  evidence: Readonly<Evidence>,
+): void {
   const existing = tallies.get(name);
-  if (existing !== undefined) return existing;
-  const created: Tally = { name, subject: subject(), numerator: 0, evidence: [] };
-  tallies.set(name, created);
-  return created;
+  if (existing === undefined) {
+    tallies.set(name, { name, subject: subject(), numerator, evidence: [...evidence] });
+    return;
+  }
+  existing.numerator += numerator;
+  existing.evidence.push(...evidence);
 }
 
 /**
@@ -279,19 +321,25 @@ function tallyFiberTimings(
 
   for (const entry of times.fibers) {
     if (!didRender(entry.participation)) continue;
-    const tally = getOrCreate(tallies, entry.fiber.name, () => ({
-      kind: 'component',
-      name: entry.fiber.name,
-      nameIsMinified: false,
-      definedAt: null,
-    }));
-    tally.numerator += Math.max(entry.selfMs, 0);
-    tally.evidence.push({
-      kind: 'fiber-render-time',
-      componentName: entry.fiber.name,
-      actualDurationMs: entry.actualDurationMs,
-      selfDurationMs: entry.selfMs,
-    });
+    addToTally(
+      tallies,
+      entry.fiber.name,
+      () => ({
+        kind: 'component',
+        name: entry.fiber.name,
+        nameIsMinified: false,
+        definedAt: null,
+      }),
+      Math.max(entry.selfMs, 0),
+      [
+        {
+          kind: 'fiber-render-time',
+          componentName: entry.fiber.name,
+          actualDurationMs: entry.actualDurationMs,
+          selfDurationMs: entry.selfMs,
+        },
+      ],
+    );
   }
 
   /*
@@ -322,6 +370,42 @@ function definitionSiteKey(frame: ProfiledFrame): string {
   return `${String(frame.resourceId)}:${String(frame.line)}:${String(frame.column)}`;
 }
 
+/**
+ * Every named function in a profile, by name, with one frame per distinct
+ * definition site.
+ *
+ * Built once per capture, over all of `profile.frames` rather than over the
+ * samples in any one window. Whether a minified name is ambiguous is a
+ * property of the bundle, not of which functions happened to be sampled
+ * between two commits: a name with a second site anywhere in the profile is
+ * shared by two functions, and a window that sampled only one of them cannot
+ * tell which one it was. Deciding per window would charge a commit's samples
+ * to a name that another window shows to be shared.
+ *
+ * What remains assumed: a name with exactly one site in the whole profile is
+ * taken to be the component. A component that was never sampled, sharing its
+ * minified name with one other function that was, would have that function's
+ * samples charged to it. Nothing in an unmapped profile can rule that out; the
+ * source map, which step 4 resolves, can.
+ *
+ * In the corpus every name the hook reported has exactly one site in its
+ * capture's profile: `h` and `re` in `derive-in-render`, and `b`, `m`, `h`,
+ * `g`, `v` and `_` in `spans` (production, 4x).
+ */
+type DefinitionSites = ReadonlyMap<string, readonly ProfiledFrame[]>;
+
+/** Indexes a profile's frames by name and definition site. See `DefinitionSites`. */
+function definitionSitesOf(profile: ProfileTrace): DefinitionSites {
+  const byName = new Map<string, Map<string, ProfiledFrame>>();
+  for (const frame of profile.frames) {
+    if (frame.name === null) continue;
+    const sites = byName.get(frame.name) ?? new Map<string, ProfiledFrame>();
+    sites.set(definitionSiteKey(frame), frame);
+    byName.set(frame.name, sites);
+  }
+  return new Map([...byName].map(([name, sites]) => [name, [...sites.values()]]));
+}
+
 /** Where a profiler frame's function is defined, in generated code. */
 function generatedLocation(
   profile: ProfileTrace,
@@ -339,6 +423,22 @@ type RenderedOrUnknown = CommitComponent & {
   readonly participation: RenderedParticipation | 'not-recorded';
 };
 
+/** Whether the hook says a component rendered, or did not record whether it did. */
+function isRenderedOrUnknown(component: CommitComponent): component is RenderedOrUnknown {
+  return component.participation === 'not-recorded' || didRender(component.participation);
+}
+
+/** A profile and its per-capture name index, built together. */
+interface IndexedProfile {
+  readonly profile: ProfileTrace;
+  readonly sites: DefinitionSites;
+}
+
+/** The capture's profile with its name index, or `null` when there was no profiler. */
+function indexProfile(profile: ProfileTrace | null): IndexedProfile | null {
+  return profile === null ? null : { profile, sites: definitionSitesOf(profile) };
+}
+
 /**
  * The profiler tier: samples in the commit's window charged to rendered
  * components by name.
@@ -351,106 +451,133 @@ type RenderedOrUnknown = CommitComponent & {
  * it is React's own reconciliation and commit work, or whatever ran in the
  * window before the render began.
  *
- * A name that matches frames at more than one definition site is not charged
- * at all (see `ambiguous-minified-name`). A component is one function at one
- * site, so a second site means another function shares the minified name, and
- * there is no way to tell which samples were whose.
+ * A name with more than one definition site in the capture's profile is not
+ * charged at all (see `ambiguous-minified-name` and `DefinitionSites`). A
+ * component is one function at one site, so a second site means another
+ * function shares the minified name, and there is no way to tell which
+ * samples were whose. Its samples are not passed on to a component further
+ * out on the stack either: whichever function it was, its time is not that
+ * outer component's self time.
  */
 function tallySamples(
   components: readonly CommitComponent[],
-  profile: ProfileTrace,
+  { profile, sites }: IndexedProfile,
   window: CommitSampleWindow,
   provenance: CaptureProvenance,
-): { tallies: Tally[]; samplesInWindow: number; notes: ComponentAttributionNote[] } {
+): {
+  tallies: Tally[];
+  samplesInWindow: number;
+  unchargedSamples: number;
+  notes: ComponentAttributionNote[];
+} {
   // Where render evidence was not recorded, every fiber is a possible
   // renderer: nothing in the record can rule one out.
-  const rendered = components.filter(
-    (component): component is RenderedOrUnknown =>
-      component.participation === 'not-recorded' || didRender(component.participation),
-  );
-  const names = new Set(rendered.map((component) => component.name));
+  const fibersByName = new Map<string, RenderedOrUnknown[]>();
+  for (const component of components.filter(isRenderedOrUnknown)) {
+    const fibers = fibersByName.get(component.name) ?? [];
+    fibers.push(component);
+    fibersByName.set(component.name, fibers);
+  }
 
   const counts = new Map<string, number>();
-  const sites = new Map<string, Map<string, ProfiledFrame>>();
   let samplesInWindow = 0;
-
   for (const sample of profile.samples) {
     if (sample.stackId === null) continue;
     if (sample.atMs <= window.fromMs || sample.atMs > window.toMs) continue;
     samplesInWindow += 1;
 
     const match = stackFrames(profile, sample.stackId).find(
-      (frame) => frame.name !== null && names.has(frame.name),
+      (frame) => frame.name !== null && fibersByName.has(frame.name),
     );
     if (match?.name == null) continue;
-
     counts.set(match.name, (counts.get(match.name) ?? 0) + 1);
-    const nameSites = sites.get(match.name) ?? new Map<string, ProfiledFrame>();
-    nameSites.set(definitionSiteKey(match), match);
-    sites.set(match.name, nameSites);
   }
 
   // Reported rather than divided by: with nothing in the window, every
   // rendered component would otherwise carry a weight of 0 of 0.
-  if (samplesInWindow === 0 && rendered.length > 0) {
-    return { tallies: [], samplesInWindow, notes: [{ kind: 'no-samples-in-window' }] };
+  if (samplesInWindow === 0 && fibersByName.size > 0) {
+    return {
+      tallies: [],
+      samplesInWindow,
+      unchargedSamples: 0,
+      notes: [{ kind: 'no-samples-in-window' }],
+    };
   }
 
   const notes: ComponentAttributionNote[] = [];
-  const tallies = new Map<string, Tally>();
+  const tallies: Tally[] = [];
   const nameIsMinified = provenance.buildMode === 'production';
+  let chargedSamples = 0;
 
-  for (const component of rendered) {
-    const nameSites = [...(sites.get(component.name)?.values() ?? [])];
+  for (const [name, fibers] of fibersByName) {
+    const nameSites = sites.get(name) ?? [];
     const ambiguous = nameSites.length > 1;
     const [site] = nameSites;
-
-    const tally = getOrCreate(tallies, component.name, () => ({
-      kind: 'component',
-      name: component.name,
-      nameIsMinified,
-      definedAt:
-        !ambiguous && site !== undefined ? generatedLocation(profile, site) : null,
-    }));
-
-    if (component.participation !== 'not-recorded') {
-      tally.evidence.push({
-        kind: 'fiber-rendered',
-        componentName: component.name,
-        participation: component.participation,
-      });
-    }
-
-    // Once per name, on the first fiber that carries it.
-    if (tally.evidence.some((evidence) => evidence.kind === 'profiler-samples')) continue;
     if (ambiguous) {
       notes.push({
         kind: 'ambiguous-minified-name',
-        componentName: component.name,
+        componentName: name,
         definitionSites: nameSites.length,
       });
     }
-    const samples = ambiguous ? 0 : (counts.get(component.name) ?? 0);
-    tally.numerator = samples;
-    tally.evidence.push({
-      kind: 'profiler-samples',
-      samples,
-      ofSamplesInWindow: samplesInWindow,
-      window: 'commit-render',
+
+    const samples = ambiguous ? 0 : (counts.get(name) ?? 0);
+    chargedSamples += samples;
+    tallies.push({
+      name,
+      subject: {
+        kind: 'component',
+        name,
+        nameIsMinified,
+        definedAt:
+          !ambiguous && site !== undefined ? generatedLocation(profile, site) : null,
+      },
+      numerator: samples,
+      evidence: [
+        {
+          kind: 'profiler-samples',
+          samples,
+          ofSamplesInWindow: samplesInWindow,
+          window: 'since-previous-commit',
+        },
+        ...fibers.flatMap((fiber): CauseEvidence[] =>
+          fiber.participation === 'not-recorded'
+            ? []
+            : [
+                {
+                  kind: 'fiber-rendered',
+                  componentName: name,
+                  participation: fiber.participation,
+                },
+              ],
+        ),
+      ],
     });
   }
 
-  return { tallies: [...tallies.values()], samplesInWindow, notes };
+  return {
+    tallies,
+    samplesInWindow,
+    unchargedSamples: samplesInWindow - chargedSamples,
+    notes,
+  };
 }
 
 /** Picks the strongest tier a commit supports and tallies it there. */
 function tallyCommit(
   signals: CapturedSignals,
+  profile: IndexedProfile | null,
   commit: ReactCommit,
   window: CommitSampleWindow,
 ): CommitTally {
-  const components = componentsOf(commit);
-  const timing = commitRenderTimes(commit);
+  // Built once and shared by both readers, so they cannot disagree about
+  // which fibers took part.
+  const participation =
+    commit.components.linkage === 'recorded'
+      ? participationsOf(commit.components.fibers)
+      : null;
+  const components = componentsOf(commit, participation);
+  const timing = commitRenderTimes(commit, participation ?? undefined);
 
   if (timing.kind === 'timed') {
     const { times } = timing;
@@ -468,7 +595,7 @@ function tallyCommit(
     };
   }
 
-  if (signals.profile === null) {
+  if (profile === null) {
     return {
       basis: { tier: 'unattributed', shortfall: timing.shortfall, reason: 'no-profiler' },
       components,
@@ -478,12 +605,13 @@ function tallyCommit(
     };
   }
 
-  const sampled = tallySamples(components, signals.profile, window, signals.provenance);
+  const sampled = tallySamples(components, profile, window, signals.provenance);
   return {
     basis: {
       tier: 'profiler-unmapped',
       shortfall: timing.shortfall,
       samplesInWindow: sampled.samplesInWindow,
+      unchargedSamples: sampled.unchargedSamples,
     },
     components,
     tallies: sampled.tallies,
@@ -505,25 +633,17 @@ function rankTallies(
   denominator: number,
 ): RankedCauses {
   const basis = weightBasisOf(tier);
-  const causes: CandidateCause[] = [];
-  for (const tally of tallies) {
-    const [first, ...rest] = tally.evidence;
-    // Every tally is created by a loop that pushes at least one entry onto it
-    // before the next tally is created, so `first` is always present. Skipped
-    // rather than asserted, so that a future path that broke this would lose a
-    // candidate visibly in a test instead of fabricating one.
-    if (first === undefined) continue;
-    causes.push({
+  return rankCauses(
+    tallies.map((tally): CandidateCause => ({
       subject: tally.subject,
       weight: confidenceWeight(
         denominator > 0 ? tally.numerator / denominator : 0,
         basis,
       ),
       tier,
-      evidence: [first, ...rest],
-    });
-  }
-  return rankCauses(causes);
+      evidence: tally.evidence,
+    })),
+  );
 }
 
 /** The long frame a page-clock instant fell inside, or `null`. */
@@ -537,11 +657,12 @@ function frameAt(
 /**
  * Attributes one commit to the components that rendered in it.
  *
- * `sinceMs` opens the commit's sample window: page-clock milliseconds, the
- * later of the previous commit's `committedAtMs` and the start of the
- * interaction the commit belongs to. The window closes at the commit itself.
- * At the fiber tier it decides only which spans corroborate. At the profiler
- * tier it decides which samples are shared out.
+ * `sinceMs` opens the commit's sample window, in page-clock milliseconds; the
+ * window closes at the commit itself. `attributeInteractionComponents` passes
+ * the latest of the interaction's start, the previous commit's
+ * `committedAtMs` and the last input action at or before this commit (see
+ * `commitWindowStart`). At the fiber tier the window decides only which spans
+ * corroborate. At the profiler tier it decides which samples are shared out.
  *
  * Returns the strongest tier the commit supports: `react-fiber-timings` when
  * the record carries links and timings, else `profiler-unmapped` when a
@@ -555,7 +676,8 @@ export function attributeCommit(
   commit: ReactCommit,
   sinceMs: number,
 ): CommitAttribution {
-  return attributeInWindow(signals, commit, sinceMs).attribution;
+  return attributeInWindow(signals, indexProfile(signals.profile), commit, sinceMs)
+    .attribution;
 }
 
 /**
@@ -565,14 +687,16 @@ export function attributeCommit(
  */
 function attributeInWindow(
   signals: CapturedSignals,
+  profile: IndexedProfile | null,
   commit: ReactCommit,
   sinceMs: number,
 ): { attribution: CommitAttribution; tally: CommitTally } {
   const sampleWindow = { fromMs: sinceMs, toMs: commit.committedAtMs };
-  const tally = tallyCommit(signals, commit, sampleWindow);
+  const tally = tallyCommit(signals, profile, commit, sampleWindow);
   return {
     attribution: {
       commit,
+      provenance: signals.provenance,
       frame: frameAt(signals.frames, commit.committedAtMs),
       sampleWindow,
       components: tally.components,
@@ -584,28 +708,80 @@ function attributeInWindow(
   };
 }
 
+/**
+ * Where a commit's sample window opens, in page-clock milliseconds: the
+ * latest of the interaction's start, the previous commit's `committedAtMs`,
+ * and the last input action at or before the commit.
+ *
+ * The hook reports when a commit finished, never when its render began, so
+ * the window can only bound the render. Each of the three is a point the
+ * render cannot have started before:
+ *
+ * - The interaction's start, because the commit is being claimed for it.
+ * - The previous commit, because React renders one commit at a time on the
+ *   main thread, and the samples before it belong to that commit.
+ * - The last action. The driver reads the page clock before it dispatches the
+ *   input (`spike/drive.ts`), so nothing the action caused can precede that
+ *   reading. Without this bound a commit's window would open at the previous
+ *   commit and take in everything that ran between it and the user's input:
+ *   on a page with a polling timer, that timer's samples would be shared out
+ *   among the components the input made render.
+ *
+ * No corpus figure depends on the third bound. In every interaction's commit
+ * windows, no stacked sample falls between the older bound and the action:
+ * 0 of 96 in `derive-in-render` development and 0 of 69 in production, and 0
+ * of 52 in `spans` in each build (4x).
+ *
+ * An action after the commit is ignored, because the commit cannot have been
+ * caused by it. An interaction with no actions, such as a settle step that
+ * contains a first mount, is bounded by the other two alone.
+ */
+function commitWindowStart(
+  interaction: InteractionWindow,
+  previous: ReactCommit | undefined,
+  commit: ReactCommit,
+): number {
+  let sinceMs = Math.max(
+    interaction.fromMs,
+    previous?.committedAtMs ?? interaction.fromMs,
+  );
+  for (const action of interaction.actions) {
+    if (action.atMs <= commit.committedAtMs) sinceMs = Math.max(sinceMs, action.atMs);
+  }
+  return sinceMs;
+}
+
+/**
+ * An interaction's candidates merged across its commits, at the one tier they
+ * all reached.
+ */
+export interface MergedComponents {
+  readonly tier: AttributionTier;
+  readonly causes: RankedCauses;
+}
+
+/** An interaction React committed in, with its commits' attributions. */
+export interface AttributedInteraction {
+  readonly kind: 'attributed';
+  readonly interaction: InteractionWindow;
+  /** Carried so that every millisecond figure here can be quoted with it. */
+  readonly provenance: CaptureProvenance;
+  /** The long frames that began in the window. May be empty. */
+  readonly frames: readonly LongAnimationFrame[];
+  readonly commits: readonly [CommitAttribution, ...CommitAttribution[]];
+  /**
+   * The commits' candidates merged by name, as shares of the interaction's
+   * summed denominators, or `null` when its commits were attributed at
+   * different tiers. A fiber-time share and a sample share are not the
+   * same quantity, so they are not added together. The per-commit answers
+   * are still there.
+   */
+  readonly merged: MergedComponents | null;
+}
+
 /** One interaction's component attribution, merged across its commits. */
 export type InteractionComponents =
-  | {
-      readonly kind: 'attributed';
-      readonly interaction: InteractionWindow;
-      /** Carried so that every millisecond figure here can be quoted with it. */
-      readonly provenance: CaptureProvenance;
-      /** The long frames that began in the window. May be empty. */
-      readonly frames: readonly LongAnimationFrame[];
-      readonly commits: readonly [CommitAttribution, ...CommitAttribution[]];
-      /**
-       * The commits' candidates merged by name, as shares of the interaction's
-       * summed denominators, or `null` when its commits were attributed at
-       * different tiers. A fiber-time share and a sample share are not the
-       * same quantity, so they are not added together. The per-commit answers
-       * are still there.
-       */
-      readonly merged: {
-        readonly tier: AttributionTier;
-        readonly causes: RankedCauses;
-      } | null;
-    }
+  | AttributedInteraction
   | {
       readonly kind: 'no-commit';
       readonly interaction: InteractionWindow;
@@ -625,10 +801,10 @@ export type InteractionComponents =
  * that rendered in them.
  *
  * A commit belongs to the interaction whose window contains its
- * `committedAtMs`, inclusive at both ends. Its sample window opens at the
- * previous commit or at the interaction's start, whichever is later. A frame
- * is not required: the interaction's frames are reported beside the answer,
- * and an interaction with none is still attributed from its commits.
+ * `committedAtMs`, inclusive at both ends. Its sample window opens at
+ * `commitWindowStart`. A frame is not required: the interaction's frames are
+ * reported beside the answer, and an interaction with none is still
+ * attributed from its commits.
  *
  * Returns `null` when no interaction has that label.
  */
@@ -641,6 +817,7 @@ export function attributeInteractionComponents(
 
   const frames = framesOfInteraction(signals, label);
   const { commits } = signals.react;
+  const profile = indexProfile(signals.profile);
 
   const attributed: CommitAttribution[] = [];
   const tallies: CommitTally[] = [];
@@ -651,12 +828,8 @@ export function attributeInteractionComponents(
     ) {
       continue;
     }
-    const previous = commits[index - 1];
-    const sinceMs = Math.max(
-      interaction.fromMs,
-      previous?.committedAtMs ?? interaction.fromMs,
-    );
-    const { attribution, tally } = attributeInWindow(signals, commit, sinceMs);
+    const sinceMs = commitWindowStart(interaction, commits[index - 1], commit);
+    const { attribution, tally } = attributeInWindow(signals, profile, commit, sinceMs);
     attributed.push(attribution);
     tallies.push(tally);
   }
@@ -691,9 +864,7 @@ export function attributeInteractionComponents(
  * samples as a share of all the samples in the interaction's commit windows.
  * A name's subject is taken from the first commit that carried it.
  */
-function mergeTallies(
-  commits: readonly CommitTally[],
-): Extract<InteractionComponents, { kind: 'attributed' }>['merged'] {
+function mergeTallies(commits: readonly CommitTally[]): MergedComponents | null {
   const [first] = commits;
   if (first === undefined) return null;
   const tier = first.basis.tier;
@@ -704,9 +875,13 @@ function mergeTallies(
   for (const commit of commits) {
     denominator += commit.denominator;
     for (const tally of commit.tallies) {
-      const target = getOrCreate(merged, tally.name, () => tally.subject);
-      target.numerator += tally.numerator;
-      target.evidence.push(...tally.evidence);
+      addToTally(
+        merged,
+        tally.name,
+        () => tally.subject,
+        tally.numerator,
+        tally.evidence,
+      );
     }
   }
 
@@ -734,11 +909,12 @@ export function describeCommitBasis(basis: CommitAttributionBasis): string {
       return describeTier(basis.tier);
     case 'profiler-unmapped':
       return (
-        `${describeTier(basis.tier)}, joined to the components React's DevTools hook ` +
-        `reported by name; degraded from ${describeTier('react-fiber-timings')} because ` +
-        `${describeShortfall(basis.shortfall)}. Source maps are not resolved at this tier, ` +
-        'even where the bundle ships one, so component names and positions are as the ' +
-        'bundle shipped them'
+        `${describeTier(basis.tier)}, joined by name to the components React's DevTools ` +
+        `hook reported; degraded from ${describeTier('react-fiber-timings')} because ` +
+        `${describeShortfall(basis.shortfall)}. This tier does not resolve a source map ` +
+        'even where the bundle ships one, so positions are in generated code too. ' +
+        `${String(basis.unchargedSamples)} of the ${String(basis.samplesInWindow)} stacked ` +
+        "samples in the commit's window were charged to no component"
       );
     case 'unattributed':
       return (
@@ -748,15 +924,21 @@ export function describeCommitBasis(basis: CommitAttributionBasis): string {
   }
 }
 
-/** One line of prose for a component-attribution note. */
-export function describeComponentNote(note: ComponentAttributionNote): string {
+/**
+ * One line of prose for a component-attribution note. `provenance` is the
+ * capture's, and qualifies any millisecond figure the line quotes.
+ */
+export function describeComponentNote(
+  note: ComponentAttributionNote,
+  provenance: CaptureProvenance,
+): string {
   switch (note.kind) {
     case 'negative-self-time':
-      return `${note.componentName} (fiber ${String(note.fiberId)}) has children summing to ${note.byMs.toFixed(1)}ms more than its own subtree time; its self time is reported as negative, not clamped`;
+      return `${note.componentName} (fiber ${String(note.fiberId)}) has children summing to ${formatMilliseconds(note.byMs, provenance)} more than its own subtree time; its self time is reported as negative, not clamped`;
     case 'walk-truncated':
       return "the collector's walk hit its fiber cap, so some ancestors' self times include fibers the record does not show";
     case 'ambiguous-minified-name':
-      return `${note.componentName} matched ${String(note.definitionSites)} different functions in the profile, so none of its samples were charged to it`;
+      return `${note.componentName} names ${String(note.definitionSites)} different functions in the profile, so none of its samples were charged to it`;
     case 'no-samples-in-window':
       return "no profiler sample with a stack fell inside the commit's window, so the rendered components carry no weight";
   }
