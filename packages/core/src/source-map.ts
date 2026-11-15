@@ -30,7 +30,8 @@
  * The corpus's declared culprit resolves to `OrderTable.tsx:36:5`, the `sort`
  * of `.sort((a, b) => ...)`, in both builds. That token is read back out of
  * the map's `sourcesContent` and carried as `enclosingCallToken`, so that the
- * claim can be "line 36, in the callback passed to `.sort`".
+ * claim can be "line 36, in the callback passed to `.sort`". It depends on the
+ * lookup's bias; see the comment in `resolveFrame`.
  *
  * ## Library code
  *
@@ -48,6 +49,7 @@
  */
 
 import {
+  GREATEST_LOWER_BOUND,
   isIgnored,
   originalPositionFor,
   sourceContentFor,
@@ -59,6 +61,7 @@ import {
   charPositionAt,
   createScriptLineIndex,
   type LineColumn,
+  type ScriptLineIndex,
 } from './char-position.ts';
 import {
   type ProfiledFrame,
@@ -78,27 +81,43 @@ export type UnlocatedReason =
   /** A `resourceId` with no entry in `trace.resources`. */
   | 'unknown-resource';
 
+/** What every frame with a position carries, whether or not a map applied. */
+interface Located {
+  readonly frame: ProfiledFrame;
+  /** The served script the frame ran in. */
+  readonly scriptUrl: string;
+  /** The profiler's position, converted once, in the served script. */
+  readonly generated: LineColumn;
+}
+
 /**
  * One profiled frame, resolved as far as the capture allows.
+ *
+ * A located frame carries `definedAt`, where its function is defined: in the
+ * original file when a map applied, in the served script with the reason when
+ * none did. Either way `generated` is the served position, so a frame's
+ * identity never depends on whether it resolved.
  *
  * Every frame in the corpus is either `mapped` or `unmapped`. `unlocated` is
  * reasoned rather than measured: the API can report a native frame, and no
  * capture has one.
  */
 export type FrameResolution =
-  | {
+  | (Located & {
       readonly kind: 'mapped';
-      readonly frame: ProfiledFrame;
-      /** The served script the frame ran in. */
-      readonly scriptUrl: string;
-      /** The profiler's position, converted once, in the served script. */
-      readonly generated: LineColumn;
       /** The original position, through the map. */
-      readonly original: Extract<SourceLocation, { throughSourceMap: true }>;
+      readonly definedAt: Extract<SourceLocation, { throughSourceMap: true }>;
       /**
        * The map's name for the identifier at the original position, or `null`.
        * Present on every component in both production captures, and absent
        * from every development map, which carries an empty `names` array.
+       *
+       * Always `null` for a frame the profiler reports as anonymous. Such a
+       * frame resolves to the segment before its own, which belongs to a
+       * neighbouring token, the enclosing call, so any name the map gives
+       * there is that token's and not the function's. Taken only from a named
+       * frame, where the segment is the function's own name: `h` becomes
+       * `OrderTable`.
        */
       readonly originalName: string | null;
       /** Whether the map's `ignoreList` names the original source as library code. */
@@ -108,19 +127,34 @@ export type FrameResolution =
        * when the map carries the original text. See `enclosingCallTokenAt`.
        */
       readonly enclosingCallToken: string | null;
-    }
-  | {
+    })
+  | (Located & {
       readonly kind: 'unmapped';
-      readonly frame: ProfiledFrame;
-      readonly scriptUrl: string;
       /** In the served script, carrying the reason no map applied. */
-      readonly generated: Extract<SourceLocation, { throughSourceMap: false }>;
-    }
+      readonly definedAt: Extract<SourceLocation, { throughSourceMap: false }>;
+    })
   | {
       readonly kind: 'unlocated';
       readonly frame: ProfiledFrame;
       readonly reason: UnlocatedReason;
     };
+
+/**
+ * A stable key for a profiled function: its resource and its definition site
+ * there, as the profiler reported it.
+ *
+ * The raw 1-based line and column, unconverted. A key only has to tell sites
+ * apart, so it needs no conversion, and leaving the position as reported keeps
+ * `profiledFramePosition` the one place the column changes base. Two frames
+ * with the same generated position are the same function; keying on the
+ * original position as well would split nothing, since the map is a function
+ * of the generated one. The React tier's name index and the profiler tier's
+ * tallies both key on this, so the two can never disagree about which frames
+ * are one function.
+ */
+export function generatedSiteKey(frame: ProfiledFrame): string {
+  return `${String(frame.resourceId)}:${String(frame.line)}:${String(frame.column)}`;
+}
 
 /**
  * A profile with every frame resolved, computed once.
@@ -140,9 +174,17 @@ export interface ResolvedProfile {
  *
  * `TraceMap` decodes its mappings lazily on the first lookup, so building one
  * per mapped resource costs nothing for a resource no frame points into.
+ * `lineIndexOf` is lazy and cached for the same reason: React's development
+ * map carries the whole of react-dom as `sourcesContent`, and only a frame
+ * that resolves into a source needs its lines counted.
  */
 type ResourceMap =
-  | { readonly kind: 'map'; readonly map: TraceMap }
+  | {
+      readonly kind: 'map';
+      readonly map: TraceMap;
+      /** The original text's line index, or `null` when the map carries no text. */
+      readonly lineIndexOf: (source: string) => ScriptLineIndex | null;
+    }
   | { readonly kind: 'none'; readonly reason: UnmappedReason };
 
 /**
@@ -172,9 +214,15 @@ function traceMapOf(map: RawSourceMap): TraceMap | null {
       ...(map.ignoreList === undefined ? {} : { ignoreList: map.ignoreList }),
     });
   } catch {
-    // A malformed `mappings` string throws on decode. That is the map's
-    // fault, not the capture's, and it degrades the resource rather than the
-    // run.
+    /*
+     * Only a structural fault reaches here, such as a map with no `sources`
+     * array. A malformed `mappings` string does not: `TraceMap` decodes
+     * lazily and leniently, and garbage VLQ resolves silently to some
+     * position rather than throwing. The original-line check in
+     * `resolveFrame` is the cheap guard against the worst of that. Either way
+     * it is the map's fault, not the capture's, and it degrades the resource
+     * rather than the run.
+     */
     return null;
   }
 }
@@ -187,9 +235,17 @@ function resourceMapOf(resource: ScriptResource): ResourceMap {
     };
   }
   const map = traceMapOf(resource.sourceMap.map);
-  return map === null
-    ? { kind: 'none', reason: 'source-map-unreadable' }
-    : { kind: 'map', map };
+  if (map === null) return { kind: 'none', reason: 'source-map-unreadable' };
+
+  const lineIndexes = new Map<string, ScriptLineIndex | null>();
+  const lineIndexOf = (source: string): ScriptLineIndex | null => {
+    if (!lineIndexes.has(source)) {
+      const text = sourceContentFor(map, source);
+      lineIndexes.set(source, text === null ? null : createScriptLineIndex(text));
+    }
+    return lineIndexes.get(source) ?? null;
+  };
+  return { kind: 'map', map, lineIndexOf };
 }
 
 /*
@@ -285,24 +341,51 @@ function resolveFrame(
     kind: 'unmapped',
     frame,
     scriptUrl,
-    generated: { file: scriptUrl, position: generated, throughSourceMap: false, whyNot },
+    generated,
+    definedAt: { file: scriptUrl, position: generated, throughSourceMap: false, whyNot },
   });
 
   if (resourceMap.kind === 'none') return unmapped(resourceMap.reason);
 
   /*
-   * The default bias, `GREATEST_LOWER_BOUND`, is the right one and the only
-   * one that matters: on every frame in both `derive-in-render` builds it and
-   * `LEAST_UPPER_BOUND` returned the same original position (`findings.md`,
-   * point 4), because the maps are dense and the miss is a structural absent
-   * segment, not a sparse map.
+   * The bias is load-bearing, and `GREATEST_LOWER_BOUND` is required, not
+   * merely the default. esbuild and rolldown emit no segment on an arrow
+   * function's opening paren, so the profiler's position for an anonymous
+   * callback falls between segments. With none at that column, GLB takes the
+   * segment before it, which is the call token: `OrderTable.tsx:36:5`, the
+   * `sort` of `.sort`. `LEAST_UPPER_BOUND` takes the one after, the arrow's
+   * first parameter, at `36:11`.
+   *
+   * The two disagree on every mapped frame in the corpus, not only that one:
+   * they agree on 0 of 27 in `derive-in-render` development and 0 of 19 in
+   * production, and on 0 of 117 across `derive-in-render` and `spans` (v0.3
+   * re-capture, 4x, both build modes). So no profiled position lands exactly
+   * on a segment start, and the bias decides every lookup. `findings.md`
+   * point 4 once recorded the opposite. Agreement appears only at the
+   * unconverted 1-based column, and even there on 24 of 27 frames in
+   * development and 15 of 19 in production, so it was most likely measured with the
+   * off-by-one; the correction is appended there.
    */
-  const { map } = resourceMap;
-  const original = originalPositionFor(map, generated);
+  const { map, lineIndexOf } = resourceMap;
+  const original = originalPositionFor(map, { ...generated, bias: GREATEST_LOWER_BOUND });
   if (original.source === null) return unmapped('no-mapping-at-position');
 
+  /*
+   * A sanity check against a map that decoded without complaint and is
+   * wrong: an original line past the end of the source it names cannot be
+   * a real position. `TraceMap` decodes leniently, so a corrupt `mappings`
+   * string reaches here rather than failing at construction. Only checked
+   * where the map carries the source's text; no frame in the corpus fails it.
+   */
+  const lineIndex = lineIndexOf(original.source);
+  if (lineIndex !== null && original.line > lineIndex.lineStarts.length) {
+    return unmapped('no-mapping-at-position');
+  }
+
   const position = { line: original.line, column: original.column };
-  const anonymous = frame.name === null && original.name === null;
+  // Only the profiler's own name says whether the function is anonymous: see
+  // `originalName` on `FrameResolution` for why the map's name cannot.
+  const anonymous = frame.name === null;
   const text = anonymous ? sourceContentFor(map, original.source) : null;
 
   return {
@@ -310,8 +393,8 @@ function resolveFrame(
     frame,
     scriptUrl,
     generated,
-    original: { file: original.source, position, throughSourceMap: true },
-    originalName: original.name,
+    definedAt: { file: original.source, position, throughSourceMap: true },
+    originalName: anonymous ? null : original.name,
     inIgnoredSource: isIgnored(map, original.source),
     enclosingCallToken: text === null ? null : enclosingCallTokenAt(text, position),
   };
@@ -350,12 +433,5 @@ export function resolvedStack(
  * map applied, the generated one otherwise, and `null` for an unlocated frame.
  */
 export function definitionSite(resolution: FrameResolution): SourceLocation | null {
-  switch (resolution.kind) {
-    case 'mapped':
-      return resolution.original;
-    case 'unmapped':
-      return resolution.generated;
-    case 'unlocated':
-      return null;
-  }
+  return resolution.kind === 'unlocated' ? null : resolution.definedAt;
 }

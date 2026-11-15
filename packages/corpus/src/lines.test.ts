@@ -5,7 +5,7 @@
  *
  * 1. `derive-in-render` resolves to `OrderTable.tsx` line 36 as the top-ranked
  *    line in both build modes, with 60% or more of the replay's `OrderTable`
- *    samples inside the declared range 34-36.
+ *    samples charged to functions defined inside the declared range 34-36.
  * 2. `vendor-listener` attributes its vendor slice to `vendor.js` from the
  *    profiler, while reporting that LoAF named `app.js` for the same slice.
  *
@@ -99,7 +99,7 @@ function shareInRange(
   return { inRange, ofFile };
 }
 
-describe('derive-in-render: the profiler names the declared line', () => {
+describe('derive-in-render: the profiler names the function on the declared line', () => {
   const truth = loadGroundTruth('derive-in-render');
   const range = ['expected', 'acceptableAttribution', 'lineRange'] as const;
   const from = numberAt(truth, [...range, 'from']);
@@ -112,7 +112,7 @@ describe('derive-in-render: the profiler names the declared line', () => {
   const dominantLine = numberAt(dominant, ['line']);
 
   for (const mode of BUILD_MODES) {
-    it(`${mode}: line ${String(dominantLine)} ranks first over the replay, and most samples land in ${String(from)}-${String(to)}`, async (context) => {
+    it(`${mode}: the function defined on line ${String(dominantLine)} ranks first over the replay, and most samples are charged to functions defined in ${String(from)}-${String(to)}`, async (context) => {
       const { signals, resolved, replay } = replayOf('derive-in-render', mode);
 
       /*
@@ -292,11 +292,15 @@ describe('vendor-listener: the profiler names the vendor LoAF cannot', () => {
       const entry = entryFor(entries, vendor);
 
       /*
-       * LoAF's half, unchanged: every one of this listener's six entries
-       * names `app.js`, where the listener was registered, and nothing in
-       * them names `vendor.js`.
+       * LoAF's half, unchanged: every one of this listener's entries (six in
+       * each build mode, 4x) names `app.js`, where the listener was
+       * registered, and nothing in them names `vendor.js`. How many entries
+       * there are is a long-frame count, so it is not asserted.
        */
-      expect(entry.slices).toHaveLength(6);
+      expect(entry.slices.length).toBeGreaterThan(0);
+      for (const slice of entry.slices) {
+        expect(fileNameOf(slice.script.sourceUrl ?? '')).toBe(vendor.loafFileName);
+      }
       expect(fileNameOf(entry.site.sourceUrl ?? '')).toBe(vendor.loafFileName);
 
       /*
@@ -304,8 +308,17 @@ describe('vendor-listener: the profiler names the vendor LoAF cannot', () => {
        * samples in development, all 13 in `vendorTrack`, and 14 in
        * production, 13 of them in `vendorTrack` and one in the anonymous
        * listener itself at `app.js:192` (4x). A 12ms slice at a 12-15ms
-       * cadence is about one sample per click, which is why the claim is over
-       * every click rather than per frame.
+       * cadence is about one sample per click (both build modes), which is
+       * why the claim is over every click rather than per frame.
+       *
+       * Most of those samples are one burst, not thirteen clicks' worth: 9
+       * of development's 13 fall in 1.1ms on the first click (165.8-166.9ms),
+       * and 9 of production's 14 in 181.0-182.5ms, the `app.js:192` sample
+       * among them. After the first click the evidence is 4 of 4 in
+       * development and 5 of 5 in production, all `vendorTrack`; the sixth
+       * development click's one sample, at 3757.2ms, is on the boundary and
+       * goes to the next slice (4x). Burst samples are not independent
+       * evidence, which the confidence model has to account for.
        */
       const profiler = entry.profiler;
       if (profiler === null) throw new Error('no profiler attribution');
@@ -347,7 +360,9 @@ describe('vendor-listener: the profiler names the vendor LoAF cannot', () => {
        * forced-layout entry's 51 development samples include one in
        * `vendorTrack`, taken at 3757.2ms, the exact coarsened instant the
        * vendor slice ends and this one begins (4x). Slices are half-open, so
-       * it is counted here, once.
+       * it is counted here, once. That is the tie-break, and here it points
+       * the wrong way: the sample's leaf is `vendorTrack`, so by its stack it
+       * belongs to the vendor slice (see `scriptSlicePopulation`).
        */
       for (const slice of slices.filter((candidate) => !candidate.isThirdParty)) {
         const entry = entryFor(entries, slice);

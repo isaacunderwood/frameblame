@@ -119,7 +119,9 @@ export function describeTier(tier: AttributionTier): string {
  *   resolver can read.
  * - `no-mapping-at-position` — the map covers the script but not this
  *   position: a bundler's own runtime, or a module's top level. One production
- *   frame in `spans`, at generated `1:1`, is this.
+ *   frame in `spans`, at generated `1:1`, is this. Also what a map gets for
+ *   naming an original line past the end of its source, which only a corrupt
+ *   map does and no corpus map does.
  */
 export type UnmappedReason =
   | 'no-source-map'
@@ -255,7 +257,16 @@ export type CauseSubject =
   | {
       readonly kind: 'browser-work';
       readonly what: 'forced-style-and-layout' | 'style' | 'layout' | 'paint';
-      /** The script that forced it, where the browser named one. */
+      /**
+       * The script that forced it, where the browser named one.
+       *
+       * Nothing constructs this yet. When something first does, the position
+       * will come from LoAF's `sourceCharPosition` in the served script, and
+       * an unmapped `SourceLocation` must say why no map applied. A position
+       * nobody tried to resolve through a map fits none of `UnmappedReason`'s
+       * four members, so it will need a "not attempted" member then, rather
+       * than borrowing `no-source-map` and claiming something unchecked.
+       */
       readonly forcedBy: SourceLocation | null;
     }
   | {

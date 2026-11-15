@@ -149,7 +149,7 @@ describe('resolveProfile', () => {
     expect(component).toMatchObject({
       kind: 'mapped',
       generated: { line: 1, column: 9 },
-      original: {
+      definedAt: {
         file: 'src/Table.tsx',
         position: { line: 2, column: 16 },
         throughSourceMap: true,
@@ -171,9 +171,88 @@ describe('resolveProfile', () => {
     const [callback] = resolveProfile(traceOf([at(null, 1, 36)])).frames;
     expect(callback).toMatchObject({
       kind: 'mapped',
-      original: { position: { line: 4, column: 5 } },
+      definedAt: { position: { line: 4, column: 5 } },
       originalName: null,
       enclosingCallToken: '.sort',
+    });
+  });
+
+  it('never gives an anonymous callback the name of the call it landed on', () => {
+    /*
+     * The same map, except that the `sort` segment carries a name, as a
+     * production map's member-call segments can. The anonymous callback still
+     * lands on it, and the name there is `sort`'s, not the callback's: taking
+     * it would report the comparator as a function called `sort`. No frame in
+     * the corpus has this shape; the rule is what keeps one from going wrong.
+     */
+    const named: RawSourceMap = {
+      ...MAP,
+      names: ['Table', 'sort'],
+      mappings: encodeMappings([
+        [
+          [9, 0, 1, 16, 0],
+          [30, 0, 3, 5, 1],
+          [60, 1, 0, 0],
+        ],
+      ]),
+    };
+    const [callback] = resolveProfile(
+      traceOf(
+        [at(null, 1, 36)],
+        [
+          resource({
+            sourceMap: { origin: { kind: 'external', url: 'index.js.map' }, map: named },
+          }),
+        ],
+      ),
+    ).frames;
+    expect(callback).toMatchObject({
+      kind: 'mapped',
+      definedAt: { position: { line: 4, column: 5 } },
+      originalName: null,
+      enclosingCallToken: '.sort',
+    });
+  });
+
+  it('refuses an original line past the end of the source it names', () => {
+    /*
+     * A segment that sends generated column 80 to 0-based line 39 of a
+     * six-line file: what a corrupt `mappings` string can decode to, since
+     * `TraceMap` decodes leniently rather than throwing. It is reported as
+     * not covered by the map rather than as a position that does not exist.
+     */
+    const corrupt: RawSourceMap = {
+      ...MAP,
+      mappings: encodeMappings([
+        [
+          [9, 0, 1, 16, 0],
+          [30, 0, 3, 5],
+          [60, 1, 0, 0],
+          [80, 0, 39, 0],
+        ],
+      ]),
+    };
+    const [past, inside] = resolveProfile(
+      traceOf(
+        [at('x', 1, 81), at('h', 1, 10)],
+        [
+          resource({
+            sourceMap: {
+              origin: { kind: 'external', url: 'index.js.map' },
+              map: corrupt,
+            },
+          }),
+        ],
+      ),
+    ).frames;
+    expect(past).toMatchObject({
+      kind: 'unmapped',
+      generated: { line: 1, column: 80 },
+      definedAt: { throughSourceMap: false, whyNot: 'no-mapping-at-position' },
+    });
+    expect(inside).toMatchObject({
+      kind: 'mapped',
+      definedAt: { position: { line: 2 } },
     });
   });
 
@@ -189,15 +268,15 @@ describe('resolveProfile', () => {
     const [onSegment, oneLeft] = resolveProfile(
       traceOf([at(null, 1, 31), at(null, 1, 30)]),
     ).frames;
-    expect(onSegment).toMatchObject({ original: { position: { line: 4, column: 5 } } });
-    expect(oneLeft).toMatchObject({ original: { position: { line: 2, column: 16 } } });
+    expect(onSegment).toMatchObject({ definedAt: { position: { line: 4, column: 5 } } });
+    expect(oneLeft).toMatchObject({ definedAt: { position: { line: 2, column: 16 } } });
   });
 
   it("records the map's ignore-list verdict on library code", () => {
     const [library] = resolveProfile(traceOf([at('Fd', 1, 61)])).frames;
     expect(library).toMatchObject({
       kind: 'mapped',
-      original: { file: 'node_modules/react/index.js' },
+      definedAt: { file: 'node_modules/react/index.js' },
       inIgnoredSource: true,
     });
   });
@@ -230,7 +309,7 @@ describe('resolveProfile', () => {
     expect(
       resolved.frames.map((frame) =>
         frame.kind === 'unmapped'
-          ? frame.generated.whyNot
+          ? frame.definedAt.whyNot
           : frame.kind === 'unlocated'
             ? frame.reason
             : frame.kind,
@@ -247,7 +326,8 @@ describe('resolveProfile', () => {
 
     // The generated position is still reported, in the served script.
     expect(resolved.frames[0]).toMatchObject({
-      generated: {
+      generated: { line: 1, column: 9 },
+      definedAt: {
         file: 'http://localhost/assets/index.js',
         position: { line: 1, column: 9 },
         throughSourceMap: false,

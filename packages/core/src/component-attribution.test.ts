@@ -683,6 +683,69 @@ describe('attributeInteractionComponents', () => {
     expect(app?.weight.fraction).toBeCloseTo(20 / 100, 10);
   });
 
+  it('merges a mapped commit with an unmapped one, at the unmapped tier', () => {
+    /*
+     * Two production commits in one interaction. The map covers `g`'s site
+     * (generated 9:101, 0-based, named `StateOwner`) and not `z`'s, which this
+     * test defines at 1-based column 50, before the line's first segment. So
+     * the first commit is `profiler-mapped` and the second `profiler-unmapped`.
+     * Both are sample shares, so they merge, and the merge claims only the
+     * weaker tier; each candidate keeps its own.
+     */
+    const sampled = trace(
+      [
+        { atMs: 940, stack: ['d', 'g'] },
+        { atMs: 1000, stack: ['d', 'z'] },
+      ],
+      { 'g@940': 102, 'z@1000': 50 },
+    );
+    const [bundle] = sampled.resources;
+    if (bundle === undefined) throw new Error('no bundle');
+    const input = signals({
+      commits: [
+        commit([fiber(0, 'g', null, null)], 950),
+        commit([fiber(0, 'z', null, null)], 1050),
+      ],
+      buildMode: 'production',
+      profile: {
+        ...sampled,
+        resources: [
+          {
+            ...bundle,
+            sourceMap: {
+              origin: { kind: 'external', url: 'index.js.map' },
+              map: {
+                version: 3,
+                sources: ['src/App.tsx'],
+                names: ['StateOwner'],
+                mappings: ';;;;;;;;qGAAAA',
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const result = attributeInteractionComponents(input, 'click');
+    if (result?.kind !== 'attributed')
+      throw new Error('expected an attributed interaction');
+    expect(result.commits.map((attributed) => attributed.basis.tier)).toEqual([
+      'profiler-mapped',
+      'profiler-unmapped',
+    ]);
+    expect(result.merged?.tier).toBe('profiler-unmapped');
+    expect(names({ causes: result.merged?.causes ?? { causes: [] } })).toEqual([
+      'StateOwner',
+      'z',
+    ]);
+    expect(
+      result.merged?.causes.causes.map((cause) => [cause.tier, cause.weight.fraction]),
+    ).toEqual([
+      ['profiler-mapped', 0.5],
+      ['profiler-unmapped', 0.5],
+    ]);
+  });
+
   it('opens a commit’s window no earlier than the input that caused it', () => {
     const base = signals({
       commits: [commit([fiber(0, 'b', null, null)], 1000)],

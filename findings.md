@@ -321,6 +321,18 @@ sharpen the column — neither is a lever. The consolation: the profiler's colum
 resolved, lands on the **enclosing call's token** — `OrderTable.tsx:36:6` is `.sort` — identically
 in dev and production. That is the token worth printing.
 
+*(Corrected in step 4's review, 2026-11-15, against the v0.3 re-capture, 4×, both build modes.
+The two biases do not return identical results at the column the resolver actually queries, the
+profiler's column minus one. There they disagree on every mapped frame: they agree on 0 of 27 in
+`derive-in-render` development, 0 of 19 in production, and 0 of the 117 mapped frames across
+`derive-in-render` and `spans`. For the culprit, `GREATEST_LOWER_BOUND` gives `36:5` (0-based), the
+`sort` of `.sort`, and `LEAST_UPPER_BOUND` gives `36:11`, the arrow's first parameter. Agreement
+appears only at the unconverted 1-based column, where the same frames agree on 24 of 27 and 15 of
+19, so the claim above was most likely measured with the off-by-one; the v0.1 capture it came from
+was not re-measured. The bias is therefore a lever after all, and `GREATEST_LOWER_BOUND` is
+required: it is what lands an anonymous callback on the call it was passed to. `source-map.ts`
+now passes it explicitly. The text above is kept as it was written.)*
+
 **5. `sourceCharPosition` is valuable for non-framework jank, and cannot produce a third-party
 share.** On the vanilla three-listener fixture (4×, throwaway fixture), one frame carried three
 script entries, each resolving to the exact listener registration line in the user's own file:

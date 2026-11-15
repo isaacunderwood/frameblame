@@ -69,6 +69,7 @@
  */
 
 import {
+  ATTRIBUTION_TIERS,
   type AttributionTier,
   type CandidateCause,
   type CauseEvidence,
@@ -95,7 +96,7 @@ import {
   isWithinFrame,
   type LongAnimationFrame,
 } from './loaf.ts';
-import { type ProfiledFrame, type ProfileTrace, stackFrames } from './profiler.ts';
+import { type ProfileTrace, stackFrames } from './profiler.ts';
 import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
 import type { FiberId, ReactCommit, ReactSpan } from './react.ts';
 import {
@@ -106,6 +107,7 @@ import {
 import {
   definitionSite,
   type FrameResolution,
+  generatedSiteKey,
   resolveProfile,
   type ResolvedProfile,
 } from './source-map.ts';
@@ -380,11 +382,6 @@ function tallyFiberTimings(
   return { tallies: [...tallies.values()], denominator };
 }
 
-/** A stable key for a profiler frame's definition site. */
-function definitionSiteKey(frame: ProfiledFrame): string {
-  return `${String(frame.resourceId)}:${String(frame.line)}:${String(frame.column)}`;
-}
-
 /**
  * Every named function in a profile, by name, with one frame per distinct
  * definition site.
@@ -421,7 +418,7 @@ function definitionSitesOf(profile: ProfileTrace): DefinitionSites {
   for (const [frameId, frame] of profile.frames.entries()) {
     if (frame.name === null) continue;
     const sites = byName.get(frame.name) ?? new Map<string, number>();
-    const key = definitionSiteKey(frame);
+    const key = generatedSiteKey(frame);
     if (!sites.has(key)) sites.set(key, frameId);
     byName.set(frame.name, sites);
   }
@@ -445,7 +442,8 @@ interface IndexedProfile {
   /**
    * The profile's frames resolved through its source maps, computed on first
    * use. Lazy because only the profiler tier reads it: a development commit
-   * with fiber timings never needs React's 3MB development map decoded.
+   * with fiber timings never needs React's 1.7MB development map (for a 3.1MB
+   * served script) decoded.
    */
   readonly resolved: () => ResolvedProfile;
 }
@@ -835,8 +833,8 @@ function commitWindowStart(
 }
 
 /**
- * An interaction's candidates merged across its commits, at the one tier they
- * all reached.
+ * An interaction's candidates merged across its commits, at the least-mapped
+ * tier among them. See `mergeTallies` for which tiers merge.
  */
 export interface MergedComponents {
   readonly tier: AttributionTier;
@@ -854,9 +852,10 @@ export interface AttributedInteraction {
   readonly commits: readonly [CommitAttribution, ...CommitAttribution[]];
   /**
    * The commits' candidates merged by name, as shares of the interaction's
-   * summed denominators, or `null` when its commits were attributed at
-   * different tiers. A fiber-time share and a sample share are not the
-   * same quantity, so they are not added together. The per-commit answers
+   * summed denominators, or `null` when its commits' shares are of different
+   * quantities. A fiber-time share and a sample share are not the same
+   * quantity, so they are not added together; a mapped and an unmapped
+   * sample share are, at the weaker of the two tiers. The per-commit answers
    * are still there.
    */
   readonly merged: MergedComponents | null;
@@ -939,19 +938,50 @@ export function attributeInteractionComponents(
 }
 
 /**
- * Merges commits' tallies by component name, when they share a tier.
+ * What a commit's tallies are shares of, which decides what can be added
+ * together: fiber self time at the fiber tier, samples at either profiler
+ * tier, and nothing at all for an unattributed commit, which has no tallies.
+ */
+function commitShareBasis(tier: CommitAttributionBasis['tier']): WeightBasis | null {
+  return tier === 'unattributed' ? null : weightBasisOf(tier);
+}
+
+/**
+ * The least-mapped of a non-empty list of tiers, by `ATTRIBUTION_TIERS`'s
+ * strongest-first order, so that a merge never claims more than its weakest
+ * commit stood on.
+ */
+function weakestTier<Tier extends AttributionTier>(
+  tiers: readonly [Tier, ...Tier[]],
+): Tier {
+  return tiers.reduce((weakest, tier) =>
+    ATTRIBUTION_TIERS.indexOf(tier) > ATTRIBUTION_TIERS.indexOf(weakest) ? tier : weakest,
+  );
+}
+
+/**
+ * Merges commits' tallies by component name, when their tiers share a weight
+ * basis, and returns `null` when they do not.
  *
  * The merged weight is the summed numerators over the summed denominators. At
  * the fiber tier that is a component's self time across the interaction as a
  * share of all the interaction's render time. At the profiler tier it is its
  * samples as a share of all the samples in the interaction's commit windows.
- * A name's subject is taken from the first commit that carried it.
+ * `profiler-mapped` and `profiler-unmapped` commits merge, because both are
+ * sample shares and a map changes a candidate's name, not its count; the
+ * merge takes the least-mapped tier among them, and each candidate keeps its
+ * own. A fiber-time share and a sample share are different quantities and do
+ * not merge. A name's subject is taken from the first commit that carried it.
  */
 function mergeTallies(commits: readonly CommitTally[]): MergedComponents | null {
-  const [first] = commits;
+  const [first, ...rest] = commits;
   if (first === undefined) return null;
-  const tier = first.basis.tier;
-  if (commits.some((commit) => commit.basis.tier !== tier)) return null;
+  const basis = commitShareBasis(first.basis.tier);
+  if (rest.some((commit) => commitShareBasis(commit.basis.tier) !== basis)) return null;
+  const tier = weakestTier([
+    first.basis.tier,
+    ...rest.map((commit) => commit.basis.tier),
+  ]);
 
   const merged = new Map<string, Tally>();
   let denominator = 0;
@@ -997,7 +1027,8 @@ export function describeCommitBasis(basis: CommitAttributionBasis): string {
         `hook reported; degraded from ${describeTier('react-fiber-timings')} because ` +
         `${describeShortfall(basis.shortfall)}. ` +
         (basis.tier === 'profiler-mapped'
-          ? "The components' names and definition sites come from the source map. "
+          ? 'Definition sites come from the source map, and names too where the map carries ' +
+            'one; a candidate still marked minified did not get its name back. '
           : 'Names are as the hook reported them, minified in a production build, and ' +
             'positions are in generated code where any are given. ') +
         `${String(basis.unchargedSamples)} of the ${String(basis.samplesInWindow)} stacked ` +

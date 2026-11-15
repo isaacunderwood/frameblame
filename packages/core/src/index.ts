@@ -32,9 +32,11 @@
  * 5. **The profiler tier** — `source-map.ts` resolves the profiler's frames
  *    through the maps the capture carried, and `line-attribution.ts` charges
  *    a population of samples to the functions they ran in, located by
- *    definition site: the replay, the long frames, or the script slices LoAF
- *    attributed to one registration site, where the profiler can name a
- *    third party LoAF cannot.
+ *    definition site: the replay, the long frames, or a set of script slices.
+ *    `script-entry-attribution.ts` builds on it for the slices LoAF
+ *    attributed to one registration site: the profiler names the script
+ *    their time was spent in, which LoAF cannot, and which third-party
+ *    attribution would be built on.
  *
  * What is deliberately not here yet is the confidence model: nothing in this
  * package weighs one tier's answer against another's, or a commit against the
@@ -124,27 +126,32 @@ export type { FrameRenderingUpdate, FrameScript, LongAnimationFrame } from './lo
 
 export {
   attributeSampledFunctions,
-  attributeScriptEntries,
   chargedSamples,
   describeFunctionAttribution,
-  describeScriptEntry,
   describeSourceLocation,
   describeUnmappedReason,
   FUNCTION_LEVEL_CAVEAT,
   interactionPopulation,
   longFramePopulation,
-  scriptSlicePopulation,
 } from './line-attribution.ts';
 export type {
   FunctionAttribution,
   FunctionSubject,
   SamplePopulation,
   SampleRange,
+} from './line-attribution.ts';
+
+export {
+  attributeScriptEntries,
+  describeScriptEntry,
+  scriptSlicePopulation,
+} from './script-entry-attribution.ts';
+export type {
   ScriptDisagreement,
   ScriptEntryAttribution,
   ScriptEntrySite,
   ScriptSlice,
-} from './line-attribution.ts';
+} from './script-entry-attribution.ts';
 
 export {
   OBSERVED_SAMPLE_CADENCE_MS,

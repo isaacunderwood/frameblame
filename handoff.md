@@ -610,8 +610,9 @@ at 210 tests (107 core, 103 corpus), and `pnpm build` passes. Not committed.
 
 How the done-when is demonstrated, in `packages/corpus/src/lines.test.ts`:
 
-- `derive-in-render: the profiler names the declared line > {development,production}: line 36 ranks
-  first over the replay, and most samples land in 34-36`.
+- `derive-in-render: the profiler names the function on the declared line > {development,production}:
+  the function defined on line 36 ranks first over the replay, and most samples are charged to
+  functions defined in 34-36` (retitled in the step 4 fix round, C7).
   - The top candidate is `OrderTable.tsx:36`, mapped, `.sort`, function-level.
   - The replay floor holds: 65 of 92 (70.7%) in development and 56 of 67 (83.6%) in production,
     4x, the orchestrator's figures exactly.
@@ -623,6 +624,12 @@ How the done-when is demonstrated, in `packages/corpus/src/lines.test.ts`:
   - LoAF names `app.js` at offset 9268 on all six entries.
   - The profiler puts 13 of 13 stacked samples (development) and 13 of 14 (production) in
     `vendor.js:42`, `vendorTrack`, at `profiler-unmapped` with `no-source-map`, 4x.
+  - Most of that is one burst (F2, re-derived in the fix round): 9 of development's 13 fall in
+    1.1ms on the first click (165.8–166.9ms), and 9 of production's 14 in 181.0–182.5ms, the one
+    `app.js:192` sample among them. After the first click it is 4 of 4 in development and 5 of 5
+    in production, all `vendorTrack`; the sixth development click's sample, at 3757.2ms, sits on
+    the boundary and goes to the next slice (4x). Burst samples are not independent evidence,
+    which step 5 has to account for.
   - The disagreement names both scripts.
 - Also in that file: the first-party slices agree with LoAF and name `computeTotals` and
   `thrashLayout`; `innerhtml-rebuild` stays at `profiler-unmapped` with its reason named; App is
@@ -713,6 +720,15 @@ lost its reason.
 - **F6, F8, done by the orchestrator in this file.** 0.17 becomes 0.16 standard errors, and the
   replay note says "92 of the replay's 96 stacked samples charged to `OrderTable.tsx`". The
   done-when's "(measured 76%/83%)" is marked as a v0.2-era figure.
+
+### Step 4 — closed
+
+The fix pass applied every accepted finding. `pnpm check` is green at 213 tests (110 core, 103
+corpus). A before-and-after snapshot of all 8 captures (136 frame resolutions, every function
+attribution, script entry and interaction) is identical apart from the two intended prose changes.
+On the out-of-window samples, the script measured 6 before the first window, not the reviewer's 7.
+6 + 3 + 2 is the 11 total, so the reviewer's count was the one that was off. Step 5 starts next, on
+Fable, as `overnight-run.md` asks.
 
 ## Questions for the morning
 

@@ -2,10 +2,11 @@
  * The profiler tier for lines: which functions a population of samples spent
  * its time in, each located by where it is defined, ranked by sample share.
  *
- * This is the production story and the only source of third-party
- * attribution. It needs no React hook, no development build and no build-time
- * plugin: sampled stacks, resolved through whatever source maps the scripts
- * shipped (`source-map.ts`), and counted.
+ * This is the production story, and the only signal that names the script a
+ * slice's time was spent in, which third-party attribution would be built on.
+ * It needs no React hook, no development build and no build-time plugin:
+ * sampled stacks, resolved through whatever source maps the scripts shipped
+ * (`source-map.ts`), and counted.
  *
  * ## What a candidate claims
  *
@@ -31,9 +32,10 @@
  * from the row-rendering `.map` callback at `OrderTable.tsx:49` and 2 from the
  * component body (4x). Charged to the leaf, that work is reported as
  * `react-jsx-dev-runtime.development.js:327`, which nobody can act on. Folded
- * into the innermost function the developer wrote, it is line 49's cost,
- * which is what it is. The fold is never silent: each candidate's
- * `ignore-listed-callees` evidence counts the samples it absorbed.
+ * into the innermost function the developer wrote, it is the cost of the
+ * `.map` callback defined on line 49, which is what it is. The fold is never
+ * silent: each candidate's `ignore-listed-callees` evidence counts the samples
+ * it absorbed.
  *
  * Where no frame on the stack qualifies, the sample is charged to the leaf, so
  * React's own scheduling work is still a candidate under its own name rather
@@ -61,19 +63,22 @@
  * Inside long frames is the population that answers "what was this frame
  * doing", and the one whose empty-stack share means anything. A script slice
  * is the population for "whose code was this LoAF entry", which is the
- * question LoAF answers wrongly for third parties.
+ * question LoAF answers wrongly for third parties; it, and the comparison with
+ * what LoAF named, are `script-entry-attribution.ts`.
  *
  * ## What this module does not do
  *
  * It does not weigh a candidate against the frame's duration, merge it with
  * the React tier's answer, or decide a confidence beyond the sample share.
- * That is the confidence model's job. It reads only the records it is handed.
+ * That is the confidence model's job. It does not group LoAF's script entries
+ * either; `script-entry-attribution.ts` builds on this module for that. It
+ * reads only the records it is handed.
  *
  * **Clock.** Every `…Ms` value is page-clock `performance.now()` milliseconds.
  */
 
 import {
-  type AttributionTier,
+  ATTRIBUTION_TIERS,
   type CandidateCause,
   type CauseEvidence,
   type CauseSubject,
@@ -85,13 +90,12 @@ import {
   type SampleWindowKind,
   type UnmappedReason,
 } from './attribution.ts';
-import { decomposeFrame, type FrameSlice } from './frame-decomposition.ts';
 import { isWithinFrame, type LongAnimationFrame } from './loaf.ts';
-import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
+import type { CaptureProvenance } from './provenance.ts';
 import type { CapturedSignals } from './signals.ts';
 import {
-  definitionSite,
   type FrameResolution,
+  generatedSiteKey,
   resolvedStack,
   type ResolvedProfile,
 } from './source-map.ts';
@@ -106,7 +110,8 @@ export type FunctionSubject = Extract<CauseSubject, { kind: 'source-location' }>
  * "in-frame" means the same thing here as everywhere else in the engine.
  * `interval` states its own end: inclusive for an interaction window, as
  * `signals.ts` defines one, and exclusive for a script slice, so that a
- * sample on the boundary between two adjacent scripts is counted once.
+ * sample on the boundary between two adjacent scripts is counted once (see
+ * `scriptSlicePopulation` for why that end is a tie-break).
  */
 export type SampleRange =
   | { readonly kind: 'frame'; readonly frame: LongAnimationFrame }
@@ -136,12 +141,14 @@ function inRange(range: SampleRange, atMs: number): boolean {
  * Every sample inside any interaction window: the replay population.
  *
  * Samples outside every window are left out. In the corpus that is at most
- * two per capture, none of them with a stack (all eight captures, 4x): the
- * profiler starts 1.4-3.1ms before the first window opens, except in `spans`,
- * whose first window opens at 0 and so contains the init-script start and the
- * first mount's samples before any input arrives. A consumer that took the
- * first *action* as the start of the samples would mis-bin that mount. The
- * windows are inclusive at both ends, as `signals.ts` defines them.
+ * two per capture, none of them with a stack (all eight captures, 4x): 11 in
+ * all, of which 6 precede the first window, 3 follow the last, and `spans`
+ * production's 2 fall between two steps. The profiler starts 1.4-3.1ms
+ * before the first window opens, except in `spans`, whose first window opens
+ * at 0 and so contains the init-script start and the first mount's samples
+ * before any input arrives. A consumer that took the first *action* as the
+ * start of the samples would mis-bin that mount. The windows are inclusive at
+ * both ends, as `signals.ts` defines them.
  */
 export function interactionPopulation(signals: CapturedSignals): SamplePopulation {
   return {
@@ -160,28 +167,6 @@ export function longFramePopulation(signals: CapturedSignals): SamplePopulation 
   return {
     window: 'frame',
     ranges: signals.frames.map((frame) => ({ kind: 'frame', frame })),
-  };
-}
-
-/** A frame's script slice, as `decomposeFrame` cuts it. */
-export type ScriptSlice = Extract<FrameSlice, { kind: 'script' }>;
-
-/**
- * Every sample inside any of these script slices, each half-open at its end.
- *
- * The slice's own extent rather than the script entry's, because the slice is
- * what the partition charges to the script; the two are identical on all 77
- * script entries in the corpus.
- */
-export function scriptSlicePopulation(slices: readonly ScriptSlice[]): SamplePopulation {
-  return {
-    window: 'script-slice',
-    ranges: slices.map((slice) => ({
-      kind: 'interval',
-      fromMs: slice.startMs,
-      toMs: slice.startMs + slice.durationMs,
-      end: 'exclusive',
-    })),
   };
 }
 
@@ -236,18 +221,6 @@ function chargedFrame(
   return leaf === undefined ? null : { frame: leaf, foldedCallees: false };
 }
 
-/**
- * A stable key for the function a resolution points at: its served script and
- * its definition site there. Two frames with the same generated position are
- * the same function; keying on the original position as well would split
- * nothing, since the map is a function of the generated one.
- */
-function functionKey(resolution: Located): string {
-  const generated =
-    resolution.kind === 'mapped' ? resolution.generated : resolution.generated.position;
-  return `${resolution.scriptUrl}:${String(generated.line)}:${String(generated.column)}`;
-}
-
 function functionNameOf(resolution: Located): FunctionName | null {
   if (resolution.kind === 'mapped' && resolution.originalName !== null) {
     return { text: resolution.originalName, from: 'source-map' };
@@ -258,24 +231,15 @@ function functionNameOf(resolution: Located): FunctionName | null {
 
 /** The candidate subject for a charged frame. */
 function functionSubject(resolution: Located): FunctionSubject {
-  const location = definitionSite(resolution);
-  // Unreachable: `definitionSite` returns `null` only for an unlocated frame,
-  // which `Located` excludes.
-  if (location === null) throw new Error('a located frame has no definition site');
   return {
     kind: 'source-location',
-    location,
+    location: resolution.definedAt,
     granularity: 'function-definition',
     scriptUrl: resolution.scriptUrl,
     functionName: functionNameOf(resolution),
     enclosingCallToken:
       resolution.kind === 'mapped' ? resolution.enclosingCallToken : null,
   };
-}
-
-/** The tier a charged frame's candidate stands on. */
-function tierOf(resolution: Located): AttributionTier {
-  return resolution.kind === 'mapped' ? 'profiler-mapped' : 'profiler-unmapped';
 }
 
 interface FunctionTally {
@@ -288,6 +252,9 @@ interface FunctionTally {
  * One function's tally as a candidate: its share of `stackedSamples`, with the
  * samples it was charged and, where it absorbed any, the ignore-listed callees
  * it folded in. Assumes `stackedSamples` includes the tally's own samples.
+ *
+ * The tier is read off the subject's own location, so a candidate cannot claim
+ * `profiler-mapped` for a position that did not come through a map.
  */
 function functionCandidate(
   tally: FunctionTally,
@@ -305,11 +272,12 @@ function functionCandidate(
   if (tally.foldedCallees > 0) {
     evidence.push({ kind: 'ignore-listed-callees', samples: tally.foldedCallees });
   }
+  const subject = functionSubject(tally.resolution);
   return {
-    subject: functionSubject(tally.resolution),
+    subject,
     // `stackedSamples` is at least `tally.samples`, which is at least 1.
     weight: confidenceWeight(tally.samples / stackedSamples, 'sample-share'),
-    tier: tierOf(tally.resolution),
+    tier: subject.location.throughSourceMap ? 'profiler-mapped' : 'profiler-unmapped',
     evidence,
   };
 }
@@ -353,7 +321,9 @@ export function attributeSampledFunctions(
       continue;
     }
 
-    const key = functionKey(charged.frame);
+    // Keyed on the generated site: see `generatedSiteKey` for why that is the
+    // function's identity whether or not a map applied.
+    const key = generatedSiteKey(charged.frame.frame);
     const tally = tallies.get(key) ?? {
       resolution: charged.frame,
       samples: 0,
@@ -440,202 +410,30 @@ export const FUNCTION_LEVEL_CAVEAT =
   'Each line is where the sampled function is defined, not the statement that was running: ' +
   'the in-page profiler reports definition sites only, so this is function-level attribution';
 
-/** One line of prose naming what a function attribution was working from. */
+/**
+ * One line of prose naming what a function attribution was working from: the
+ * population and its counts, and the tiers its candidates actually reached,
+ * strongest first, so that an all-unmapped answer never mentions a map.
+ */
 export function describeFunctionAttribution(attribution: FunctionAttribution): string {
-  const window: Record<SampleWindowKind, string> = {
+  const windowLabel: Record<SampleWindowKind, string> = {
     frame: 'inside long animation frames',
     'since-previous-commit': "inside React commits' windows",
     interaction: 'inside the interaction windows',
     'script-slice': "inside the LoAF entry's script slices",
   };
+  const { causes } = attribution.causes;
+  const reached = ATTRIBUTION_TIERS.filter((tier) =>
+    causes.some((cause) => cause.tier === tier),
+  );
+  const workingFrom =
+    reached.length === 0
+      ? 'no sample was charged'
+      : reached.map(describeTier).join(', and ');
   return (
     `${String(attribution.stackedSamples)} stacked samples ` +
-    `${window[attribution.population.window]}, ` +
+    `${windowLabel[attribution.population.window]}, ` +
     `${String(attribution.samplesWithoutStack)} more with no JavaScript on the stack; ` +
-    `${describeTier('profiler-mapped')} where a map applied, otherwise ` +
-    `${describeTier('profiler-unmapped')}. ${FUNCTION_LEVEL_CAVEAT}`
+    `${workingFrom}. ${FUNCTION_LEVEL_CAVEAT}`
   );
-}
-
-/**
- * What LoAF named for a script entry: the registration site of the entry
- * point, which is where a listener was added rather than whose code it ran.
- */
-export interface ScriptEntrySite {
-  /** `null` when Chrome reported no URL. */
-  readonly sourceUrl: string | null;
-  readonly sourceFunctionName: string | null;
-  readonly sourceCharPosition: number | null;
-  readonly invoker: string;
-  readonly invokerType: string;
-}
-
-/**
- * The profiler and LoAF disagreeing about whose script a LoAF entry's time was.
- *
- * LoAF names the script that *registered* the entry point, so wherever
- * first-party code calls into a vendor library it names the first-party file.
- * The profiler names the script each sample was running in.
- */
-export interface ScriptDisagreement {
-  /** The script LoAF named. */
-  readonly loafScriptUrl: string | null;
-  /** The script the profiler's top-ranked candidate ran in. */
-  readonly profilerScriptUrl: string;
-  /**
-   * Stacked samples charged to a function in any script other than the one
-   * LoAF named, of the attribution's `stackedSamples`.
-   */
-  readonly samplesElsewhere: number;
-}
-
-/**
- * Every script slice in a capture that LoAF attributed to one registration
- * site, with what the profiler says ran in them.
- *
- * Grouped across frames because one entry's share is a handful of samples: a
- * 12ms slice at a 12-15ms cadence is about one sample per frame (4x), so the
- * profiler's answer for it is only stable over every frame that entry
- * appeared in.
- */
-export interface ScriptEntryAttribution {
-  /** Carried so that `durationMs` can be quoted with its build mode and throttle. */
-  readonly provenance: CaptureProvenance;
-  /** What LoAF said. The `loaf-script-registration` tier's claim. */
-  readonly site: ScriptEntrySite;
-  readonly slices: readonly ScriptSlice[];
-  /** Summed slice durations, in milliseconds. */
-  readonly durationMs: number;
-  /** `null` when the capture has no profile. */
-  readonly profiler: FunctionAttribution | null;
-  /**
-   * Set when the profiler's top-ranked candidate ran in a different script
-   * than LoAF named; `null` when they agree or there is no profile.
-   */
-  readonly disagreement: ScriptDisagreement | null;
-}
-
-function siteOf(slice: ScriptSlice): ScriptEntrySite {
-  const { script } = slice;
-  return {
-    sourceUrl: script.sourceUrl,
-    sourceFunctionName: script.sourceFunctionName,
-    sourceCharPosition: script.sourceCharPosition,
-    invoker: script.invoker,
-    invokerType: script.invokerType,
-  };
-}
-
-function siteKey(site: ScriptEntrySite): string {
-  return JSON.stringify([
-    site.sourceUrl,
-    site.sourceFunctionName,
-    site.sourceCharPosition,
-    site.invoker,
-    site.invokerType,
-  ]);
-}
-
-function disagreementOf(
-  site: ScriptEntrySite,
-  attribution: FunctionAttribution,
-): ScriptDisagreement | null {
-  const [top] = attribution.causes.causes;
-  if (top?.subject.kind !== 'source-location') return null;
-  if (top.subject.scriptUrl === site.sourceUrl) return null;
-
-  const samplesElsewhere = attribution.causes.causes.reduce(
-    (sum, cause) =>
-      cause.subject.kind === 'source-location' &&
-      cause.subject.scriptUrl !== site.sourceUrl
-        ? sum + chargedSamples(cause)
-        : sum,
-    0,
-  );
-  return {
-    loafScriptUrl: site.sourceUrl,
-    profilerScriptUrl: top.subject.scriptUrl,
-    samplesElsewhere,
-  };
-}
-
-/**
- * Attributes every LoAF script entry in the capture to the functions the
- * profiler saw running inside it, grouped by the registration site LoAF named.
- *
- * Returns one entry per distinct site, in the order each was first seen, each
- * with its slices as `decomposeFrame` cuts them, its summed duration in
- * milliseconds, the profiler's ranked functions over those slices, and the
- * disagreement when the profiler's top function ran in a different script
- * than LoAF named. Pass `resolveProfile(signals.profile)`, or `null` when the
- * capture has no profile, in which case LoAF's site is all there is.
- *
- * Assumes a site is identified by everything LoAF reports about it: URL,
- * function name, character offset, invoker and invoker type. Two listeners
- * registered on the same line by different code would share a site.
- */
-export function attributeScriptEntries(
-  signals: CapturedSignals,
-  resolved: ResolvedProfile | null,
-): readonly ScriptEntryAttribution[] {
-  const groups = new Map<string, { site: ScriptEntrySite; slices: ScriptSlice[] }>();
-  for (const frame of signals.frames) {
-    for (const slice of decomposeFrame(frame).slices) {
-      if (slice.kind !== 'script') continue;
-      const site = siteOf(slice);
-      const key = siteKey(site);
-      const group = groups.get(key) ?? { site, slices: [] };
-      group.slices.push(slice);
-      groups.set(key, group);
-    }
-  }
-
-  return [...groups.values()].map(({ site, slices }) => {
-    const profiler =
-      resolved === null
-        ? null
-        : attributeSampledFunctions(
-            resolved,
-            signals.provenance,
-            scriptSlicePopulation(slices),
-          );
-    return {
-      provenance: signals.provenance,
-      site,
-      slices,
-      durationMs: slices.reduce((sum, slice) => sum + slice.durationMs, 0),
-      profiler,
-      disagreement: profiler === null ? null : disagreementOf(site, profiler),
-    };
-  });
-}
-
-/**
- * One line of prose for a script entry: what LoAF named, with the milliseconds
- * qualified by the capture's provenance, and where the profiler disagreed.
- */
-export function describeScriptEntry(entry: ScriptEntryAttribution): string {
-  const { site, profiler } = entry;
-  const offset =
-    site.sourceCharPosition === null
-      ? ''
-      : ` at offset ${String(site.sourceCharPosition)}`;
-  const count = entry.slices.length;
-  const loafSaid =
-    `LoAF named ${site.sourceUrl ?? 'no script'}${offset} for ` +
-    `${formatMilliseconds(entry.durationMs, entry.provenance)} over ` +
-    `${String(count)} ${count === 1 ? 'entry' : 'entries'} ` +
-    `(${describeTier('loaf-script-registration')})`;
-  if (profiler === null)
-    return `${loafSaid}; no profile was captured to check it against`;
-
-  const [top] = profiler.causes.causes;
-  if (top?.subject.kind !== 'source-location') {
-    return `${loafSaid}; the profiler found no stacked sample in it to charge`;
-  }
-  const share = `${String(chargedSamples(top))} of ${String(profiler.stackedSamples)} stacked samples`;
-  const profilerSaid = `the profiler put ${share} in ${describeSourceLocation(top.subject)}`;
-  return entry.disagreement === null
-    ? `${loafSaid}; ${profilerSaid}, in the same script`
-    : `${loafSaid}; ${profilerSaid}, which is a different script`;
 }
