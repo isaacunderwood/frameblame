@@ -165,7 +165,7 @@ both build modes, with 60%+ of in-frame `OrderTable` samples inside the declared
 (measured 76% development, 83% production; those are v0.2-era figures, from `findings.md`, and match
 neither the previous corpus nor the current one).
 *Orchestrator's note, 2026-11-15 overnight run:* the v0.3 re-capture left production with long
-frames on only 2 of 24 presses, so in-frame production `OrderTable` samples number 3, and this
+frames after only 1 of 24 presses (LoAF reported 2 frames, one of them the page load), so in-frame production `OrderTable` samples number 3, and this
 criterion cannot be met as written. The step 4 suite therefore asserts the 60% floor over the
 replay, meaning every sample inside the drive's steps: 70.7% of the 92 replay samples charged to `OrderTable.tsx` in development (of 96 stacked
 replay samples) and 83.6%
@@ -866,8 +866,90 @@ Not done, and known:
 - `findings.md` is unchanged. The two new measurements, the burst gaps and the cross-check's
   denominator, are recorded in `profiler.ts` and `frame-attribution.ts`.
 
+### Step 5 cycle — review findings and the orchestrator's decisions
+
+The refactor is committed as `3930f5d`. Two parallel cold reviewers again. The figures reviewer
+reproduced almost every figure from raw JSON, its own Wilson arithmetic and `trace-mapping`,
+independently of the engine. **No figure was fabricated.** Two were wrong: the vendor slice share,
+and a misread press count that had also crept into this file. The governing principle for the
+decisions below is "the numbers must be honest": where a confidence level claims more than its
+evidence holds, the level comes down, even when that changes a corpus assertion. The reviewer
+called three of these morning decisions. I took the conservative side of each tonight and listed
+it under Questions.
+
+**Code reviewer (C):**
+- **C1, accepted** (in Questions). A subtraction whose cross-check "agrees" was `high` on 5–14
+  in-frame samples, which is fewer than the 21 the same module requires before a sampled share is
+  even `moderate`. Agreement is now only as strong as the samples that could have disagreed:
+  `high` needs a usable sample count. Every corpus unattributed candidate therefore becomes
+  `moderate`. Step 5's done-when still holds, because `innerhtml-rebuild` still ranks a large
+  unattributed share first and does not give a confident wrong answer.
+- **C2, accepted.** A `measured` weight whose grid share exceeds the usable half-width is `low`,
+  not `high`. Nothing in the corpus is affected.
+- **C3, accepted.** The no-profiler commit remainder's basis becomes `sole-candidate`, not
+  `fiber-self-time-share`.
+- **C4, accepted** (in Questions). A per-frame function share drawn from a pool was graded by the
+  pool's sample count. It is now graded by the frame's own count, `inOwnWindow`, which keeps the
+  pool's range. `describeConfidence` says "of the N samples at this site across the interaction".
+  This applies `findings.md` point 2, "per-frame percentages remain unusable".
+- **C5, accepted, with F3.** The 21-sample threshold is documented as the project's chosen bar,
+  not as a derivation. `findings.md`'s ±20 points at five samples is about one standard error; the
+  95% Wilson half-width at five samples is ±33 points. The constant is kept.
+- **C6, accepted.** Frames outside the profile's span become
+  `unchecked: frame-outside-profile` with a note, not `too-few-samples`.
+- **C7, minimal fix accepted.** An agreeing or unchecked subtraction's range is now ±grid, not a
+  single point. **Not done:** whether an unchecked subtraction's range should be `[0, fraction]`.
+  That is in Questions.
+- **C8, C9, C10, C11, accepted:** the stale `totalWeight` doc, per-commit fit-check notes plus a
+  note for the zero-JavaScript case, a throw instead of a silent drop, and three stale comments.
+- **C12, accepted.** Burst collapse is bounded by the burst's span, so a faster sampler is not
+  collapsed into one sample. Nothing in the corpus changes.
+- **C13, accepted** as documentation: a frame ranking can list one function twice, once per slice.
+- **C14, C15, C16, C17, accepted.**
+  - `ResolvedProfile | null` everywhere, carrying `independence`.
+  - `attributeCapture` builds per window and stops re-finding interactions by label.
+  - Each frame is decomposed once, and pools are keyed by slice.
+  - Subtraction support and scaled sample support each get a constructor.
+- **C18, partly accepted.** Split the profiler-tier join out of `component-attribution.ts` into
+  `component-samples.ts`. The further tally-plumbing split is left; one seam per pass.
+
+**Figures reviewer (F):**
+- **F1, accepted.** The vendor slice is 7.7–9.0%, not 7.7–8.9%; production reaches 9.018%.
+- **F2, accepted.** Production `derive-in-render` produced a long frame after **1** of 24 presses,
+  not 2: one of LoAF's two frames was the page load. Fixed in `capture-attribution.ts`. The
+  orchestrator fixed both occurrences in this file, including its own note on step 4's
+  done-when. The in-frame population figures are unaffected.
+- **F3, accepted** with C5.
+- **F4, accepted.** `capture.test.ts:311` asserted `frames` equal to `[]` for `state-owner-self`,
+  which is a long-frame count of zero. It now asserts the components without touching `frames`.
+  The same applies to `components.test.ts:192` and `:344`, from step 3 tonight. **Carried to step
+  6:** `records.test.ts` asserts frame counts at `:140`, `:182`, `:422` and `:489`, from commit
+  `024ca24` before tonight. Step 6 rewrites that suite, so the rule is applied there.
+- **F5, accepted.** The `within-noise` rows of the lead test were chosen from engine output. The
+  comment now says so, and records that `initial-mount`'s `clear` lead for `App` comes from
+  host-fiber time charged to `App`, the step 3 #1 artefact, not from a real difference.
+- **F6, F7, accepted:** the build mode and throttle on "one 12ms slice", and the v0.3 cadence of
+  14.2–14.7ms named apart from the previous capture's 12.2ms.
+- **F8, accepted.** The `innerhtml-rebuild` tests also assert the function name, and that its
+  definition line falls at or before the ground truth's range.
+- **F9, accepted.** `.sort` is read from the ground truth's `expectedSourceText`, not hard-coded.
+
 ## Questions for the morning
 
+- **The step 5 confidence levels were lowered where review found them over-claiming.** Chosen
+  tonight, as the conservative side:
+  - A cross-check "agreement" makes a subtraction `high` only on 21 or more in-frame samples, the
+    same bar as estimating a share. Every corpus unattributed answer is therefore `moderate`, not
+    `high`.
+  - A per-frame function share is graded by that frame's own samples, not by its interaction's
+    pool.
+
+  The case against: LoAF's partition is exact, so the subtraction itself is measured, and the
+  cross-check only confirms that nothing attributable hid in the gap. On that view agreement at
+  9–12 samples could still earn `high`.
+- **Should an unchecked subtraction's range be `[0, fraction]`?** Unreported sub-5ms script could
+  hide in the gap. Not done tonight; the range is ±grid. Doing it would make the no-profiler
+  `innerhtml-rebuild` lead `within-noise`.
 - **Should "profiler header absent → infer from overlap" produce weighted candidates?** Step 5
   built it conservatively. With no profile and no fiber timings, the components the hook saw render
   are attached as `fiber-rendered` evidence on the script entry they overlapped. The commit's
@@ -884,7 +966,8 @@ Not done, and known:
   standard error noted beside it.
 - **Step 4's "60%+ of in-frame `OrderTable` samples" is now measured over the replay, every sample
   inside the drive's steps, instead of inside long frames.** In-frame production holds 3 samples
-  after the re-capture, because LoAF fired on only 2 of 24 presses, against 5 of 24 before.
+  after the re-capture, because LoAF reported a long frame after only 1 of 24 presses (2 frames, one of them the page
+  load), against 5 of 24 before (not re-checked for the same page-load misreading).
   Orchestrator's decision: accept the replay population. It is the same function work, a frame
   under the 50ms threshold is still a slow keypress, and it follows the settled rule that long-frame
   counts are not assertable. The in-frame share is still reported. If you want the claim limited
