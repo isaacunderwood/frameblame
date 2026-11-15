@@ -447,6 +447,14 @@ places, which is a drift risk. Consolidating it means rewriting measurement pros
 two ground-truth comments and `handoff.md`, and the rule tonight is that such prose may be moved
 but not cut. Left for the morning; see Questions.
 
+### Step 0 — closed
+
+The fix pass applied every accepted finding. `pnpm check` is green at 140 tests (64 core, 76
+corpus). No decomposition note changed on any of the 53 corpus frames. The fix pass also found
+that `handoff.md`'s step 1 said `App` "did not re-render at all" in `mount-toggle`. That is wrong,
+because the commit comes from `App`'s own `setShowLateMount`, and the orchestrator corrected the
+sentence. Committed as `9007f0d` and pushed. Step 3 starts next.
+
 ## Questions for the morning
 
 - **Should the derive-in-render histogram narrative live only in `findings.md`, with the README,
