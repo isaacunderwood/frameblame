@@ -36,6 +36,10 @@ So write everything down as you go, and trust files over memory:
   it.
 - When you reorient after a summary, this brief plus `handoff.md` plus the module comments are the
   state. Re-read them rather than reconstructing what you were doing.
+- **Verify before you assert.** `pnpm check` green is the floor, not the proof: it catches an
+  invented API but not an invented measurement. Any figure you write down comes from a script you
+  ran against `corpus/` or from a test that passes, and the next section's review exists to catch
+  the ones that came from neither. If you cannot verify a number, do not write it.
 
 ## Where things stand
 
@@ -44,20 +48,37 @@ ranked causes, and the adapter that parses all eight captures into them. `pnpm c
 `pnpm build` pass at 114 tests. There are no heuristics — nothing attributes a frame to a
 component, weights a sample, or resolves a source map yet.
 
-## The cycle
+## You are the orchestrator, and you hold almost nothing
 
-After **every** step below, including step 0, run this three-part cycle before moving on:
+**Every step below runs in its own fresh subagent, one at a time.** Not because the work fans out —
+it does not, each step's output is the next one's input — but because a fresh agent starts with an
+empty context. That is what keeps a step's working memory from accumulating in this session and
+being summarised into a half-remembered version of itself later. You delegate, read the conclusion,
+check it against the repo, commit, and move on.
 
-1. **Refactor**, in a subagent. Behaviour-preserving cleanup of the code that step touched and the
-   code it leans on.
-2. **Review**, in a subagent. A fresh reader with no memory of your reasoning, reviewing the diff
-   since the last commit.
-3. **Fix**, in this session. Apply what the review found, decide against what you disagree with,
-   and record both in `handoff.md`.
+Two consequences, both binding:
 
-Then run `pnpm check`, commit, and start the next step. The refactor and the review are the only
-work that goes to subagents; the implementation steps are yours, because each one's output is the
-next one's input and judgement does not fan out.
+- **Never use a `fork` subagent for a step.** A fork inherits this context, which defeats the
+  entire point. Use a general-purpose agent with a brief that names the files to read first.
+- **Run one at a time.** Never two steps at once, and nothing at all while the capture is running.
+
+Each step's brief must be self-contained, because the agent running it knows nothing: name the step
+and its completion criteria from `handoff.md`, name the files to read before writing anything
+(`CLAUDE.md`, the relevant `packages/core` modules, and `findings.md` where the step depends on a
+finding), and state that it must leave `pnpm check` green and report what it did rather than
+narrating as it goes.
+
+After **every** step, including step 0, run this three-part cycle before moving on:
+
+1. **Refactor**, in a fresh subagent. Behaviour-preserving cleanup of the code that step touched
+   and the code it leans on.
+2. **Review**, in a fresh subagent. A reader with no memory of anyone's reasoning, reviewing the
+   diff since the last commit.
+3. **Fix**, in a fresh subagent, briefed with the review's findings. You decide which findings to
+   accept and record that decision and your reasons in `handoff.md` yourself — that judgement is
+   the one thing not to delegate, because it is what the morning will be read for.
+
+Then run `pnpm check`, commit, push, and start the next step.
 
 Two rules bind the refactor every time it runs:
 
@@ -68,10 +89,20 @@ Two rules bind the refactor every time it runs:
   re-derived; `findings.md` exists because three conclusions were lost once already. A tidy-up
   that shortens them has destroyed the most valuable thing in the file.
 
-The review subagent's brief, each time: does this code do what its comments claim; does it
-over-claim or under-claim anywhere; does it meet the completion criteria the step declares in
-`handoff.md`; and is any number in it quoted without the build mode and CPU throttle rate that
-produced it. Not style, not preferences.
+The review subagent's brief, each time. Not style, not preferences — these five questions:
+
+1. Does the code do what its comments claim?
+2. Does it meet the completion criteria the step declares in `handoff.md`?
+3. Does it over-claim or under-claim anywhere?
+4. Is any millisecond figure quoted without the build mode and CPU throttle rate that produced it?
+5. **Does every new number appear in the corpus?** For each figure introduced in the diff — in
+   code, in a comment, in a test, in a ground truth, in `findings.md` — find it in `corpus/` or
+   derive it with a script and say which. A figure that can be found in neither is fabricated, and
+   that is the finding this review exists for above all others. The project has already shipped a
+   wrong number twice and a dangling citation once.
+
+A review that reports nothing is a suspicious review; a review that reports taste is a useless
+one. Ask for the five answers explicitly.
 
 ## Version control, already set up
 
