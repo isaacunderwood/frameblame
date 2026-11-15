@@ -49,29 +49,39 @@ over-claim or under-claim anywhere; does it meet the completion criteria the ste
 `handoff.md`; and is any number in it quoted without the build mode and CPU throttle rate that
 produced it. Not style, not preferences.
 
-## Step 0 — version control, cleanup, and the one capture
+## Version control, already set up
+
+The repo is now a git repository with `origin` at `github.com/isaacunderwood/frameblame`, and the
+work so far is one commit on the branch **`v0.3-engine`**, taken off `origin/main`. `user.name` and
+`user.email` are set locally, so your commits will not fail for want of an identity. Work on that
+branch; do not commit to `main` and do not merge.
+
+**The branch is not pushed and you will not be able to push it.** There is no `gh` on this machine,
+no SSH key, and no stored credential, so a push can only prompt for a username — which with nobody
+awake means a hung session. Prefix any `git` command that touches the network with
+`GIT_TERMINAL_PROMPT=0` so it fails in a second rather than waiting all night, and do not retry it.
+Local commits are what the night needs: they are the revert points. Pushing is a morning job, and
+`handoff.md` should say so.
+
+## Step 0 — cleanup, and the one capture
 
 Do these in order, and do them first.
 
-1. `git init`, a `.gitignore` check, and one commit of everything as it stands. This is the
-   baseline every later step is diffed and reverted against. `corpus/` is 6.6MB of captured
-   evidence and belongs in the commit — it is the test input, and the project has already lost a
-   run by treating dumps as disposable.
-2. The refactor pass, scoped as above. The real debts, rather than a sweep: `corpus.ts` and
+1. The refactor pass, scoped as above. The real debts, rather than a sweep: `corpus.ts` and
    `provenance.ts` each define a `BuildMode`; `spike/` has grown seven modules with some
    duplication between `collect-run.ts` and `dump-raw-streams.ts`; `records.ts` is long enough to
    split along the three signals if that reads better. `corpus.test.ts`'s local readers are
    **deliberately** throwaway and step 6 deletes them — leave them alone until then.
-3. The collector change, which is the only reason a browser is needed tonight. In
+2. The collector change, which is the only reason a browser is needed tonight. In
    `spike/collectors.ts`: record a parent id per fiber in `describeCommit`, and add
    `forcedStyleDuration` and `forcedLayoutDuration` to `serializeScript`, which is missing them
    because the ambient declarations it was written from were. Then update
    `packages/core/src/react.ts`, which currently states the absence of fiber linkage as a property
    of the capture, and `packages/corpus/src/records.ts` to read it.
-4. **Re-capture all eight runs in one pass**: `pnpm spike:corpus`. All eight, serially, in one
+3. **Re-capture all eight runs in one pass**: `pnpm spike:corpus`. All eight, serially, in one
    invocation. Not the subset the tests read — the corpus's whole value is that its entries are
    comparable to each other, and a previous session broke that by re-capturing two.
-5. Then the cycle, then commit.
+4. Then the cycle, then commit.
 
 While the capture runs, **run nothing else**. No subagents, no builds, no test runs. Each fixture
 binds a fixed port, and two things sharing this CPU make every millisecond figure in the capture
