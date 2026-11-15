@@ -585,6 +585,9 @@ started strictly after the update was scheduled on the coarsened page clock
 (`react-dom-client.development.js:18619`), so an update and a render inside one clock tick produce
 nothing. A test that required `StateOwner`'s span was asserting the coin-flip; it now asserts that
 any component an `Update` span names is one React gave no component span, which is the claim.
+*(Since the step 0 fix round it also asserts, per interaction, that a named originator is the
+component whose `setState` that interaction called, and it no longer requires an `Update` span in
+the phase set, which was the same coin-flip one level up.)*
 
 **The forced split disagrees with its total by up to two grid steps, and the spec says it should
 not disagree at all.** `forcedStyleDuration + forcedLayoutDuration − forcedStyleAndLayoutDuration`
@@ -615,7 +618,10 @@ the links.
 - *Frame decomposition.* Unforced `innerHTML` frames are 88.9–90.3% unattributed, with 88.9–91.7%
   of each frame's samples carrying no stack. One `offsetHeight` read moves LoAF from naming
   9.7–11.1% of the frame to 83.1–85.7%, with 94.9–103.8ms of forced style and layout, and the
-  empty-stack share to 10–22%. `styleDuration` and `layoutDuration` stay 0 in both.
+  empty-stack share to 10–22% counting samples inside `[startTime, startTime + duration]`, or
+  10–30% inside the engine's `isWithinFrame`, whose ±0.2ms tolerance admits one stackless sample
+  at 4324.9ms against a production frame starting at 4325.0. `styleDuration` and `layoutDuration`
+  stay 0 in both.
 - *The residual is work.* Listeners of 13.3–14.3ms are followed by 116.7–148.8ms waits for their
   own `MessageChannel` message.
 - *Third-party attribution.* The same three offsets, 9092, 9268 and 9443, in both build modes, with

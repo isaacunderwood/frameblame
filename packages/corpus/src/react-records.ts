@@ -35,58 +35,82 @@ import {
   get,
   isJsonArray,
   type Json,
-  type JsonObject,
   type JsonPath,
-  nullableBooleanAt,
   nullableNumberAt,
   numberAt,
   stringAt,
 } from './json.ts';
 
-function readFiber(fiber: JsonObject): RenderedFiber {
+/*
+ * Every reader below is handed the file's root and the full path to what it
+ * reads, rather than an already-extracted record and a path relative to it. A
+ * malformed fiber then fails naming where it is — `commits.3.components.1.flags
+ * is undefined` — and never just `flags`, which in a file of 58 commits says
+ * nothing about which one.
+ */
+
+function readFiber(root: Json, path: JsonPath): RenderedFiber {
   return {
-    name: stringAt(fiber, ['name']),
-    tag: numberAt(fiber, ['tag']),
-    lanes: nullableNumberAt(fiber, ['lanes']),
+    name: stringAt(root, [...path, 'name']),
+    tag: numberAt(root, [...path, 'tag']),
+    lanes: nullableNumberAt(root, [...path, 'lanes']),
     // Both are `null` on every fiber in a production build, where React does
     // not populate them at all. Absent, not zero: a component that rendered
     // for an unknown length of time is not one that rendered instantly.
-    actualDurationMs: nullableNumberAt(fiber, ['actualDuration']),
-    selfBaseDurationMs: nullableNumberAt(fiber, ['selfBaseDuration']),
+    actualDurationMs: nullableNumberAt(root, [...path, 'actualDuration']),
+    selfBaseDurationMs: nullableNumberAt(root, [...path, 'selfBaseDuration']),
   };
 }
 
 /**
+ * The keys the v0.3 collector change added to each fiber. All present on every
+ * fiber of a commit that change wrote, and none on a commit written before it.
+ */
+const LINKAGE_KEYS = ['id', 'parentId', 'flags', 'hasAlternate', 'carriedOver'] as const;
+
+/**
  * A commit's fibers, linked into a tree where the collector recorded one.
  *
- * Captures made before the collector recorded `id`, `parentId` and the render
- * evidence — every run in `corpus/` until the v0.3 re-capture — have none of
- * those keys on any fiber, and come back `unrecorded` rather than with a
- * guessed tree. A guess would be easy and plausible, since both React fixtures
- * happen to be one root over flat siblings, and it would be a claim about the
- * capture that the capture does not make.
+ * Which shape a commit has is read off the commit record, not inferred from its
+ * fibers: the collector change that recorded the links also writes
+ * `truncated` on every commit, so a commit with that key is `recorded` and one
+ * without it is `unrecorded`. Keying on the commit means an empty fiber list
+ * still says which collector wrote it, and means the fibers are then checked
+ * against that answer rather than voting on it.
  *
- * A commit with the keys on some fibers and not others throws: no collector
- * writes that, so a record like it was damaged or written by something else.
- * Where the keys are on every fiber, `readLinkedFiber` checks each one.
+ * Captures made before that change — every run in `corpus/` until the v0.3
+ * re-capture — come back `unrecorded` rather than with a guessed tree. A guess
+ * would be easy and plausible, since both React fixtures happen to be one root
+ * over flat siblings, and it would be a claim about the capture that the
+ * capture does not make.
  *
- * An empty list is `unrecorded`, since it cannot show which collector wrote it.
+ * Either way the fibers must agree with the commit, and a fiber that does not
+ * throws: a recorded commit's fiber missing its `id`, `parentId` or render
+ * evidence, or an unrecorded commit's fiber carrying any of them, is something
+ * no collector writes, so the record was damaged or written by something else.
  */
-function readComponents(entries: readonly Json[], path: JsonPath): CommitComponents {
-  const records = entries.map((entry, index) => asRecord(entry, [...path, index]));
+function readComponents(root: Json, commitPath: JsonPath): CommitComponents {
+  const path = [...commitPath, 'components'];
+  const fiberPaths = arrayAt(root, path).map((_, index) => [...path, index]);
 
-  const withLinks = records.filter((record) => get(record, ['id']) !== undefined).length;
-  if (withLinks === 0) return { linkage: 'unrecorded', fibers: records.map(readFiber) };
-  if (withLinks !== records.length) {
-    throw new Error(
-      `${path.join('.')}: ${String(withLinks)} of ${String(records.length)} fibers carry ` +
-        'an id, so the commit is neither linked nor flat',
-    );
+  const truncated = get(root, [...commitPath, 'truncated']);
+  if (truncated === undefined) {
+    for (const fiberPath of fiberPaths) {
+      const found = LINKAGE_KEYS.find((key) => get(root, [...fiberPath, key]) !== undefined);
+      if (found !== undefined) {
+        throw new Error(
+          `${[...fiberPath, found].join('.')} is present, but the commit carries no ` +
+            '`truncated`, so no collector that records fiber links wrote it',
+        );
+      }
+    }
+    return { linkage: 'unrecorded', fibers: fiberPaths.map((fiberPath) => readFiber(root, fiberPath)) };
   }
 
   return {
     linkage: 'recorded',
-    fibers: records.map((record, index) => readLinkedFiber(record, index, [...path, index])),
+    truncated: asBoolean(truncated, [...commitPath, 'truncated']),
+    fibers: fiberPaths.map((fiberPath, index) => readLinkedFiber(root, fiberPath, index)),
   };
 }
 
@@ -100,31 +124,41 @@ function readComponents(entries: readonly Json[], path: JsonPath): CommitCompone
  * writes them, so a record like that was damaged or written by something else,
  * and the adapter is the place to say so rather than an engine computing
  * negative self times from it.
+ *
+ * `parentId` is required even though it may be `null`: a root fiber's `null`
+ * is written explicitly, so a missing key is a missing link, not a root.
  */
-function readLinkedFiber(record: JsonObject, index: number, path: JsonPath): LinkedFiber {
-  const where = path.join('.');
-  const id = numberAt(record, ['id']);
-  const parentId = nullableNumberAt(record, ['parentId']);
+function readLinkedFiber(root: Json, path: JsonPath, index: number): LinkedFiber {
+  const id = numberAt(root, [...path, 'id']);
   if (id !== index) {
-    throw new Error(`${where}: id ${String(id)} is not the fiber's index ${String(index)}`);
+    throw new Error(
+      `${[...path, 'id'].join('.')}: id ${String(id)} is not the fiber's index ${String(index)}`,
+    );
   }
+
+  const parentPath = [...path, 'parentId'];
+  if (get(root, parentPath) === undefined) {
+    throw new Error(`${parentPath.join('.')} is undefined, expected a number or null`);
+  }
+  const parentId = nullableNumberAt(root, parentPath);
   if (parentId !== null && !(Number.isInteger(parentId) && parentId >= 0 && parentId < id)) {
     throw new Error(
-      `${where}: parentId ${String(parentId)} does not name an earlier fiber in the commit`,
+      `${parentPath.join('.')}: parentId ${String(parentId)} does not name an earlier fiber ` +
+        'in the commit',
     );
   }
 
   return {
-    ...readFiber(record),
+    ...readFiber(root, path),
     id,
     parentId,
     // Required wherever the links are: the collector change that recorded
     // one recorded the other, so a fiber with an id and no evidence is not
     // something any collector wrote.
     render: {
-      flags: numberAt(record, ['flags']),
-      hasAlternate: asBoolean(get(record, ['hasAlternate']), [...path, 'hasAlternate']),
-      carriedOver: asBoolean(get(record, ['carriedOver']), [...path, 'carriedOver']),
+      flags: numberAt(root, [...path, 'flags']),
+      hasAlternate: booleanAt(root, [...path, 'hasAlternate']),
+      carriedOver: booleanAt(root, [...path, 'carriedOver']),
     },
   };
 }
@@ -211,14 +245,10 @@ export function reactOf(run: CorpusRun): ReactSignals {
       didError: asBoolean(get(record, ['didError']), ['commits', index, 'didError']),
       priorityLevel: nullableNumberAt(record, ['priorityLevel']),
       collectionCostMs: numberAt(record, ['collectionCost']),
-      // Absent from captures that predate it, and `null` there rather than
-      // `false`: an old capture never said its walk was complete.
-      truncated: nullableBooleanAt(record, ['truncated']),
-      components: readComponents(arrayAt(record, ['components']), [
-        'commits',
-        index,
-        'components',
-      ]),
+      // Whether the walk was complete is part of `components`, and absent from
+      // captures that predate it rather than `false`: an old capture never said
+      // its walk was complete.
+      components: readComponents(run.files.react, ['commits', index]),
     });
   }
 

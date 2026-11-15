@@ -58,7 +58,7 @@
  */
 
 import {
-  COARSENED_TIMING_TOLERANCE_MS,
+  exceedsByMoreThanCoarsening,
   exceedsCoarsenedTolerance,
   frameEndMs,
   type FrameScript,
@@ -202,7 +202,9 @@ export interface FrameCharges {
  * A disagreement between a figure the frame reported and the frame's own
  * boundaries, with the signed size of it.
  *
- * Emitted only past `COARSENED_TIMING_TOLERANCE_MS`. Below that the
+ * Emitted only past `COARSENED_TIMING_TOLERANCE_MS`, and every one of these
+ * checks goes through `exceedsByMoreThanCoarsening` so that the boundary is
+ * inclusive and float-safe in the same way at each site. Below that the
  * disagreement is the coarsening — every field is quantised onto a randomised
  * 100us grid, and the spec quantises the style and layout durations
  * individually on purpose so that summing them cannot recover more resolution
@@ -383,7 +385,6 @@ export function decomposeFrame(frame: LongAnimationFrame): FrameDecomposition {
   const slices: FrameSlice[] = [];
   const notes: FrameConsistencyNote[] = [];
   const end = frameEndMs(frame);
-  const tolerance = COARSENED_TIMING_TOLERANCE_MS;
 
   /*
    * The cursor is the partition. It only ever moves forward, so two scripts
@@ -401,24 +402,29 @@ export function decomposeFrame(frame: LongAnimationFrame): FrameDecomposition {
   for (const [scriptIndex, script] of frame.scripts.entries()) {
     const scriptEnd = script.startTimeMs + script.durationMs;
 
-    if (script.startTimeMs < frame.startTimeMs - tolerance) {
+    if (exceedsByMoreThanCoarsening(frame.startTimeMs, script.startTimeMs)) {
       notes.push({
         kind: 'script-starts-before-frame',
         scriptIndex,
         byMs: frame.startTimeMs - script.startTimeMs,
       });
     }
-    if (scriptEnd > end + tolerance) {
+    if (exceedsByMoreThanCoarsening(scriptEnd, end)) {
       notes.push({ kind: 'script-ends-after-frame', scriptIndex, byMs: scriptEnd - end });
     }
-    if (script.startTimeMs < cursor - tolerance) {
+    if (exceedsByMoreThanCoarsening(cursor, script.startTimeMs)) {
       notes.push({
         kind: 'scripts-overlap',
         scriptIndex,
         byMs: cursor - script.startTimeMs,
       });
     }
-    if (script.forcedStyleAndLayoutDurationMs > script.durationMs + tolerance) {
+    if (
+      exceedsByMoreThanCoarsening(
+        script.forcedStyleAndLayoutDurationMs,
+        script.durationMs,
+      )
+    ) {
       notes.push({
         kind: 'forced-exceeds-script-duration',
         scriptIndex,
@@ -473,7 +479,7 @@ export function decomposeFrame(frame: LongAnimationFrame): FrameDecomposition {
 
   const update = frame.renderingUpdate;
   if (update.kind === 'rendered') {
-    if (update.renderStartMs < cursor - tolerance) {
+    if (exceedsByMoreThanCoarsening(cursor, update.renderStartMs)) {
       notes.push({
         kind: 'render-start-before-last-script-end',
         byMs: cursor - update.renderStartMs,
@@ -507,7 +513,7 @@ export function decomposeFrame(frame: LongAnimationFrame): FrameDecomposition {
     const style = Math.min(update.styleDurationMs, window);
     const layout = Math.min(update.layoutDurationMs, window - style);
     const reported = update.styleDurationMs + update.layoutDurationMs;
-    if (reported > window + tolerance) {
+    if (exceedsByMoreThanCoarsening(reported, window)) {
       notes.push({
         kind: 'style-and-layout-exceed-rendering-update',
         byMs: reported - window,

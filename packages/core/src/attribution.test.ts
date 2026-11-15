@@ -62,7 +62,7 @@ describe('rankCauses', () => {
     /*
      * A 64ms frame yields four to seven samples at Chrome's 10ms sampling
      * floor (a 12.2ms median cadence in one corpus capture, 14.5ms in the
-     * next), so the second and third candidates are routinely tied. Inventing
+     * next, 4x, both build modes), so the second and third candidates are routinely tied. Inventing
      * an order between them would present sampling noise as a ranking.
      */
     const ranked = rankCauses([cause(0.25, 'first'), cause(0.25, 'second')]);

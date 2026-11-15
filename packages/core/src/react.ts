@@ -215,17 +215,35 @@ export interface FiberRenderEvidence {
  * parent" the same value.
  *
  * - `recorded`: the collector stored each fiber's `id`, `parentId` and render
- *   evidence, so self time is computable from the record alone. The two
- *   arrived in one collector change and self time needs both, so they are one
- *   variant rather than two independent optional halves.
+ *   evidence, and whether its walk was complete, so self time is computable
+ *   from the record alone. They arrived in one collector change and self time
+ *   needs all of them, so they are one variant rather than independent
+ *   optional parts. Which variant a commit is in is a fact about the commit
+ *   record — the walk's completeness flag is written once per commit by that
+ *   collector — so a recorded commit with no component fibers at all is still
+ *   recognisably recorded.
  * - `unrecorded`: the fibers are flat, as every capture made before the v0.3
  *   collector change is. Self time is recoverable from these only when the
  *   tree's shape is known from somewhere else. It happens to be known for both
  *   React fixtures in the corpus, which are one root over flat siblings. It
- *   would not be for a real app.
+ *   would not be for a real app. Nor did that collector say whether its walk
+ *   was complete, so this variant has no `truncated` at all rather than a
+ *   `false` it never claimed.
  */
 export type CommitComponents =
-  | { readonly linkage: 'recorded'; readonly fibers: readonly LinkedFiber[] }
+  | {
+      readonly linkage: 'recorded';
+      /**
+       * Whether the collector's walk hit its 10,000-fiber cap and left fibers
+       * out.
+       *
+       * When `true`, every ancestor of a missing fiber has its self time
+       * overstated by the missing subtree, and nothing in `fibers` shows which
+       * ones. `false` on all 58 commits of the v0.3 re-capture.
+       */
+      readonly truncated: boolean;
+      readonly fibers: readonly LinkedFiber[];
+    }
   | { readonly linkage: 'unrecorded'; readonly fibers: readonly RenderedFiber[] };
 
 /**
@@ -268,16 +286,9 @@ export interface ReactCommit {
    */
   readonly collectionCostMs: number;
   /**
-   * Whether the collector's walk hit its 10,000-fiber cap and left fibers out,
-   * or `null` for a capture made before the collector recorded it.
-   *
-   * When `true`, every ancestor of a missing fiber has its self time overstated
-   * by the missing subtree, and nothing in `components` shows which ones.
-   */
-  readonly truncated: boolean | null;
-  /**
    * In the order the collector walked the tree, which visits a fiber's
-   * ancestors before it. See `CommitComponents` for what is linked and when.
+   * ancestors before it. See `CommitComponents` for what is linked and when,
+   * and for whether the walk was complete.
    */
   readonly components: CommitComponents;
 }

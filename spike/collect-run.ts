@@ -304,8 +304,9 @@ export async function collectRun(options: RunOptions): Promise<RunSummary> {
         note:
           'All page-side timestamps are performance.now() milliseconds relative ' +
           'to timeOrigin. The profiler samples share this clock: the first sample ' +
-          'lands 0.1-1.3ms after the reading taken immediately before the Profiler ' +
-          'was constructed, so no reconciliation is needed. See findings.md.',
+          'lands 0.1-0.9ms after the reading taken immediately before the Profiler ' +
+          'was constructed (v0.3 re-capture, 4x, both build modes; 0.0-0.7ms in the ' +
+          'capture before), so no reconciliation is needed. See findings.md.',
         timeOrigin: streams.timeOrigin,
         driveStartedAt,
         driveFinishedAt,
@@ -353,7 +354,8 @@ export async function collectRun(options: RunOptions): Promise<RunSummary> {
               'of 10ms (16 on Windows) that no flag reads, so a request of 5 is ' +
               'answered with 10. The median cadence that gives is a property of the ' +
               'session rather than a constant: 14.5ms in the v0.3 re-capture, ' +
-              '12.2ms in the capture before it, on the same machine and settings.',
+              '12.2ms in the capture before it, on the same machine and settings ' +
+              '(4x, both build modes).',
           },
           profilerWindow: {
             startedAt: profile?.startedAt ?? null,

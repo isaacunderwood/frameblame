@@ -176,7 +176,7 @@
             "shareInDeclaredRangeOverReplay": 0.836
           }
         },
-        "$shareInDeclaredRangeAcrossCapturesComment": "In-frame, in capture order, modes interleaved as captured: v0.1 development, then development, production, development, production, then the v0.3 re-capture's development and production."
+        "$shareInDeclaredRangeAcrossCapturesComment": "In-frame shares. The first three, 0.73, 0.76 and 0.83, predate the corpus and are quoted from findings.md (\"73% when this document was written, then 76%, 83%, 69% and 93%\"); see it for what each of them measured. 0.69 and 0.93 are the previous corpus capture's development and production runs, and 0.714 and 0.333 the v0.3 re-capture's, all at 4x."
       }
     },
     "replayedLineHistogram": {

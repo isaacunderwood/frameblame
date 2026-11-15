@@ -69,6 +69,7 @@ export type {
 
 export {
   COARSENED_TIMING_TOLERANCE_MS,
+  exceedsByMoreThanCoarsening,
   exceedsCoarsenedTolerance,
   frameEndMs,
   isWithinFrame,

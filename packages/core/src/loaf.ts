@@ -22,8 +22,9 @@
  * to the document's `timeOrigin` — the same clock as the profiler's samples and
  * React's spans, which is what makes the join possible at all. Measured: the
  * profiler's first sample lands 0.1-0.9ms after the `performance.now()` reading
- * taken immediately before `new Profiler(...)` (0.0-0.7ms in the capture before
- * the v0.3 re-capture), so no reconciliation is needed.
+ * taken immediately before `new Profiler(...)` (4x, both build modes; 0.0-0.7ms
+ * in the capture before the v0.3 re-capture, also 4x), so no reconciliation is
+ * needed.
  *
  * **Absence.** Absence is spelled `null` throughout, never an omitted property.
  * Chrome reports several of these fields with a zero sentinel and omits others
@@ -76,18 +77,34 @@ export const COARSENED_TIMING_TOLERANCE_MS = 0.2;
 const FLOAT_SLACK_MS = 1e-6;
 
 /**
- * Whether `deltaMs`, a signed difference in milliseconds between coarsened
- * LoAF figures, is larger than the coarsening alone can explain. Clock-free:
- * it is a difference of durations or of page-clock timestamps, never a
- * timestamp itself.
+ * Whether `aMs` exceeds `bMs` by more than the coarsening alone can explain:
+ * `aMs - bMs > COARSENED_TIMING_TOLERANCE_MS`, plus the float slack above.
+ * One-sided, so "a is later than b" or "a is larger than b" — the caller orders
+ * the arguments to say which disagreement it is looking for. Clock-free: both
+ * arguments are durations or both are page-clock timestamps, in milliseconds,
+ * and only their difference is read.
  *
- * Inclusive at the tolerance, plus the float slack above: a difference of two
- * grid steps is inside the coarsening and must not be reported as a
- * disagreement just because the subtraction that produced it rounded a hair
- * past 0.2.
+ * Inclusive at the tolerance: a difference of exactly two grid steps is inside
+ * the coarsening and must not be reported as a disagreement just because the
+ * subtraction that produced it rounded a hair past 0.2. This is the one
+ * comparison every coarsened check in the engine goes through, so that the
+ * float-safe boundary is decided once rather than re-derived, slightly
+ * differently, at each site — the forced split was the first to cross it, and
+ * every boundary check in `decomposeFrame` shares the same arithmetic.
+ */
+export function exceedsByMoreThanCoarsening(aMs: number, bMs: number): boolean {
+  return aMs - bMs > COARSENED_TIMING_TOLERANCE_MS + FLOAT_SLACK_MS;
+}
+
+/**
+ * Whether `deltaMs`, a signed difference in milliseconds between coarsened
+ * LoAF figures, is larger in either direction than the coarsening alone can
+ * explain. The two-sided form of `exceedsByMoreThanCoarsening`, for a figure
+ * that should equal another and may drift either way — the forced split
+ * against its own total. Clock-free, like that function.
  */
 export function exceedsCoarsenedTolerance(deltaMs: number): boolean {
-  return Math.abs(deltaMs) > COARSENED_TIMING_TOLERANCE_MS + FLOAT_SLACK_MS;
+  return exceedsByMoreThanCoarsening(Math.abs(deltaMs), 0);
 }
 
 /**
@@ -332,7 +349,8 @@ export function frameEndMs(frame: LongAnimationFrame): number {
 /**
  * Whether `atMs`, a page-clock timestamp, falls inside the frame.
  *
- * Inclusive at both ends and tolerant by one coarsening step, because a script
+ * Inclusive at both ends and tolerant by two coarsening steps
+ * (`COARSENED_TIMING_TOLERANCE_MS`, 0.2ms on the 100us grid), because a script
  * entry's own end can land a float-rounding hair past its frame's: one of the
  * corpus's script entries overshoots by 1.5e-9ms (two, by 1.5e-9 and 2.2e-9ms,
  * in the capture before), which a strict comparison rejects. The tolerance is

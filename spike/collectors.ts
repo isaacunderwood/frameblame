@@ -33,8 +33,9 @@ export const SOURCE_LINE_COLUMN_FEATURES = [
  * recorded alongside the trace: `findings.md` establishes the floor is a
  * compile-time constant of 10ms in Blink that no flag reads, and that Chrome
  * snaps *up* rather than down, so a request of 5 is answered with 10 and
- * measures out at a median cadence of 12.1ms (the v0.1 replay; 12.2ms in the
- * corpus capture before the v0.3 re-capture and 14.5ms in that re-capture, so
+ * measures out at a median cadence of 12.1ms (the v0.1 replay, development,
+ * 4x; 12.2ms in the corpus capture before the v0.3 re-capture and 14.5ms in
+ * that re-capture, 4x, both build modes, so
  * the cadence is a property of the session — see `OBSERVED_SAMPLE_CADENCE_MS`
  * in `packages/core/src/profiler.ts`). The request is left at 5 so the clamp
  * stays visible in every dump rather than being pre-applied here.

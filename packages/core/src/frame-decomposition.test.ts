@@ -23,6 +23,8 @@ import {
 } from './frame-decomposition.ts';
 import {
   COARSENED_TIMING_TOLERANCE_MS,
+  exceedsByMoreThanCoarsening,
+  exceedsCoarsenedTolerance,
   type FrameScript,
   type LongAnimationFrame,
 } from './loaf.ts';
@@ -74,6 +76,68 @@ function frame(overrides: Partial<LongAnimationFrame>): LongAnimationFrame {
 function totalSliced(decomposition: ReturnType<typeof decomposeFrame>): number {
   return decomposition.slices.reduce((sum, slice) => sum + slice.durationMs, 0);
 }
+
+describe('the coarsening comparison', () => {
+  /*
+   * Every coarsened check in `decomposeFrame` goes through this one helper, so
+   * its boundary is pinned here directly rather than only through the notes it
+   * produces. The values are page-clock figures on the 100us grid; the point
+   * of each pair is what float64 makes of their difference.
+   */
+  it('is quiet at exactly two grid steps, even where the float lands past 0.2', () => {
+    // 4000.3 - 4000.1 is 0.20000000000027285 in floating point.
+    expect(4000.3 - 4000.1).toBeGreaterThan(COARSENED_TIMING_TOLERANCE_MS);
+    expect(exceedsByMoreThanCoarsening(4000.3, 4000.1)).toBe(false);
+    expect(exceedsByMoreThanCoarsening(100.2, 100)).toBe(false);
+  });
+
+  it('fires at three grid steps', () => {
+    expect(exceedsByMoreThanCoarsening(4000.4, 4000.1)).toBe(true);
+    expect(exceedsByMoreThanCoarsening(100.3, 100)).toBe(true);
+  });
+
+  it('is one-sided: the first argument must be the larger', () => {
+    expect(exceedsByMoreThanCoarsening(4000.1, 4000.4)).toBe(false);
+    expect(exceedsByMoreThanCoarsening(100, 160)).toBe(false);
+  });
+
+  it('has a two-sided form for a figure that may drift either way', () => {
+    // The corpus's two-step forced split, `innerhtml-rebuild` development, 4x.
+    expect(exceedsCoarsenedTolerance(23.2 + 71.5 - 94.9)).toBe(false);
+    expect(exceedsCoarsenedTolerance(0.3)).toBe(true);
+    expect(exceedsCoarsenedTolerance(-0.3)).toBe(true);
+  });
+
+  it('decides the frame boundary checks the same way', () => {
+    /*
+     * A script ending two grid steps past its frame's end, where the frame
+     * ends at 4000.1 and the script at 4000.3. The comparison this replaced,
+     * `scriptEnd > end + tolerance`, noted it, because `4000.1 + 0.2` rounds
+     * below `4000.3`; the forced split had already been fixed for the same
+     * float, and the other checks had not.
+     */
+    const twoSteps = decomposeFrame(
+      frame({
+        startTimeMs: 3940.1,
+        durationMs: 60,
+        renderingUpdate: { kind: 'none' },
+        scripts: [script({ startTimeMs: 3950.3, durationMs: 50 })],
+      }),
+    );
+    expect(twoSteps.notes).toEqual([]);
+
+    const threeSteps = decomposeFrame(
+      frame({
+        startTimeMs: 3940.1,
+        durationMs: 60,
+        renderingUpdate: { kind: 'none' },
+        scripts: [script({ startTimeMs: 3950.4, durationMs: 50 })],
+      }),
+    );
+    expect(threeSteps.notes).toHaveLength(1);
+    expect(threeSteps.notes[0]?.kind).toBe('script-ends-after-frame');
+  });
+});
 
 describe('the partition', () => {
   it('accounts for every millisecond of a frame with one script', () => {

@@ -205,41 +205,86 @@ describe('the records', () => {
     );
     expect(new Set(componentSpans)).toEqual(new Set(['PropsChanged', 'DeepEqualProps']));
 
-    // Phase markers sit on the same DevTools track as the component spans, so
-    // only the zero-width prefix tells them apart.
-    const phases = dev.react.spans
-      .filter((span) => span.kind === 'phase')
-      .map((span) => span.phase);
-    expect(new Set(phases)).toEqual(new Set(['Update', 'Mount', 'Update Blocked']));
+    /*
+     * Phase markers sit on the same DevTools track as the component spans, so
+     * only the zero-width prefix tells them apart.
+     *
+     * The set is not asserted equal to `{Update, Mount, Update Blocked}`, which
+     * is what this test used to do, because two of those three are a coin flip
+     * per capture. `Update` and `Update Blocked` are the same marker, emitted
+     * under the one gate described below and named `Update Blocked` when the
+     * render started more than 5ms after the update (:18629-18630). Both
+     * captures so far happened to contain both, and a re-capture in which every
+     * update and its render shared a clock tick would have contained neither,
+     * failing the test on chance. `Mount` is deterministic here: React logs it
+     * for a fiber mounting under an already-mounted parent whenever the mount
+     * took more than 0.05ms (`logComponentTrigger(..., "Mount")`, :17206 and
+     * :17224), and every component in the fixture burns 25ms. So: `Mount` is
+     * present, and nothing outside the three names is classified as a phase.
+     */
+    const phases = new Set(
+      dev.react.spans.filter((span) => span.kind === 'phase').map((span) => span.phase),
+    );
+    expect(phases).toContain('Mount');
+    for (const phase of phases) expect(['Update', 'Mount', 'Update Blocked']).toContain(phase);
 
     /*
      * An `Update` span names the component that scheduled the update — which is
-     * exactly the component the span gate declines to give a span to. So every
-     * component an originator names is one with no component span.
+     * exactly the component the span gate declines to give a span to. So each
+     * named originator is asserted, per interaction, to be the component whose
+     * `setState` that interaction's click called (`fixtures/spans/src/App.tsx`
+     * and `causes.tsx`; the `bump-again` step clicks the `bump` button again),
+     * and to be a component with no component span.
      *
-     * Which interactions get an `Update` span at all is not stable, so no
-     * particular originator is asserted. React 19.3.1 emits one only when the
-     * render started strictly after the update was scheduled, on the coarsened
-     * page clock (`debugTask > previousRenderStartTime &&` in
+     * Which interactions get an `Update` span at all is not stable, so none is
+     * required to have one. React 19.3.1 emits it only when the render started
+     * strictly after the update was scheduled, on the coarsened page clock
+     * (`debugTask > previousRenderStartTime &&` in
      * `react-dom-client.development.js`, :18619); an update and a render inside
      * the same clock tick produce nothing. The capture before v0.3 had one for
      * `StateOwner`'s own `setState` and one for `App`; the re-capture has two
      * for `App` and none for `StateOwner`. The v0.1 replay saw one on 5 of 24
-     * keypresses. A bonus, not a tier, exactly as `react.ts` says.
+     * keypresses. A bonus, not a tier, exactly as `react.ts` says. What is
+     * deterministic is that when one appears it names the right component, and
+     * that is what is asserted; an `Update` span that fell outside every
+     * interaction window would escape the check, so that is refused too.
      *
      * The `Update Blocked` span at mount names no component at all — its rows
      * are only `[["Method name","root.render()"]]` — which is what reading the
-     * rows by label rather than by index is for.
+     * rows by label rather than by index is for. It sits under the same gate, so
+     * it is asserted only where it appears; the label-parsing it exercises is
+     * pinned without chance in `collector-fields.test.ts`.
      */
-    const originators = dev.react.spans.flatMap((span) =>
-      span.kind === 'phase' && span.originator !== null ? [span.originator] : [],
+    const SET_STATE_OWNER: Readonly<Record<string, string | null>> = {
+      'initial-mount': null,
+      bump: 'App',
+      'state-owner-self': 'StateOwner',
+      'mount-toggle': 'App',
+      'bump-again': 'App',
+    };
+    const originated = dev.react.spans.flatMap((span) =>
+      span.kind === 'phase' && span.originator !== null
+        ? [{ atMs: span.startTimeMs, originator: span.originator }]
+        : [],
     );
-    const named = originators.flatMap((originator) =>
-      originator.componentName === null ? [] : [originator.componentName],
-    );
-    expect(named.length).toBeGreaterThan(0);
-    for (const name of named) expect(componentSpans).not.toContain(name);
-    expect(originators).toContainEqual({ componentName: null, methodName: 'root.render()' });
+    for (const { atMs, originator } of originated) {
+      const interaction = dev.interactions.find(
+        (window) => atMs >= window.fromMs && atMs <= window.toMs,
+      );
+      const where = `originator at ${String(atMs)}ms`;
+      expect(interaction, where).toBeDefined();
+      if (interaction === undefined) continue;
+
+      expect(Object.keys(SET_STATE_OWNER), where).toContain(interaction.label);
+      const owner = SET_STATE_OWNER[interaction.label] ?? null;
+      expect(originator.componentName, `${where}, ${interaction.label}`).toBe(owner);
+      if (owner === null) {
+        expect(originator.methodName, where).toBe('root.render()');
+      } else {
+        expect(originator.methodName, where).toBe('setState()');
+        expect(componentSpans, where).not.toContain(owner);
+      }
+    }
 
     // Production: no spans at all, and every fiber timing null rather than
     // zero. The hook still fires on every commit, with minified names.
@@ -276,9 +321,9 @@ describe('the v0.3 collector fields, as the re-capture recorded them', () => {
 
         for (const [index, commit] of commits.entries()) {
           const where = `${fixture}/${mode} commit ${String(index)}`;
-          expect(commit.truncated, where).toBe(false);
           expect(commit.components.linkage, where).toBe('recorded');
           if (commit.components.linkage !== 'recorded') continue;
+          expect(commit.components.truncated, where).toBe(false);
 
           for (const fiber of commit.components.fibers) {
             const performedWork = (fiber.render.flags & 1) !== 0;

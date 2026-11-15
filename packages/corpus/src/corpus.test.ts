@@ -385,6 +385,15 @@ describe('derive-in-render: the profiler names the declared culprit', () => {
        * than error: line 32 is the component declaration, reached when a
        * sample lands in the sort but not in the comparator, and line 49 is the
        * row-rendering `.map`.
+       *
+       * How much room the floor leaves: a share of n independent samples has a
+       * binomial standard error of sqrt(p(1-p)/n), about 4.8 points at n near
+       * 100 and p near 0.65. The previous capture measured 60.8% (62 of 102,
+       * development, 4x), under a fifth of a standard error above the floor. So a
+       * re-capture that lands just under 60% is within ordinary sampling noise
+       * of what has been seen, and should be read as that before it is read as
+       * a regression in attribution. The floor stays at 60% because that is
+       * step 4's declared criterion in `handoff.md`.
        */
       expect(inRange / total).toBeGreaterThan(0.6);
 

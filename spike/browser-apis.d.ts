@@ -46,8 +46,9 @@ interface ProfilerSample {
    * Per spec, a high resolution timestamp relative to "the profiling session's
    * time origin" — which is not obviously the document's time origin.
    *
-   * Measured, it is: the first sample lands 0.1-1.3ms after the
-   * `performance.now()` reading taken immediately before `new Profiler(...)`,
+   * Measured, it is: the first sample lands 0.1-0.9ms after the
+   * `performance.now()` reading taken immediately before `new Profiler(...)`
+   * (v0.3 re-capture, 4x, both build modes; 0.0-0.7ms in the capture before),
    * so all three signals share one `performance.now()` timeline and no clock
    * reconciliation is needed. That was the correlation risk the spike was most
    * worried about; `findings.md` records it as answered.

@@ -13,23 +13,24 @@ They are history, not instructions.
 
 ## Where things stand
 
-`pnpm check` passes from the repo root: `format:check`, `lint`, `typecheck`, then `test` — 114
-tests across two packages. `pnpm build` passes.
+`pnpm check` passes from the repo root: `format:check`, `lint`, `typecheck`, then `test` — 140
+tests across two packages after the overnight run's step 0 (114 before it). `pnpm build` passes.
 
 **Steps 1 and 2 are built and are the subject of a review point; step 3 has not started.**
 `packages/core` now holds the record types (`loaf.ts`, `profiler.ts`, `react.ts`, `signals.ts`,
 `provenance.ts`), the frame partition (`frame-decomposition.ts`) and the answer's shape
 (`attribution.ts`) — no heuristics. `packages/corpus/src/records.ts` parses all eight runs into
-those types, and its record tests assert the partition against all 56 captured frames. The list of
-packages below describes what existed before that and is otherwise still accurate.
+those types, and its record tests assert the partition against all 53 captured frames (56 in the
+capture before the v0.3 re-capture). The list of packages below describes what existed before
+that and is otherwise still accurate.
 
 The go/no-go is answered and the evidence is in the repo. Everything the engine needs to be
 tested against now exists on disk, and nothing in the steps below requires a browser.
 
 What exists:
 
-- **`corpus/`** — 8 captures: every fixture in both build modes, five files each, 6.6MB, plus a
-  `manifest.json`. **This is the engine's test input.** Read `corpus/README.md` before using it.
+- **`corpus/`** — 8 captures: every fixture in both build modes, five files each, 6.8MB (6.6MB
+  before the v0.3 re-capture), plus a `manifest.json`. **This is the engine's test input.** Read `corpus/README.md` before using it.
 - **`packages/corpus`** — private, test-only. Reads a run directory and a `ground-truth.json` off
   disk and hands over parsed records, so `core` never needs I/O. It deliberately has no opinion
   about what the records mean — that opinion is step 1 below. 30 tests assert that each fixture's
@@ -76,14 +77,20 @@ to get wrong:
 
 - **`forcedStyleAndLayoutDuration` is nested inside its script's `duration`.** Adding it as a
   sibling slice double-counts. Measured: a 111–127ms script entry containing 108–124ms of it.
+  (108.8–117.7ms entries containing 94.9–103.8ms in the v0.3 re-capture, `innerhtml-rebuild`, 4x,
+  both build modes.)
 - **Fiber `actualDuration` is subtree time, not self time.** Self time is
   `actualDuration − Σ children.actualDuration`, which is what React itself computes. It is *not*
   `selfBaseDuration`, which is the previous render's base duration and measured 8% off. In the
-  `spans` corpus `App` reads 151.7ms against six components burning ~25ms each: an engine that
-  treats `actualDuration` as self time reports that frame at roughly double its length — summing
-  the list naively gives 277.8ms for a commit that took 151.7ms, and `App`, which did not
-  re-render at all, at 5.9× its real contribution. (The figure read 151.4ms here before step 1
-  checked it against the dump; the two six-component commits are 151.70 and 151.80ms.)
+  `spans` corpus `App` reads 151.2ms (151.7ms in the capture before the v0.3 re-capture) against
+  six components burning ~25ms each: an engine that treats `actualDuration` as self time reports
+  that frame at roughly double its length — summing the list naively gives 277.2ms (277.8ms) for a
+  commit that took 151.2ms (151.7ms), and `App` at 6.0× (5.9×) its
+  real contribution, which is its own 25.2ms burn. (This sentence used to say `App` "did not
+  re-render at all". That is wrong: the commit comes from `App`'s own `setShowLateMount`, so `App`
+  rendered. Corrected by the overnight orchestrator after the step 0 fix pass found it.) All development, 4x, in the `mount-toggle` commit. (The figure read 151.4ms
+  here before step 1 checked it against the dump; the two six-component commits are 151.20 and
+  152.90ms, 151.70 and 151.80ms in the capture before.)
 - **React emits two kinds of `performance.measure`.** Phase markers (`Update`, `Mount`,
   `Update Blocked`) and one span per component, distinguished only by a **U+200B prefix** on the
   component ones. Nothing else separates them.
@@ -101,8 +108,9 @@ it, with the honest recipe in `findings.md` under "Decomposing the frame", and a
 **unattributed** remainder.
 
 Two denominators, and the engine must be able to name which it used: `duration` ends at
-`paintTime`, while `presentationTime` sits 26–43ms beyond it in every frame measured. ~70% of
-`duration` is ~45% of keypress-to-pixels.
+`paintTime`, while `presentationTime` sits 23.8–42.5ms beyond it in every frame measured (all 51
+painted frames of the v0.3 re-capture, 4x, both build modes; 26–43ms when this brief was
+written). ~70% of `duration` is ~45% of keypress-to-pixels.
 
 **Done when** every frame in the corpus decomposes with slices that never sum past `duration`;
 `innerhtml-rebuild`'s unforced frames report 70%+ unattributed; its forced frames attribute
@@ -173,9 +181,14 @@ the weight.
   points at five samples. 24 presses is what makes it stable.
 - The **statement** is unavailable from inside the page at all.
 - The **unattributed remainder** is cross-checked against the share of in-frame profiler samples
-  with an empty stack. Measured, the two move together: 89–92% residual with 90–93% empty stacks
-  unforced, 15% residual with 9–20% empty stacks forced. Two independent signals agreeing that
-  nothing was attributable is a far better unattributed tier than subtraction alone.
+  with an empty stack. Measured, the two move together: 88.9–90.3% residual with 88.9–91.7% empty
+  stacks unforced, 14.3–16.9% residual with 10–22% empty stacks forced (per frame, v0.3
+  re-capture, 4x, both build modes; 89–92% with 90–93%, and 15% with 9–20%, in the capture
+  before). The forced empty-stack share depends on the frame window: 10–22% counts samples inside
+  `[startTime, startTime + duration]`, and it is 10–30% inside the engine's `isWithinFrame`, whose
+  ±0.2ms tolerance admits one stackless sample at 4324.9ms against a production frame starting at
+  4325.0. Two independent signals agreeing that nothing was attributable is a far better
+  unattributed tier than subtraction alone.
 
 Degrade in tiers and **name the tier**: profiler header absent → infer from overlap at lower
 confidence; React hook absent → source-level attribution; source map absent → minified name with
@@ -254,9 +267,9 @@ proposing a feature.
   asserts. This is finding 6 made sharper, not a new problem.
 - **Four fixtures is the harness.** The full corpus stays deferred in `later.md`. These four
   cover the four claims that shape the engine's design, and that is their job.
-- **The corpus lives in the repo.** 6.6MB of captured signal, kept rather than regenerated,
-  because the v0.1 spike's most interesting run was overwritten and `findings.md` still carries
-  it as a dangling citation. Size is not a reason to delete evidence.
+- **The corpus lives in the repo.** 6.8MB of captured signal (6.6MB before the v0.3 re-capture),
+  kept rather than regenerated, because the v0.1 spike's most interesting run was overwritten and
+  `findings.md` still carries it as a dangling citation. Size is not a reason to delete evidence.
 - **`learning/` stays.** It is a teaching workspace that lives in this repo, excluded from the
   lint and format gate on purpose. Leave it alone; it is not part of the tool and nothing in the
   tool may depend on it.
@@ -291,7 +304,7 @@ Progress (updated before each next step starts):
 - [x] Step 0.2 — collector change (fiber parent id, forced style/layout on scripts)
 - [x] Step 0.3 — re-capture all eight runs in one pass
 - [x] Step 0.4 — re-derive moved figures
-- [ ] Step 0 cycle (refactor, review, fix) and commit
+- [x] Step 0 cycle (refactor, review, fix) and commit
 - [ ] Step 3 — components, the React tier
 - [ ] Step 4 — lines, the profiler tier
 - [ ] Step 5 — the confidence model
@@ -332,8 +345,11 @@ Progress (updated before each next step starts):
   React 19.3.1 development build, `react-dom-client.development.js`: `createWorkInProgress` at :5105,
   with `actualDuration` reset at :5128 and flags masked at :5130; `bubbleProperties` at :12823-12842.
   Step 3 must skip `carriedOver` fibers, both as candidates and as children subtracted from a parent.
-- The old corpus reads as `unrecorded` with `truncated: null`. New synthetic tests are in
-  `packages/corpus/src/collector-fields.test.ts`. The gate is green at 123 tests.
+- The old corpus reads as `unrecorded` with `truncated: null`. (Since the step 0 fix round an
+  `unrecorded` commit has no `truncated` at all: the flag lives in the `recorded` variant of
+  `CommitComponents`, and its presence on the commit record is what makes a commit `recorded`.)
+  New synthetic tests are in `packages/corpus/src/collector-fields.test.ts`. The gate is green at
+  123 tests.
 
 ### Step 0.3 — re-capture
 
@@ -384,8 +400,61 @@ core, 71 corpus); `pnpm build` passes. Not committed.
   as written. The collector's `run.json` sampling note still says "~12ms median cadence" (spike
   text, not edited). Findings has a new closing section, "What the v0.3 re-capture found".
 
+### Step 0 cycle — review findings and the orchestrator's decisions
+
+The refactor is committed as `415ec1e`. A cold review of `9aecc23..HEAD` checked every changed
+ground-truth figure, every `findings.md` change, the README, and the changed comment figures with
+scripts against the new corpus and the `9aecc23` one. **No figure was fabricated.** It confirmed the
+React 19.3.1 line citations and the LoAF spec reading. Its ten findings, and what was done with each:
+
+1. **Accepted.** The forced empty-stack share of 10–22% holds only under a strict frame window. The
+   engine's ±0.2ms `isWithinFrame` gives 10–30%, because a stackless sample at 4324.9 sits against a
+   frame start of 4325.0. Both are now quoted, each with its convention.
+2. **Accepted.** `spike/collect-run.ts` and `spike/browser-apis.d.ts` still said the first sample
+   lands 0.1–1.3ms after start, which is stale. They now give 0.1–0.9ms for the v0.3 re-capture and
+   0.0–0.7ms for the capture before, both at 4×.
+3. **Accepted.** The figures in `handoff.md` that the re-capture moved are annotated as `findings.md`
+   does: the test count, the frame count, the corpus size, the spans `App` arithmetic, the
+   presentation gap, and step 5's cross-check bounds. Step 5's agent reads those bounds as its
+   targets, so they had to be current.
+4. **Partly accepted.** The derive-in-render replay floor of 0.6 sits only 0.17 standard errors
+   below the previous capture's 60.8% of 102. The current capture's 70.7% is 2.25 standard errors
+   above it. (An earlier version of this note said "about two standard errors" for the first gap;
+   the fix pass corrected the arithmetic.) The review proposed swapping it for a plurality test or
+   a 0.5 floor. **Rejected:** 60% is step 4's declared done-when, and moving a declared criterion is
+   a design decision, not a fix. What was accepted is a comment beside the floor giving the binomial
+   standard error, so that a future flap is read as noise. Also carried forward: step 4's brief
+   states the replay-population decision explicitly, because so far it lives only in a throwaway
+   `corpus.test.ts` reader.
+5. **Accepted.** The rewritten spans originator test was close to vacuous, because `App` has no
+   props and so can never get a component span. It now asserts per interaction that each `Update`
+   originator names the component whose `setState` that interaction called. Its comment says the
+   `Update` span itself is intermittent.
+6. **Accepted.** One float-safe, one-sided tolerance helper is used for every coarsened comparison
+   in `frame-decomposition.ts`, not just the forced split. The `isWithinFrame` comment's "one
+   coarsening step" is corrected to two. This is a condition of acceptance: no note may change on
+   any corpus frame.
+7. **Accepted.** `truncated` moves into the `recorded` variant of `CommitComponents`, and linkage is
+   now keyed on the commit, not inferred from its fibers.
+8. **Accepted.** `readLinkedFiber`'s error paths are made consistent.
+9. **Accepted.** "(4x, both build modes)" is appended to the cadence and clock figures that lacked a
+   throttle.
+10. **Accepted.** The derive-in-render ground truth no longer asserts the order and modes of the
+    pre-corpus 0.73, 0.76 and 0.83. It cites `findings.md` for them.
+
+**Deferred:** the review's remark that the derive-in-render histogram story is now told in six
+places, which is a drift risk. Consolidating it means rewriting measurement prose in the README,
+two ground-truth comments and `handoff.md`, and the rule tonight is that such prose may be moved
+but not cut. Left for the morning; see Questions.
+
 ## Questions for the morning
 
+- **Should the derive-in-render histogram narrative live only in `findings.md`, with the README,
+  the ground truth and the tests citing it?** It is currently told in six places. Not consolidated
+  tonight, because doing so means cutting measurement prose in an unattended run.
+- **Should the replay floor of 0.6 stay at step 4's declared 60%?** One capture measured 60.8% of 102, only
+  0.17 standard errors above it, so a future re-capture may flap. Kept at 0.6, with the
+  standard error noted beside it.
 - **Step 4's "60%+ of in-frame `OrderTable` samples" is now measured over the replay, every sample
   inside the drive's steps, instead of inside long frames.** In-frame production holds 3 samples
   after the re-capture, because LoAF fired on only 2 of 24 presses, against 5 of 24 before.

@@ -23,7 +23,8 @@
  * relative to "the profiling session's time origin", which is not obviously the
  * document's; measured, it is — the first sample lands 0.1-0.9ms after the
  * reading taken immediately before the profiler was constructed, across all
- * eight captures of the v0.3 re-capture (0.0-0.7ms in the capture before).
+ * eight captures of the v0.3 re-capture (4x, both build modes; 0.0-0.7ms in the
+ * capture before, also 4x).
  *
  * https://wicg.github.io/js-self-profiling/
  */
@@ -194,6 +195,13 @@ export interface ProfiledStack {
  * signals agreeing that nothing was attributable is a far better unattributed
  * tier than subtraction alone.
  *
+ * "In-frame" needs its window stated, because the forced figure depends on it.
+ * The 10-22% counts samples inside `[startTime, startTime + duration]`. Inside
+ * the engine's `isWithinFrame`, whose tolerance is 0.2ms either side, it is
+ * 10-30%: one stackless sample at 4324.9ms falls against a production frame
+ * starting at 4325.0, turning that frame's 2 of 9 into 3 of 10. The unforced
+ * figures are the same under both windows.
+ *
  * Note that the whole-run share is not that number: most of a run is the idle
  * gaps between interactions, so 75-99% of all samples in these captures have no
  * stack. The quantity that means anything is the share of samples *inside a
@@ -222,7 +230,8 @@ export interface ProfilerSampling {
  * Note the two windows a consumer must not confuse: this trace's own
  * `startedAtMs`/`stoppedAtMs`, and the interaction windows in `signals.ts`. In
  * two of the eight captures the profiler was started in an init script at 22-26ms
- * to catch the page's first mount, long before the drive began at 239-307ms, so
+ * to catch the page's first mount, long before the drive began at 239-307ms (4x,
+ * both build modes), so
  * dozens of samples precede the first interaction. Anything that assumes
  * samples begin at the first interaction mis-bins them.
  */

@@ -9,8 +9,13 @@
  * corpus in `records.test.ts`) and no run carries the old shape. These tests
  * pin what the readers do with both, so that an older capture still reads as
  * what it is, and so that the shape-checking the corpus never exercises — a
- * commit linked on some fibers and not others, ids that break the scheme — is
- * exercised somewhere.
+ * fiber that disagrees with its commit about linkage, ids that break the
+ * scheme — is exercised somewhere.
+ *
+ * One block here is not about the v0.3 fields: a phase span's originator rows.
+ * The corpus exercises them only where React happened to emit an update span,
+ * which is chance (see `records.test.ts`), so the by-label parsing is pinned
+ * here, where it does not depend on a capture.
  *
  * The records are the smallest the readers accept, shaped like the
  * collector's output and nothing more. No figure in them is a measurement.
@@ -52,7 +57,13 @@ function fiber(
   };
 }
 
-function commitsOf(components: Json[], extra: object = {}) {
+/**
+ * The commit-level key the linked collector writes. Its presence, not anything
+ * on a fiber, is what makes a commit `recorded` — see `readComponents`.
+ */
+const LINKED = { truncated: false };
+
+function commitsOf(components: Json[], commit: object = {}) {
   return reactOf(
     runWith({
       react: {
@@ -66,7 +77,7 @@ function commitsOf(components: Json[], extra: object = {}) {
             didError: false,
             priorityLevel: null,
             components,
-            ...extra,
+            ...commit,
           },
         ],
         measures: [],
@@ -81,8 +92,9 @@ describe('fiber parent links', () => {
 
     expect(commit?.components.linkage).toBe('unrecorded');
     expect(commit?.components.fibers.map((f) => f.name)).toEqual(['App', 'Child']);
-    // Nor as a walk known to be complete: the old collector never said.
-    expect(commit?.truncated).toBeNull();
+    // Nor as a walk known to be complete: the old collector never said, so the
+    // unrecorded variant has no `truncated` at all.
+    expect(commit?.components).not.toHaveProperty('truncated');
   });
 
   it('carries the truncation flag and each fiber’s raw render evidence where recorded', () => {
@@ -95,9 +107,9 @@ describe('fiber parent links', () => {
       { truncated: true },
     );
 
-    expect(commit?.truncated).toBe(true);
     expect(commit?.components).toMatchObject({
       linkage: 'recorded',
+      truncated: true,
       fibers: [
         { name: 'App', render: { flags: 0, hasAlternate: true, carriedOver: false } },
         // A previous commit's object keeps its old `PerformedWork` bit, which is
@@ -107,17 +119,37 @@ describe('fiber parent links', () => {
     });
   });
 
-  it('refuses links with no render evidence beside them', () => {
-    expect(() => commitsOf([fiber('App', { id: 0, parentId: null }, {})])).toThrow(/flags/);
+  it('reads linkage off the commit, so an empty recorded commit is still recorded', () => {
+    const [commit] = commitsOf([], LINKED);
+
+    expect(commit?.components).toEqual({ linkage: 'recorded', truncated: false, fibers: [] });
+  });
+
+  it('refuses links with no render evidence beside them, naming the full path', () => {
+    expect(() => commitsOf([fiber('App', { id: 0, parentId: null }, {})], LINKED)).toThrow(
+      'commits.0.components.0.flags is undefined, expected a number',
+    );
+  });
+
+  it('refuses a linked fiber with no parentId key, which is a missing link rather than a root', () => {
+    // An id and render evidence, and no `parentId` key at all.
+    const withoutParent = fiber('App', null, { ...RENDERED, id: 0 });
+
+    expect(() => commitsOf([withoutParent], LINKED)).toThrow(
+      'commits.0.components.0.parentId is undefined',
+    );
   });
 
   it('links each fiber to its nearest component ancestor where the collector recorded it', () => {
-    const [commit] = commitsOf([
-      fiber('App', { id: 0, parentId: null }),
-      fiber('Sibling', { id: 1, parentId: 0 }),
-      fiber('Child', { id: 2, parentId: 0 }),
-      fiber('Grandchild', { id: 3, parentId: 2 }),
-    ]);
+    const [commit] = commitsOf(
+      [
+        fiber('App', { id: 0, parentId: null }),
+        fiber('Sibling', { id: 1, parentId: 0 }),
+        fiber('Child', { id: 2, parentId: 0 }),
+        fiber('Grandchild', { id: 3, parentId: 2 }),
+      ],
+      LINKED,
+    );
 
     expect(commit?.components).toMatchObject({
       linkage: 'recorded',
@@ -130,21 +162,30 @@ describe('fiber parent links', () => {
     });
   });
 
-  it('refuses a commit linked on some fibers and not others', () => {
+  it('refuses a recorded commit with a fiber that carries no links', () => {
     expect(() =>
-      commitsOf([fiber('App', { id: 0, parentId: null }), fiber('Child', null)]),
-    ).toThrow(/1 of 2 fibers carry an id/);
+      commitsOf([fiber('App', { id: 0, parentId: null }), fiber('Child', null)], LINKED),
+    ).toThrow('commits.0.components.1.id is undefined, expected a number');
+  });
+
+  it('refuses an unrecorded commit with a fiber that carries links', () => {
+    expect(() =>
+      commitsOf([fiber('App', null), fiber('Child', { id: 1, parentId: 0 })]),
+    ).toThrow(/commits\.0\.components\.1\.id is present, but the commit carries no `truncated`/);
   });
 
   it('refuses ids that break the scheme the self-time subtraction trusts', () => {
     // An id that is not the fiber's index.
-    expect(() => commitsOf([fiber('App', { id: 1, parentId: null })])).toThrow(
-      /is not the fiber's index/,
+    expect(() => commitsOf([fiber('App', { id: 1, parentId: null })], LINKED)).toThrow(
+      /commits\.0\.components\.0\.id: id 1 is not the fiber's index 0/,
     );
     // A parent that is not an earlier fiber: the walk emits ancestors first.
     expect(() =>
-      commitsOf([fiber('App', { id: 0, parentId: 1 }), fiber('Child', { id: 1, parentId: 0 })]),
-    ).toThrow(/does not name an earlier fiber/);
+      commitsOf(
+        [fiber('App', { id: 0, parentId: 1 }), fiber('Child', { id: 1, parentId: 0 })],
+        LINKED,
+      ),
+    ).toThrow(/commits\.0\.components\.0\.parentId: parentId 1 does not name an earlier fiber/);
   });
 });
 
@@ -214,5 +255,44 @@ describe('the forced style and layout split', () => {
 
     expect(script?.forcedStyleDurationMs).toBe(8);
     expect(script?.forcedLayoutDurationMs).toBe(22);
+  });
+});
+
+describe('a phase span’s originator', () => {
+  function originatorOf(properties: Json) {
+    const [span] = reactOf(
+      runWith({
+        react: {
+          reactDevToolsHookInstalled: true,
+          commits: [],
+          measures: [
+            {
+              name: 'Update Blocked',
+              startTime: 80,
+              duration: 7,
+              detail: { devtools: { properties } },
+            },
+          ],
+        },
+      }),
+    ).spans;
+    return span?.kind === 'phase' ? span.originator : undefined;
+  }
+
+  it('reads a method-only row as no component, not as a component named after the method', () => {
+    // The shape of the corpus's `Update Blocked` span at mount.
+    expect(originatorOf([['Method name', 'root.render()']])).toEqual({
+      componentName: null,
+      methodName: 'root.render()',
+    });
+  });
+
+  it('reads both rows by label, whatever their order', () => {
+    expect(
+      originatorOf([
+        ['Method name', 'setState()'],
+        ['Component name', 'StateOwner'],
+      ]),
+    ).toEqual({ componentName: 'StateOwner', methodName: 'setState()' });
   });
 });
