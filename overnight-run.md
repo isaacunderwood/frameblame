@@ -13,6 +13,30 @@ in `handoff.md`, choose the most conservative option, say in that section which 
 keep going on everything that is not blocked by it. An idle session is the only outright failure
 here.
 
+## Assume you will forget this
+
+This is one long session. When its context fills, it is summarised and continues — so the thing
+that fails overnight is not running out of room, it is a fact losing its reason on the way through
+a summary. Three of this project's conclusions were reversed once because exactly that happened to
+a human.
+
+So write everything down as you go, and trust files over memory:
+
+- **Record a step's outcome in `handoff.md` before starting the next one**, never after. A summary
+  landing between doing the work and writing it down is how the night loses a step.
+- **Never read a file in `corpus/` directly.** They run to 1.9MB each and one `Read` would cost a
+  tenth of the window. Query them with a short `node -e` script, through
+  `packages/corpus/src/records.ts`, or in a subagent that reports figures rather than contents. The
+  same goes for anything under `spike/archive/`, which has a 5.1MB file in it.
+- **Push the heavy reading into subagents.** Their tool output stays out of this session; only
+  their conclusion comes back. That is why the refactor and the review are subagents, and it is
+  also the right shape for any survey across many files.
+- **Put a fact in a test or a comment, not in your head.** If you measure something, the figure
+  belongs beside the code that relies on it, with the build mode and throttle rate that produced
+  it.
+- When you reorient after a summary, this brief plus `handoff.md` plus the module comments are the
+  state. Re-read them rather than reconstructing what you were doing.
+
 ## Where things stand
 
 Steps 1 and 2 of `handoff.md` are built: the record types, the frame partition, the vocabulary for
