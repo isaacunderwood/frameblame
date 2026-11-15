@@ -51,11 +51,23 @@ function subjectOf(cause: CandidateCause | undefined): FunctionSubject {
   return cause.subject;
 }
 
+/** A capture's signals, with its profile resolved through the maps it carried. */
 function resolvedProfileOf(fixture: string, mode: (typeof BUILD_MODES)[number]) {
   const signals = loadSignals(fixture, mode);
   if (signals.profile === null) throw new Error(`${fixture}/${mode}: no profile`);
   const resolved: ResolvedProfile = resolveProfile(signals.profile);
   return { signals, resolved };
+}
+
+/** As `resolvedProfileOf`, with the engine's attribution over the replay population. */
+function replayOf(fixture: string, mode: (typeof BUILD_MODES)[number]) {
+  const { signals, resolved } = resolvedProfileOf(fixture, mode);
+  const replay = attributeSampledFunctions(
+    resolved,
+    signals.provenance,
+    interactionPopulation(signals),
+  );
+  return { signals, resolved, replay };
 }
 
 /** A file name's last path segment, which is how ground truth and map agree. */
@@ -101,12 +113,7 @@ describe('derive-in-render: the profiler names the declared line', () => {
 
   for (const mode of BUILD_MODES) {
     it(`${mode}: line ${String(dominantLine)} ranks first over the replay, and most samples land in ${String(from)}-${String(to)}`, async (context) => {
-      const { signals, resolved } = resolvedProfileOf('derive-in-render', mode);
-      const replay = attributeSampledFunctions(
-        resolved,
-        signals.provenance,
-        interactionPopulation(signals),
-      );
+      const { signals, resolved, replay } = replayOf('derive-in-render', mode);
 
       /*
        * The top-ranked candidate is the comparator passed to `.sort`, defined
@@ -179,12 +186,7 @@ describe('derive-in-render: the profiler names the declared line', () => {
     });
 
     it(`${mode}: names the component's own lines, never App's`, () => {
-      const { signals, resolved } = resolvedProfileOf('derive-in-render', mode);
-      const replay = attributeSampledFunctions(
-        resolved,
-        signals.provenance,
-        interactionPopulation(signals),
-      );
+      const { replay } = replayOf('derive-in-render', mode);
 
       /*
        * The fixture's declared wrong answer is `App`, which owns the state the

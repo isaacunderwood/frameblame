@@ -229,14 +229,11 @@ function chargedFrame(
   const located = stack.filter(
     (resolution): resolution is Located => resolution.kind !== 'unlocated',
   );
+  for (const [index, frame] of located.entries()) {
+    if (!isIgnoreListed(frame)) return { frame, foldedCallees: index > 0 };
+  }
   const [leaf] = located;
-  if (leaf === undefined) return null;
-
-  const index = located.findIndex((resolution) => !isIgnoreListed(resolution));
-  const frame = located[index];
-  return frame === undefined
-    ? { frame: leaf, foldedCallees: false }
-    : { frame, foldedCallees: index > 0 };
+  return leaf === undefined ? null : { frame: leaf, foldedCallees: false };
 }
 
 /**
@@ -285,6 +282,36 @@ interface FunctionTally {
   readonly resolution: Located;
   samples: number;
   foldedCallees: number;
+}
+
+/**
+ * One function's tally as a candidate: its share of `stackedSamples`, with the
+ * samples it was charged and, where it absorbed any, the ignore-listed callees
+ * it folded in. Assumes `stackedSamples` includes the tally's own samples.
+ */
+function functionCandidate(
+  tally: FunctionTally,
+  stackedSamples: number,
+  window: SampleWindowKind,
+): CandidateCause {
+  const evidence: [CauseEvidence, ...CauseEvidence[]] = [
+    {
+      kind: 'profiler-samples',
+      samples: tally.samples,
+      ofSamplesInWindow: stackedSamples,
+      window,
+    },
+  ];
+  if (tally.foldedCallees > 0) {
+    evidence.push({ kind: 'ignore-listed-callees', samples: tally.foldedCallees });
+  }
+  return {
+    subject: functionSubject(tally.resolution),
+    // `stackedSamples` is at least `tally.samples`, which is at least 1.
+    weight: confidenceWeight(tally.samples / stackedSamples, 'sample-share'),
+    tier: tierOf(tally.resolution),
+    evidence,
+  };
 }
 
 /**
@@ -339,26 +366,9 @@ export function attributeSampledFunctions(
 
   const stackedSamples = samples - samplesWithoutStack;
   const causes = rankCauses(
-    [...tallies.values()].map((tally): CandidateCause => {
-      const evidence: [CauseEvidence, ...CauseEvidence[]] = [
-        {
-          kind: 'profiler-samples',
-          samples: tally.samples,
-          ofSamplesInWindow: stackedSamples,
-          window: population.window,
-        },
-      ];
-      if (tally.foldedCallees > 0) {
-        evidence.push({ kind: 'ignore-listed-callees', samples: tally.foldedCallees });
-      }
-      return {
-        subject: functionSubject(tally.resolution),
-        // `stackedSamples` is at least `tally.samples`, which is at least 1.
-        weight: confidenceWeight(tally.samples / stackedSamples, 'sample-share'),
-        tier: tierOf(tally.resolution),
-        evidence,
-      };
-    }),
+    [...tallies.values()].map((tally) =>
+      functionCandidate(tally, stackedSamples, population.window),
+    ),
   );
 
   return {

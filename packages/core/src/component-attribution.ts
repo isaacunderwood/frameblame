@@ -103,7 +103,12 @@ import {
   framesOfInteraction,
   type InteractionWindow,
 } from './signals.ts';
-import { definitionSite, resolveProfile, type ResolvedProfile } from './source-map.ts';
+import {
+  definitionSite,
+  type FrameResolution,
+  resolveProfile,
+  type ResolvedProfile,
+} from './source-map.ts';
 
 /**
  * One recorded component fiber and what the hook says it did, available at
@@ -457,6 +462,65 @@ function indexProfile(profile: ProfileTrace | null): IndexedProfile | null {
 }
 
 /**
+ * A commit's tier at the profiler: whether its components came back through a
+ * source map.
+ *
+ * Returns `profiler-mapped` when every rendered name with a single definition
+ * site in the profile resolved through a source map, and at least one did,
+ * and `profiler-unmapped` otherwise. It is decided from the sites rather than
+ * from the window's samples, so that a commit whose window happened to catch
+ * no sample stands at the same tier as its neighbours. A name never sampled
+ * anywhere has no site and decides nothing; an ambiguous name keeps the
+ * commit unmapped, because its candidate cannot be resolved.
+ */
+function commitProfilerTier(
+  renderedNames: Iterable<string>,
+  sites: DefinitionSites,
+  resolved: () => ResolvedProfile,
+): 'profiler-mapped' | 'profiler-unmapped' {
+  const sampledNames = [...renderedNames]
+    .map((name) => sites.get(name) ?? [])
+    .filter((nameSites) => nameSites.length > 0);
+  const allMapped =
+    sampledNames.length > 0 &&
+    sampledNames.every(
+      ([site, ...others]) =>
+        others.length === 0 &&
+        site !== undefined &&
+        resolved().frames[site]?.kind === 'mapped',
+    );
+  return allMapped ? 'profiler-mapped' : 'profiler-unmapped';
+}
+
+/**
+ * A sampled component's subject, and the tier it stands on, from its one
+ * definition site's resolution, or `undefined` when it has no single site.
+ *
+ * The name is the map's name for the identifier at the definition site, where
+ * there is one. For a function declaration that is the function's own name,
+ * which is how `h` becomes `OrderTable`. Without it the hook's name stands,
+ * minified in production, and the position stays generated with the reason
+ * the map did not apply. `nameIsMinified` is whether the hook's name is.
+ */
+function sampledComponentSubject(
+  hookName: string,
+  resolution: FrameResolution | undefined,
+  nameIsMinified: boolean,
+): { readonly subject: CauseSubject; readonly tier: AttributionTier } {
+  const mapped = resolution?.kind === 'mapped' ? resolution : null;
+  const realName = mapped?.originalName ?? null;
+  return {
+    subject: {
+      kind: 'component',
+      name: realName ?? hookName,
+      nameIsMinified: realName === null && nameIsMinified,
+      definedAt: resolution === undefined ? null : definitionSite(resolution),
+    },
+    tier: mapped === null ? 'profiler-unmapped' : 'profiler-mapped',
+  };
+}
+
+/**
  * The profiler tier: samples in the commit's window charged to rendered
  * components by name.
  *
@@ -476,13 +540,8 @@ function indexProfile(profile: ProfileTrace | null): IndexedProfile | null {
  * out on the stack either: whichever function it was, its time is not that
  * outer component's self time.
  *
- * The commit's tier is `profiler-mapped` when every rendered name with a
- * single definition site in the profile resolved through a source map, and at
- * least one did, and `profiler-unmapped` otherwise. It is decided from the
- * sites rather than from the window's samples, so that a commit whose window
- * happened to catch no sample stands at the same tier as its neighbours. A
- * name never sampled anywhere has no site and decides nothing; an ambiguous
- * name keeps the commit unmapped, because its candidate cannot be resolved.
+ * The commit's tier is `commitProfilerTier`'s, and each candidate's is
+ * `sampledComponentSubject`'s.
  */
 function tallySamples(
   components: readonly CommitComponent[],
@@ -519,18 +578,7 @@ function tallySamples(
     counts.set(match.name, (counts.get(match.name) ?? 0) + 1);
   }
 
-  const siteSets = [...fibersByName.keys()].map((name) => sites.get(name) ?? []);
-  const decisive = siteSets.filter((nameSites) => nameSites.length > 0);
-  const tier =
-    decisive.length > 0 &&
-    decisive.every(
-      (nameSites) =>
-        nameSites.length === 1 &&
-        nameSites[0] !== undefined &&
-        resolved().frames[nameSites[0]]?.kind === 'mapped',
-    )
-      ? 'profiler-mapped'
-      : 'profiler-unmapped';
+  const tier = commitProfilerTier(fibersByName.keys(), sites, resolved);
 
   // Reported rather than divided by: with nothing in the window, every
   // rendered component would otherwise carry a weight of 0 of 0.
@@ -564,26 +612,11 @@ function tallySamples(
     const samples = ambiguous ? 0 : (counts.get(name) ?? 0);
     chargedSamples += samples;
 
-    /*
-     * The map's name for the identifier at the definition site, where there
-     * is one. For a function declaration that is the function's own name,
-     * which is how `h` becomes `OrderTable`. Without it the hook's name
-     * stands, minified in production, and the position stays generated with
-     * the reason the map did not apply.
-     */
     const resolution =
       !ambiguous && site !== undefined ? resolved().frames[site] : undefined;
-    const mapped = resolution?.kind === 'mapped' ? resolution : null;
-    const realName = mapped?.originalName ?? null;
     tallies.push({
       name,
-      subject: {
-        kind: 'component',
-        name: realName ?? name,
-        nameIsMinified: realName === null && nameIsMinified,
-        definedAt: resolution === undefined ? null : definitionSite(resolution),
-      },
-      tier: mapped === null ? 'profiler-unmapped' : 'profiler-mapped',
+      ...sampledComponentSubject(name, resolution, nameIsMinified),
       numerator: samples,
       evidence: [
         {
