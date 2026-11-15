@@ -94,14 +94,16 @@ import {
   type CauseEvidence,
   type CauseSubject,
   confidenceWeight,
+  type NonEmptyEvidence,
   type RankedCauses,
   rankCauses,
   type UnattributedReason,
 } from './attribution.ts';
-import type { CommitAttribution } from './component-attribution.ts';
+import { type CommitAttribution, renderedEvidence } from './component-attribution.ts';
 import {
   type CrossCheck,
   crossCheckEmptyStacks,
+  measuredSupport,
   type WeightSupport,
 } from './confidence.ts';
 import { didRender } from './fiber-self-time.ts';
@@ -116,7 +118,6 @@ import {
   type FunctionAttribution,
 } from './line-attribution.ts';
 import {
-  COARSENED_TIMING_TOLERANCE_MS,
   exceedsByMoreThanCoarsening,
   isWithinFrame,
   type LongAnimationFrame,
@@ -129,7 +130,7 @@ import {
   type ScriptSlice,
   scriptSlicePopulation,
 } from './script-entry-attribution.ts';
-import type { CapturedSignals } from './signals.ts';
+import { type CapturedSignals, frameBeganIn } from './signals.ts';
 import type { ResolvedProfile } from './source-map.ts';
 
 /** Something about a frame's attribution that a report must say. */
@@ -203,9 +204,6 @@ export interface FrameAttribution {
   readonly commits: readonly CommitAttribution[];
   readonly notes: readonly FrameAttributionNote[];
 }
-
-/** A non-empty list of evidence, as `CandidateCause` requires. */
-type Evidence = [CauseEvidence, ...CauseEvidence[]];
 
 /** The profiler's side of one frame's cross-check. */
 interface InFrameSamples {
@@ -289,7 +287,7 @@ function shortfallOfFit(slice: ScriptSlice, commits: readonly TimedCommit[]): nu
 /** Milliseconds of one named thing in a frame, with the evidence for them. */
 interface Charge {
   ms: number;
-  readonly evidence: Evidence;
+  readonly evidence: NonEmptyEvidence;
 }
 
 /** A component's self time in a frame, with the subject its commit named it by. */
@@ -308,21 +306,44 @@ interface FrameShares {
   readonly measured: WeightSupport;
 }
 
-/** The `fiber-rendered` evidence for every component the hook saw render in these commits. */
-function renderedIn(commits: readonly CommitAttribution[]): CauseEvidence[] {
-  return commits.flatMap((commit) =>
-    commit.components.flatMap((component): CauseEvidence[] =>
-      component.participation !== 'not-recorded' && didRender(component.participation)
-        ? [
-            {
-              kind: 'fiber-rendered',
-              componentName: component.name,
-              participation: component.participation,
-            },
-          ]
-        : [],
-    ),
-  );
+/**
+ * Charges each timed commit's rendered components to `components` by name, at
+ * their summed self time with negative self times floored at 0, and returns
+ * the milliseconds charged. Each charge carries the slice's script evidence
+ * beside the commit's own, so the entry the render ran inside is named.
+ */
+function chargeTimedComponents(
+  timed: readonly TimedCommit[],
+  scriptEvidence: CauseEvidence,
+  components: Map<string, ComponentCharge>,
+): number {
+  let renderedMs = 0;
+  for (const commit of timed) {
+    for (const cause of commit.causes.causes) {
+      if (cause.subject.kind !== 'component') continue;
+      const { name } = cause.subject;
+      const selfMs = commit.basis.times.fibers.reduce(
+        (sum, entry) =>
+          entry.fiber.name === name && didRender(entry.participation)
+            ? sum + Math.max(entry.selfMs, 0)
+            : sum,
+        0,
+      );
+      renderedMs += selfMs;
+      const existing = components.get(name);
+      if (existing === undefined) {
+        components.set(name, {
+          subject: cause.subject,
+          ms: selfMs,
+          evidence: [...cause.evidence, scriptEvidence],
+        });
+      } else {
+        existing.ms += selfMs;
+        existing.evidence.push(...cause.evidence, scriptEvidence);
+      }
+    }
+  }
+  return renderedMs;
 }
 
 /**
@@ -366,32 +387,7 @@ function nameScriptJavaScript(
 
   // 1. Fiber timings: components hold their self time, the entry the rest.
   if (timed.length > 0 && shortfallMs === 0) {
-    let renderedMs = 0;
-    for (const commit of timed) {
-      for (const cause of commit.causes.causes) {
-        if (cause.subject.kind !== 'component') continue;
-        const { name } = cause.subject;
-        const selfMs = commit.basis.times.fibers.reduce(
-          (sum, entry) =>
-            entry.fiber.name === name && didRender(entry.participation)
-              ? sum + Math.max(entry.selfMs, 0)
-              : sum,
-          0,
-        );
-        renderedMs += selfMs;
-        const existing = components.get(name);
-        if (existing === undefined) {
-          components.set(name, {
-            subject: cause.subject,
-            ms: selfMs,
-            evidence: [...cause.evidence, scriptEvidence],
-          });
-        } else {
-          existing.ms += selfMs;
-          existing.evidence.push(...cause.evidence, scriptEvidence);
-        }
-      }
-    }
+    const renderedMs = chargeTimedComponents(timed, scriptEvidence, components);
     const restMs = selfJavaScriptMs - renderedMs;
     const rest: CandidateCause[] =
       restMs > 0
@@ -438,11 +434,118 @@ function nameScriptJavaScript(
         subject: { kind: 'script-entry', site, scope: 'whole-entry' },
         weight: confidenceWeight(jsShare, 'frame-slice-share', measured),
         tier: 'loaf-script-registration',
-        evidence: [scriptEvidence, ...renderedIn(landed)],
+        evidence: [
+          scriptEvidence,
+          ...landed.flatMap((commit) => renderedEvidence(commit.components)),
+        ],
       },
     ],
     notes,
   };
+}
+
+/**
+ * The frame's whole, and the shares every candidate of the frame is quoted in.
+ * Returned with the whole in milliseconds, which the cross-check also divides.
+ */
+function frameSharesOf(
+  frame: LongAnimationFrame,
+  decomposition: FrameDecomposition,
+): { readonly wholeMs: number; readonly shares: FrameShares } {
+  const sliced = decomposition.slices.reduce((sum, slice) => sum + slice.durationMs, 0);
+  /*
+   * The frame's duration, which the slices sum to on every corpus frame to
+   * within 2e-9ms. The larger of the two only so that a record whose slices
+   * overran its duration, which `decomposition.notes` would report, still
+   * yields weights that sum to 1 rather than throwing: always produce
+   * something. It can only lengthen the denominator, never shorten the frame.
+   */
+  const whole = Math.max(frame.durationMs, sliced);
+  return {
+    wholeMs: whole,
+    shares: {
+      shareOf: (ms) => (whole > 0 ? Math.max(ms, 0) / whole : 0),
+      measured: measuredSupport(whole),
+    },
+  };
+}
+
+/** The style and layout a script slice forced, charged to its entry, or `null` for none. */
+function forcedStyleAndLayoutCandidate(
+  slice: ScriptSlice,
+  { shareOf, measured }: FrameShares,
+): CandidateCause | null {
+  const { forcedStyleAndLayoutMs } = slice.interior;
+  if (forcedStyleAndLayoutMs <= 0) return null;
+  return {
+    subject: {
+      kind: 'browser-work',
+      what: 'forced-style-and-layout',
+      forcedBy: scriptEntrySiteOf(slice),
+    },
+    weight: confidenceWeight(
+      shareOf(forcedStyleAndLayoutMs),
+      'frame-slice-share',
+      measured,
+    ),
+    tier: 'loaf-script-registration',
+    evidence: [
+      {
+        kind: 'forced-style-and-layout',
+        scriptIndex: slice.scriptIndex,
+        durationMs: forcedStyleAndLayoutMs,
+      },
+    ],
+  };
+}
+
+/** The rendering update's own style, layout or paint, which no script forced. */
+function renderingUpdateCandidate(
+  slice: Extract<FrameSlice, { kind: 'style' | 'layout' | 'paint' }>,
+  { shareOf, measured }: FrameShares,
+): CandidateCause {
+  return {
+    subject: { kind: 'browser-work', what: slice.kind, forcedBy: null },
+    weight: confidenceWeight(shareOf(slice.durationMs), 'frame-slice-share', measured),
+    tier: 'loaf-timing-only',
+    evidence: [{ kind: 'frame-slice', slice: slice.kind, durationMs: slice.durationMs }],
+  };
+}
+
+/**
+ * The unattributed candidates, one per reason, each resting on subtraction and
+ * carrying the frame's cross-check.
+ */
+function unattributedCandidates(
+  unattributed: ReadonlyMap<UnattributedReason, Charge>,
+  check: CrossCheck,
+  inFrameSamples: InFrameSamples | null,
+  { shareOf }: FrameShares,
+): CandidateCause[] {
+  /*
+   * Where there was a profile, the raw empty-stack count is on the evidence
+   * beside the slices, so the second signal is inspectable in the same place
+   * as the first.
+   */
+  const emptyStackEvidence: CauseEvidence[] =
+    inFrameSamples === null
+      ? []
+      : [
+          {
+            kind: 'empty-stack-share',
+            samplesWithoutStack: inFrameSamples.samplesWithoutStack,
+            ofSamplesInFrame: inFrameSamples.samples,
+          },
+        ];
+  return [...unattributed].map(([reason, { ms, evidence }]) => ({
+    subject: { kind: 'unattributed', reason },
+    weight: confidenceWeight(shareOf(ms), 'frame-slice-share', {
+      kind: 'subtraction',
+      check,
+    }),
+    tier: 'unattributed',
+    evidence: [...evidence, ...emptyStackEvidence],
+  }));
 }
 
 /**
@@ -454,23 +557,8 @@ function attributeFrame(
   context: FrameContext,
 ): FrameAttribution {
   const decomposition = decomposeFrame(frame);
-  const sliced = decomposition.slices.reduce((sum, slice) => sum + slice.durationMs, 0);
-  /*
-   * The frame's duration, which the slices sum to on every corpus frame to
-   * within 2e-9ms. The larger of the two only so that a record whose slices
-   * overran its duration, which `decomposition.notes` would report, still
-   * yields weights that sum to 1 rather than throwing: always produce
-   * something. It can only lengthen the denominator, never shorten the frame.
-   */
-  const whole = Math.max(frame.durationMs, sliced);
-  const shares: FrameShares = {
-    shareOf: (ms) => (whole > 0 ? Math.max(ms, 0) / whole : 0),
-    measured: {
-      kind: 'measured',
-      gridShare: whole > 0 ? Math.min(COARSENED_TIMING_TOLERANCE_MS / whole, 1) : 1,
-    },
-  };
-  const { shareOf, measured } = shares;
+  const { wholeMs, shares } = frameSharesOf(frame, decomposition);
+  const { shareOf } = shares;
 
   const scriptMs = decomposition.slices.reduce(
     (sum, slice) => sum + (slice.kind === 'script' ? slice.durationMs : 0),
@@ -478,7 +566,7 @@ function attributeFrame(
   );
   const { inFrameSamples } = context;
   const check = crossCheckEmptyStacks(
-    shareOf(whole - scriptMs),
+    shareOf(wholeMs - scriptMs),
     inFrameSamples === null
       ? null
       : {
@@ -498,29 +586,8 @@ function attributeFrame(
   for (const slice of decomposition.slices) {
     switch (slice.kind) {
       case 'script': {
-        const { forcedStyleAndLayoutMs, selfJavaScriptMs } = slice.interior;
-        if (forcedStyleAndLayoutMs > 0) {
-          candidates.push({
-            subject: {
-              kind: 'browser-work',
-              what: 'forced-style-and-layout',
-              forcedBy: scriptEntrySiteOf(slice),
-            },
-            weight: confidenceWeight(
-              shareOf(forcedStyleAndLayoutMs),
-              'frame-slice-share',
-              measured,
-            ),
-            tier: 'loaf-script-registration',
-            evidence: [
-              {
-                kind: 'forced-style-and-layout',
-                scriptIndex: slice.scriptIndex,
-                durationMs: forcedStyleAndLayoutMs,
-              },
-            ],
-          });
-        }
+        const forced = forcedStyleAndLayoutCandidate(slice, shares);
+        if (forced !== null) candidates.push(forced);
 
         // A commit on the boundary two adjacent slices share goes to the
         // earlier one, once.
@@ -528,7 +595,7 @@ function attributeFrame(
           (commit) => !placed.has(commit) && landedIn(slice, commit),
         );
         for (const commit of landed) placed.add(commit);
-        if (selfJavaScriptMs <= 0) break;
+        if (slice.interior.selfJavaScriptMs <= 0) break;
 
         const named = nameScriptJavaScript(
           slice,
@@ -545,18 +612,7 @@ function attributeFrame(
       case 'style':
       case 'layout':
       case 'paint':
-        candidates.push({
-          subject: { kind: 'browser-work', what: slice.kind, forcedBy: null },
-          weight: confidenceWeight(
-            shareOf(slice.durationMs),
-            'frame-slice-share',
-            measured,
-          ),
-          tier: 'loaf-timing-only',
-          evidence: [
-            { kind: 'frame-slice', slice: slice.kind, durationMs: slice.durationMs },
-          ],
-        });
+        candidates.push(renderingUpdateCandidate(slice, shares));
         break;
 
       case 'before-first-script':
@@ -593,39 +649,13 @@ function attributeFrame(
   for (const { subject, ms, evidence } of components.values()) {
     candidates.push({
       subject,
-      weight: confidenceWeight(shareOf(ms), 'fiber-self-time-share', measured),
+      weight: confidenceWeight(shareOf(ms), 'fiber-self-time-share', shares.measured),
       tier: 'react-fiber-timings',
       evidence,
     });
   }
 
-  /*
-   * The unattributed candidates, each resting on subtraction and carrying the
-   * frame's cross-check. Where there was a profile, the raw empty-stack count
-   * is on the evidence beside the slices, so the second signal is inspectable
-   * in the same place as the first.
-   */
-  const emptyStackEvidence: CauseEvidence[] =
-    inFrameSamples === null
-      ? []
-      : [
-          {
-            kind: 'empty-stack-share',
-            samplesWithoutStack: inFrameSamples.samplesWithoutStack,
-            ofSamplesInFrame: inFrameSamples.samples,
-          },
-        ];
-  for (const [reason, { ms, evidence }] of unattributed) {
-    candidates.push({
-      subject: { kind: 'unattributed', reason },
-      weight: confidenceWeight(shareOf(ms), 'frame-slice-share', {
-        kind: 'subtraction',
-        check,
-      }),
-      tier: 'unattributed',
-      evidence: [...evidence, ...emptyStackEvidence],
-    });
-  }
+  candidates.push(...unattributedCandidates(unattributed, check, inFrameSamples, shares));
 
   const unattributedMs = decomposition.charges.unattributedMs;
   return {
@@ -671,11 +701,56 @@ function interactionOf(
   signals: CapturedSignals,
   frame: LongAnimationFrame,
 ): string | null {
-  const window = signals.interactions.find(
-    (candidate) =>
-      frame.startTimeMs >= candidate.fromMs && frame.startTimeMs <= candidate.toMs,
+  return (
+    signals.interactions.find((window) => frameBeganIn(frame, window))?.label ?? null
   );
-  return window?.label ?? null;
+}
+
+/**
+ * The sampled functions of every script slice in the capture, pooled by the
+ * interaction its frame began in and the site LoAF named, and looked up by
+ * that same pair. `labels` holds each frame's interaction label, in
+ * `signals.frames` order.
+ */
+function functionPools(
+  signals: CapturedSignals,
+  resolved: ResolvedProfile,
+  labels: readonly (string | null)[],
+): (label: string | null, slice: ScriptSlice) => FunctionAttribution | undefined {
+  /*
+   * The pools: every script slice in the capture, grouped by the interaction
+   * its frame began in and the site LoAF named, with one function
+   * attribution per group. A slice finds its pool by that same pair, so
+   * nothing depends on the slice objects being shared: each frame is
+   * decomposed once here and again in `attributeFrame`, and the partition is
+   * deterministic.
+   */
+  const poolKeyOf = (label: string | null, slice: ScriptSlice): string =>
+    JSON.stringify([label, scriptEntrySiteKey(scriptEntrySiteOf(slice))]);
+
+  const groups = new Map<string, ScriptSlice[]>();
+  for (const [index, frame] of signals.frames.entries()) {
+    for (const slice of decomposeFrame(frame).slices) {
+      if (slice.kind !== 'script') continue;
+      const key = poolKeyOf(labels[index] ?? null, slice);
+      const group = groups.get(key) ?? [];
+      group.push(slice);
+      groups.set(key, group);
+    }
+  }
+
+  const pools = new Map<string, FunctionAttribution>();
+  for (const [key, slices] of groups) {
+    pools.set(
+      key,
+      attributeSampledFunctions(
+        resolved,
+        signals.provenance,
+        scriptSlicePopulation(slices),
+      ),
+    );
+  }
+  return (label, slice) => pools.get(poolKeyOf(label, slice));
 }
 
 /**
@@ -700,41 +775,8 @@ export function attributeFrames(
   commits: readonly CommitAttribution[],
 ): readonly FrameAttribution[] {
   const labels = signals.frames.map((frame) => interactionOf(signals, frame));
-
-  /*
-   * The pools: every script slice in the capture, grouped by the interaction
-   * its frame began in and the site LoAF named, with one function
-   * attribution per group. A slice finds its pool by that same pair, so
-   * nothing depends on the slice objects being shared: each frame is
-   * decomposed once here and again in `attributeFrame`, and the partition is
-   * deterministic.
-   */
-  const pools = new Map<string, FunctionAttribution>();
-  const poolKeyOf = (label: string | null, slice: ScriptSlice): string =>
-    JSON.stringify([label, scriptEntrySiteKey(scriptEntrySiteOf(slice))]);
-  if (resolved !== null) {
-    const groups = new Map<string, ScriptSlice[]>();
-    for (const [index, frame] of signals.frames.entries()) {
-      for (const slice of decomposeFrame(frame).slices) {
-        if (slice.kind !== 'script') continue;
-        const key = poolKeyOf(labels[index] ?? null, slice);
-        const group = groups.get(key) ?? [];
-        group.push(slice);
-        groups.set(key, group);
-      }
-    }
-    for (const [key, slices] of groups) {
-      pools.set(
-        key,
-        attributeSampledFunctions(
-          resolved,
-          signals.provenance,
-          scriptSlicePopulation(slices),
-        ),
-      );
-    }
-  }
-
+  const pooledFunctions =
+    resolved === null ? null : functionPools(signals, resolved, labels);
   const independence =
     signals.profile === null ? null : independentSampleWeights(signals.profile);
 
@@ -744,7 +786,7 @@ export function attributeFrames(
       provenance: signals.provenance,
       interaction: label,
       commits: commits.filter((commit) => commit.frame === frame),
-      pooledFunctions: (slice) => pools.get(poolKeyOf(label, slice)),
+      pooledFunctions: (slice) => pooledFunctions?.(label, slice),
       inFrameSamples:
         signals.profile === null || independence === null
           ? null

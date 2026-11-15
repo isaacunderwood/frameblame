@@ -29,49 +29,17 @@ import { commitRenderTimes, fiberParticipation } from './fiber-self-time.ts';
 import type { LongAnimationFrame } from './loaf.ts';
 import type { ProfileTrace } from './profiler.ts';
 import type { BuildMode } from './provenance.ts';
-import type { LinkedFiber, ReactCommit, ReactSpan, RenderedFiber } from './react.ts';
+import type { ReactCommit, ReactSpan, RenderedFiber } from './react.ts';
 import type { CapturedSignals } from './signals.ts';
-
-/** Render evidence for the four participations, as React 19.3.1 leaves them. */
-const UPDATED = { flags: 1, hasAlternate: true, carriedOver: false };
-const MOUNTED = { flags: 1, hasAlternate: false, carriedOver: false };
-const BAILED_OUT = { flags: 0, hasAlternate: true, carriedOver: false };
-const CARRIED_OVER = { flags: 1, hasAlternate: true, carriedOver: true };
-
-function fiber(
-  id: number,
-  name: string,
-  parentId: number | null,
-  actualDurationMs: number | null,
-  render: LinkedFiber['render'] = UPDATED,
-): LinkedFiber {
-  return {
-    id,
-    parentId,
-    name,
-    tag: 0,
-    lanes: 0,
-    actualDurationMs,
-    selfBaseDurationMs: actualDurationMs,
-    render,
-  };
-}
-
-function commit(
-  fibers: readonly LinkedFiber[],
-  committedAtMs = 1000,
-  truncated = false,
-): ReactCommit {
-  return {
-    committedAtMs,
-    postCommitAtMs: null,
-    rendererId: 1,
-    didError: false,
-    priorityLevel: null,
-    collectionCostMs: 0,
-    components: { linkage: 'recorded', truncated, fibers },
-  };
-}
+import {
+  BAILED_OUT,
+  CARRIED_OVER,
+  commit,
+  fiber,
+  MOUNTED,
+  UPDATED,
+} from './synthetic-capture.test-support.ts';
+import { PROVENANCE } from './synthetic-profile.test-support.ts';
 
 function signals(overrides: {
   commits: readonly ReactCommit[];
@@ -81,15 +49,7 @@ function signals(overrides: {
   buildMode?: BuildMode;
 }): CapturedSignals {
   return {
-    provenance: {
-      runId: 'synthetic',
-      subject: 'synthetic',
-      buildMode: overrides.buildMode ?? 'development',
-      buildModeDescription: 'synthetic',
-      cpuThrottleRate: 4,
-      browser: 'chromium 159.0.8154.6',
-      collectedAt: '2026-11-15T00:00:00.000Z',
-    },
+    provenance: { ...PROVENANCE, buildMode: overrides.buildMode ?? 'development' },
     frames: overrides.frames ?? [],
     profile: overrides.profile ?? null,
     react: {

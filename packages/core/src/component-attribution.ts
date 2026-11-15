@@ -97,30 +97,36 @@ import {
   type CauseSubject,
   confidenceWeight,
   describeTier,
+  type NonEmptyEvidence,
   type RankedCauses,
   rankCauses,
   type UnattributedReason,
   type WeightBasis,
 } from './attribution.ts';
-import type { WeightSupport } from './confidence.ts';
+import { measuredSupport, sampleShareSupport, type WeightSupport } from './confidence.ts';
 import {
   type CommitRenderTimes,
   type CommitTimingNote,
   commitRenderTimes,
   didRender,
   type FiberParticipation,
+  type FiberSelfTime,
   participationIn,
   participationsOf,
   type ReactTierShortfall,
   type RenderedParticipation,
 } from './fiber-self-time.ts';
 import {
-  COARSENED_TIMING_TOLERANCE_MS,
   exceedsByMoreThanCoarsening,
   isWithinFrame,
   type LongAnimationFrame,
 } from './loaf.ts';
-import { independentSampleWeights, type ProfileTrace, stackFrames } from './profiler.ts';
+import {
+  independentSampleWeights,
+  type ProfileTrace,
+  type SampleCounts,
+  stackFrames,
+} from './profiler.ts';
 import { type CaptureProvenance, formatMilliseconds } from './provenance.ts';
 import type { FiberId, ReactCommit, ReactSpan } from './react.ts';
 import {
@@ -270,17 +276,6 @@ export interface CommitAttribution {
   readonly notes: readonly ComponentAttributionNote[];
 }
 
-/** A non-empty list of evidence, as `CandidateCause` requires. */
-type Evidence = [CauseEvidence, ...CauseEvidence[]];
-
-/** Raw and independent sample counts, kept side by side. */
-interface SampleCounts {
-  /** Samples as the trace holds them. */
-  samples: number;
-  /** The same samples with bursts collapsed. See `independentSampleWeights`. */
-  independent: number;
-}
-
 /** One candidate's raw share before it becomes a weight, so commits can be merged. */
 interface Tally {
   /** The hook's name, which the join and the merge key on. */
@@ -290,7 +285,7 @@ interface Tally {
   readonly tier: AttributionTier;
   numerator: number;
   /** Created with its first entry, so a candidate can never lack evidence. */
-  readonly evidence: Evidence;
+  readonly evidence: NonEmptyEvidence;
 }
 
 /**
@@ -300,7 +295,7 @@ interface Tally {
 interface Remainder {
   readonly reason: UnattributedReason;
   numerator: number;
-  readonly evidence: Evidence;
+  readonly evidence: NonEmptyEvidence;
 }
 
 /**
@@ -348,18 +343,9 @@ function supportOf(
 ): WeightSupport {
   switch (unit) {
     case 'fiber-self-time':
-      return {
-        kind: 'measured',
-        gridShare:
-          denominator > 0 ? Math.min(COARSENED_TIMING_TOLERANCE_MS / denominator, 1) : 1,
-      };
+      return measuredSupport(denominator);
     case 'independent-samples':
-      return {
-        kind: 'sampled',
-        independentSamples: numerator,
-        ofIndependentSamples: denominator,
-        ofMeasuredShare: 1,
-      };
+      return sampleShareSupport(numerator, denominator);
     case 'whole-commit':
       return {
         kind: 'subtraction',
@@ -401,7 +387,7 @@ function addToTally(
   name: string,
   subject: () => { readonly subject: CauseSubject; readonly tier: AttributionTier },
   numerator: number,
-  evidence: Readonly<Evidence>,
+  evidence: Readonly<NonEmptyEvidence>,
 ): void {
   const existing = tallies.get(name);
   if (existing === undefined) {
@@ -410,6 +396,54 @@ function addToTally(
   }
   existing.numerator += numerator;
   existing.evidence.push(...evidence);
+}
+
+/**
+ * Adds `numerator` and `evidence` to a remainder, or starts one with `reason`
+ * when there is none yet. Never mutates the evidence it is handed, so a
+ * commit's own remainder survives being merged into an interaction's.
+ */
+function addToRemainder(
+  remainder: Remainder | null,
+  reason: UnattributedReason,
+  numerator: number,
+  evidence: Readonly<NonEmptyEvidence>,
+): Remainder {
+  if (remainder === null) return { reason, numerator, evidence: [...evidence] };
+  remainder.numerator += numerator;
+  remainder.evidence.push(...evidence);
+  return remainder;
+}
+
+/** A fiber's timings as evidence, rendered or bailed out of. */
+function fiberRenderTimeEvidence(entry: FiberSelfTime): CauseEvidence {
+  return {
+    kind: 'fiber-render-time',
+    componentName: entry.fiber.name,
+    actualDurationMs: entry.actualDurationMs,
+    selfDurationMs: entry.selfMs,
+  };
+}
+
+/**
+ * The `fiber-rendered` evidence for every component the hook says rendered:
+ * which components took part, with nothing about how long they took. Empty
+ * where the record does not say which fibers rendered.
+ */
+export function renderedEvidence(
+  components: readonly CommitComponent[],
+): CauseEvidence[] {
+  return components.flatMap((component): CauseEvidence[] =>
+    component.participation !== 'not-recorded' && didRender(component.participation)
+      ? [
+          {
+            kind: 'fiber-rendered',
+            componentName: component.name,
+            participation: component.participation,
+          },
+        ]
+      : [],
+  );
 }
 
 /**
@@ -446,22 +480,9 @@ function tallyFiberTimings(
   let remainder: Remainder | null = null;
   for (const entry of times.fibers) {
     if (didRender(entry.participation) || entry.selfMs <= 0) continue;
-    const evidence: CauseEvidence = {
-      kind: 'fiber-render-time',
-      componentName: entry.fiber.name,
-      actualDurationMs: entry.actualDurationMs,
-      selfDurationMs: entry.selfMs,
-    };
-    if (remainder === null) {
-      remainder = {
-        reason: 'bailed-out-reconciliation',
-        numerator: entry.selfMs,
-        evidence: [evidence],
-      };
-    } else {
-      remainder.numerator += entry.selfMs;
-      remainder.evidence.push(evidence);
-    }
+    remainder = addToRemainder(remainder, 'bailed-out-reconciliation', entry.selfMs, [
+      fiberRenderTimeEvidence(entry),
+    ]);
   }
 
   for (const entry of times.fibers) {
@@ -479,14 +500,7 @@ function tallyFiberTimings(
         tier: 'react-fiber-timings',
       }),
       Math.max(entry.selfMs, 0),
-      [
-        {
-          kind: 'fiber-render-time',
-          componentName: entry.fiber.name,
-          actualDurationMs: entry.actualDurationMs,
-          selfDurationMs: entry.selfMs,
-        },
-      ],
+      [fiberRenderTimeEvidence(entry)],
     );
   }
 
@@ -788,17 +802,7 @@ function tallySamples(
           ofSamplesInWindow: samplesInWindow,
           window: 'since-previous-commit',
         },
-        ...fibers.flatMap((fiber): CauseEvidence[] =>
-          fiber.participation === 'not-recorded'
-            ? []
-            : [
-                {
-                  kind: 'fiber-rendered',
-                  componentName: name,
-                  participation: fiber.participation,
-                },
-              ],
-        ),
+        ...renderedEvidence(fibers),
       ],
     });
   }
@@ -838,18 +842,7 @@ function tallySamples(
  * rendered, since a candidate needs evidence.
  */
 function unmeasuredRemainder(components: readonly CommitComponent[]): Remainder | null {
-  const rendered = components.flatMap((component): CauseEvidence[] =>
-    component.participation !== 'not-recorded' && didRender(component.participation)
-      ? [
-          {
-            kind: 'fiber-rendered',
-            componentName: component.name,
-            participation: component.participation,
-          },
-        ]
-      : [],
-  );
-  const [first, ...rest] = rendered;
+  const [first, ...rest] = renderedEvidence(components);
   if (first === undefined) return null;
   return { reason: 'no-profiler', numerator: 1, evidence: [first, ...rest] };
 }
@@ -1239,12 +1232,8 @@ function mergeTallies(commits: readonly CommitTally[]): MergedComponents | null 
       );
     }
     if (commit.remainder === null) continue;
-    if (remainder === null) {
-      remainder = { ...commit.remainder, evidence: [...commit.remainder.evidence] };
-    } else {
-      remainder.numerator += commit.remainder.numerator;
-      remainder.evidence.push(...commit.remainder.evidence);
-    }
+    const { reason, numerator, evidence } = commit.remainder;
+    remainder = addToRemainder(remainder, reason, numerator, evidence);
   }
 
   return {

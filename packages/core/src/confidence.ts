@@ -45,6 +45,8 @@
  * the attribution modules'.
  */
 
+import { COARSENED_TIMING_TOLERANCE_MS } from './loaf.ts';
+
 /**
  * A weight's confidence in one word, strongest first in `CONFIDENCE_LEVELS`.
  *
@@ -101,6 +103,10 @@ export const USABLE_SHARE_HALF_WIDTH = 0.2;
  */
 export const MIN_SAMPLES_TO_COMPARE_SHARES = 1 / USABLE_SHARE_HALF_WIDTH;
 
+function clampShare(share: number): number {
+  return Math.min(Math.max(share, 0), 1);
+}
+
 /**
  * The two-sided normal quantile for 95%, which is the confidence every sampled
  * range in this project is quoted at.
@@ -124,7 +130,7 @@ const Z_95 = 1.959964;
  */
 export function wilsonRange(successes: number, trials: number): WeightRange {
   if (!(trials > 0)) return { low: 0, high: 1 };
-  const share = Math.min(Math.max(successes / trials, 0), 1);
+  const share = clampShare(successes / trials);
   const z2OverN = (Z_95 * Z_95) / trials;
   const centre = (share + z2OverN / 2) / (1 + z2OverN);
   const half =
@@ -218,7 +224,7 @@ export function crossCheckEmptyStacks(
     return { verdict: 'unchecked', reason: 'too-few-samples', ofSamplesInFrame };
   }
 
-  const share = Math.min(Math.max(shareOutsideScripts, 0), 1);
+  const share = clampShare(shareOutsideScripts);
   const predicted = ofSamplesInFrame * share;
   const toleranceSamples = Math.max(
     1,
@@ -288,6 +294,37 @@ export type WeightSupport =
       readonly check: CrossCheck;
     };
 
+/**
+ * The support of a measured duration as a share of `denominatorMs`
+ * milliseconds. Its grid is two 100us coarsening steps
+ * (`COARSENED_TIMING_TOLERANCE_MS`) over the denominator's milliseconds; with
+ * no denominator nothing is distinguishable, and the grid is the whole.
+ */
+export function measuredSupport(denominatorMs: number): WeightSupport {
+  return {
+    kind: 'measured',
+    gridShare:
+      denominatorMs > 0 ? Math.min(COARSENED_TIMING_TOLERANCE_MS / denominatorMs, 1) : 1,
+  };
+}
+
+/**
+ * The support of a share that is itself a sample share: `independentSamples`
+ * of `ofIndependentSamples`, both counted with bursts collapsed, dividing the
+ * whole (`ofMeasuredShare` of 1).
+ */
+export function sampleShareSupport(
+  independentSamples: number,
+  ofIndependentSamples: number,
+): WeightSupport {
+  return {
+    kind: 'sampled',
+    independentSamples,
+    ofIndependentSamples,
+    ofMeasuredShare: 1,
+  };
+}
+
 /** A weight's confidence: the level, the range, and the support both came from. */
 export interface WeightConfidence {
   readonly level: ConfidenceLevel;
@@ -335,10 +372,6 @@ export function confidenceLevelOf(support: WeightSupport): ConfidenceLevel {
           return 'low';
       }
   }
-}
-
-function clampShare(share: number): number {
-  return Math.min(Math.max(share, 0), 1);
 }
 
 /**

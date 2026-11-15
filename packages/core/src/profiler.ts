@@ -362,6 +362,14 @@ export function stackFrames(
   });
 }
 
+/** Raw and independent sample counts, kept side by side. */
+export interface SampleCounts {
+  /** Samples as the trace holds them. */
+  samples: number;
+  /** The same samples with bursts collapsed. See `independentSampleWeights`. */
+  independent: number;
+}
+
 /**
  * How much independent evidence each sample is: 1 for a sample on its own, and
  * `1 / n` for each of the `n` samples in a burst.

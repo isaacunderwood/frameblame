@@ -91,18 +91,19 @@
 import {
   ATTRIBUTION_TIERS,
   type CandidateCause,
-  type CauseEvidence,
   type CauseSubject,
   confidenceWeight,
   describeTier,
   type FunctionName,
+  type NonEmptyEvidence,
   type RankedCauses,
   rankCauses,
   type SampleWindowKind,
   type UnmappedReason,
 } from './attribution.ts';
+import { sampleShareSupport } from './confidence.ts';
 import { isWithinFrame, type LongAnimationFrame } from './loaf.ts';
-import { independentSampleWeights } from './profiler.ts';
+import { independentSampleWeights, type SampleCounts } from './profiler.ts';
 import type { CaptureProvenance } from './provenance.ts';
 import type { CapturedSignals } from './signals.ts';
 import {
@@ -265,14 +266,6 @@ function functionSubject(resolution: Located): FunctionSubject {
   };
 }
 
-/** Raw and independent sample counts, kept side by side. */
-interface SampleCounts {
-  /** Samples as the trace holds them. */
-  samples: number;
-  /** The same samples with bursts collapsed. See `independentSampleWeights`. */
-  independent: number;
-}
-
 interface FunctionTally extends SampleCounts {
   readonly resolution: Located;
   foldedCallees: number;
@@ -284,12 +277,11 @@ interface FunctionTally extends SampleCounts {
  * includes `counts`, and holds at least one sample.
  */
 function sampleShare(counts: SampleCounts, stacked: SampleCounts) {
-  return confidenceWeight(counts.independent / stacked.independent, 'sample-share', {
-    kind: 'sampled',
-    independentSamples: counts.independent,
-    ofIndependentSamples: stacked.independent,
-    ofMeasuredShare: 1,
-  });
+  return confidenceWeight(
+    counts.independent / stacked.independent,
+    'sample-share',
+    sampleShareSupport(counts.independent, stacked.independent),
+  );
 }
 
 /**
@@ -306,7 +298,7 @@ function functionCandidate(
   stacked: SampleCounts,
   window: SampleWindowKind,
 ): CandidateCause {
-  const evidence: [CauseEvidence, ...CauseEvidence[]] = [
+  const evidence: NonEmptyEvidence = [
     {
       kind: 'profiler-samples',
       samples: tally.samples,

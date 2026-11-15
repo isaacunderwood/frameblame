@@ -63,9 +63,11 @@ export function paintedFrame(
   };
 }
 
-/** Render evidence as React 19.3.1 leaves it on a fiber that updated, and one it bailed out of. */
+/** Render evidence for the four participations, as React 19.3.1 leaves them. */
 export const UPDATED = { flags: 1, hasAlternate: true, carriedOver: false };
+export const MOUNTED = { flags: 1, hasAlternate: false, carriedOver: false };
 export const BAILED_OUT = { flags: 0, hasAlternate: true, carriedOver: false };
+export const CARRIED_OVER = { flags: 1, hasAlternate: true, carriedOver: true };
 
 /** A component fiber. `actualDurationMs` of `null` is what a production build reports. */
 export function fiber(
@@ -87,10 +89,11 @@ export function fiber(
   };
 }
 
-/** A commit with its fibers linked. */
+/** A commit with its fibers linked, from a walk that reached them all unless `truncated`. */
 export function commit(
   fibers: readonly LinkedFiber[],
-  committedAtMs: number,
+  committedAtMs = 1000,
+  truncated = false,
 ): ReactCommit {
   return {
     committedAtMs,
@@ -99,7 +102,7 @@ export function commit(
     didError: false,
     priorityLevel: null,
     collectionCostMs: 0,
-    components: { linkage: 'recorded', truncated: false, fibers },
+    components: { linkage: 'recorded', truncated, fibers },
   };
 }
 

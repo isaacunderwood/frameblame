@@ -21,8 +21,8 @@ export const PROVENANCE: CaptureProvenance = {
   collectedAt: '2026-11-15T00:00:00.000Z',
 };
 
-export /** A script served as written, with no map: the vanilla fixtures' shape. */
-function served(url: string): ScriptResource {
+/** A script served as written, with no map: the vanilla fixtures' shape. */
+export function served(url: string): ScriptResource {
   return { url, servedLength: null, sourceMap: null, fetchError: null };
 }
 

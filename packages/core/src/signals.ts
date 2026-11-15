@@ -102,6 +102,18 @@ export interface CapturedSignals {
 }
 
 /**
+ * Whether a frame began inside an interaction's window, inclusive at both
+ * ends. The one rule for which interaction a frame belongs to; see
+ * `framesOfInteraction` for why it is the start that decides.
+ */
+export function frameBeganIn(
+  frame: LongAnimationFrame,
+  window: InteractionWindow,
+): boolean {
+  return frame.startTimeMs >= window.fromMs && frame.startTimeMs <= window.toMs;
+}
+
+/**
  * The frames that began inside an interaction's window.
  *
  * Keyed on the frame's *start*, not on any overlap: a frame that began inside
@@ -117,7 +129,5 @@ export function framesOfInteraction(
   const window = signals.interactions.find((candidate) => candidate.label === label);
   if (window === undefined) return [];
 
-  return signals.frames.filter(
-    (frame) => frame.startTimeMs >= window.fromMs && frame.startTimeMs <= window.toMs,
-  );
+  return signals.frames.filter((frame) => frameBeganIn(frame, window));
 }

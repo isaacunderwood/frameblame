@@ -612,6 +612,12 @@ export type CauseEvidence =
     };
 
 /**
+ * A non-empty list of evidence, as `CandidateCause` requires: mutable, for the
+ * builders that add to a candidate's evidence before it is ranked.
+ */
+export type NonEmptyEvidence = [CauseEvidence, ...CauseEvidence[]];
+
+/**
  * One candidate cause of a frame's cost.
  *
  * `tier` and `evidence` are both required, and `evidence` is a non-empty tuple.
